@@ -1,0 +1,4 @@
+build/
+artifacts/
+plutus.json
+.aiken-cache/

@@ -1,0 +1,14 @@
+# Aiken build artefacts
+contracts/build/
+contracts/artifacts/
+
+# TypeScript build / runtime
+node_modules/
+*.log
+*.tsbuildinfo
+.DS_Store
+
+# Deploy state + operator-specific config
+deploy/state/*.json
+deploy/config/preprod.json
+deploy/config/mainnet.json

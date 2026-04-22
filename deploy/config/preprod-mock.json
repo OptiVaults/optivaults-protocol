@@ -1,0 +1,33 @@
+{
+  "network": "Preprod",
+  "_comment": "Minimal mock config for on-chain full-drain verification. Deploys a 4-validator subset (vault_nft + vault_proxy + vault_user + vusdcx) with early_withdraw_fee_bps=0 so a Deposit+full-drain cycle can complete without waiting 7 days for keeper_inactive. Does NOT exercise governance / registry / treasury / keeper_auth / order / vault_keeper_hot / vault_protocol / vault_liqwid / vault_gov_policy / vault_gov_emergency \u2014 full-drain never reads them. NOTE (2026-04-22): after the \u00a75.4 P1 vault_core split, full-drain Withdraw lives in vault_user. The existing mock-full-drain-deploy.ts + full-drain-test.ts tools still reference vault_core and need a rewrite before re-execution \u2014 the v1-mock-drain ceremony already completed on Preprod, so this is low-priority archival maintenance.",
+  "blockfrost": {
+    "url": "https://cardano-preprod.blockfrost.io/api/v0",
+    "projectIdEnv": "BLOCKFROST_API_KEY_PREPROD",
+    "projectIdBackupEnv": "BLOCKFROST_API_KEY_PREPROD_BACKUP"
+  },
+  "wallet": {
+    "keyDaemonSocket": "/home/chrissoft/claude-code-docker/data/key-daemon-preprod.sock"
+  },
+  "depositToken": {
+    "policy": "02fb0761144626b486a0433fcebafa6d586dc48ff2803422559d7497",
+    "name": "5465737455534443",
+    "decimals": 6
+  },
+  "vaultInitialParams": {
+    "performanceFeeBps": 450,
+    "earlyWithdrawFeeBps": 0,
+    "minHoldSeconds": 60,
+    "bufferTargetBps": 3500,
+    "keeperFeeBps": 2000,
+    "govFeeBps": 0,
+    "maxSlippageBps": 200,
+    "minSwapPegBps": 9900,
+    "vaultVersion": 1,
+    "seedLovelace": 15000000
+  },
+  "ceremonyOptions": {
+    "refScriptMinAdaMultiplier": 1.1,
+    "awaitConfirmSeconds": 30
+  }
+}

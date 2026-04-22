@@ -1,0 +1,80 @@
+{
+  "network": "Mainnet",
+  "blockfrost": {
+    "url": "https://cardano-mainnet.blockfrost.io/api/v0",
+    "projectId": "mainnetYOUR_KEY_HERE_TBD",
+    "projectIdBackup": "mainnetBACKUP_KEY_HERE_TBD"
+  },
+  "wallet": {
+    "seedPhrase": "MAINNET_SEED_PHRASE_NEVER_COMMIT_THIS_FILE",
+    "comment": "24-word BIP39 seed of the mainnet deploy wallet. CRITICAL: this seed controls ~400 ADA worth of reference-script min-UTXO at deploy time plus ~50 ADA in ceremony fees plus 15 USDCx initial vault seed. Keep this file OUTSIDE git. Add to .gitignore. Prefer hardware-wallet derivation + offline signing for mainnet ceremonies; see `docs/runbooks/v1-mainnet-ceremony.md` \u00a75."
+  },
+  "depositToken": {
+    "policy": "1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e34",
+    "name": "5553444378",
+    "comment": "Canonical USDCx on Cardano mainnet per whitepaper \u00a71.2. 'policy' is Circle's USDCx minting policy (28 bytes hex). 'name' = hex of \"USDCx\" = 5553444378. These values MUST match the production USDCx identity; a typo here produces a V1 deployment anchored to the wrong token (unrecoverable without redeploy).",
+    "decimals": 6
+  },
+  "governance": {
+    "signers": [
+      "MAINNET_SIGNER_1_PKH_28_BYTES",
+      "MAINNET_SIGNER_2_PKH_28_BYTES",
+      "MAINNET_SIGNER_3_PKH_28_BYTES"
+    ],
+    "threshold": 3,
+    "distributePeriodMs": 7776000000,
+    "governanceNftAssetName": "4f7074695661756c74734756",
+    "registryAuthAssetName": "526567697374727941757468",
+    "comment": "Three founder-connected signers, threshold 3 (3-of-3 unanimity) per whitepaper \u00a75.5. PKHs must match the publicly-disclosed signers on optivaults.app. Post-audit Phase 2 rotation (4-of-5) is executed later via RotateSigners governance TX."
+  },
+  "vaultInitialParams": {
+    "performanceFeeBps": 450,
+    "earlyWithdrawFeeBps": 10,
+    "minHoldSeconds": 60,
+    "bufferTargetBps": 3500,
+    "keeperFeeBps": 2000,
+    "govFeeBps": 0,
+    "maxSlippageBps": 200,
+    "minSwapPegBps": 9900,
+    "vaultVersion": 1,
+    "seedLovelace": 15000000,
+    "comment": "Mainnet launch uses the same params as Preprod \u2014 4.5% perf fee, 60s min_hold, 20/0/80 fee split, 15 ADA seed. These are the validator-enforced hard-cap ceilings (perf 450, hold 21600 = 6h, keeper+gov 3000). Policy changes post-deploy go through governance timelocks."
+  },
+  "treasuryInitialParams": {
+    "auditBps": 3000,
+    "opsBps": 4000,
+    "rdBps": 2000,
+    "bufferBps": 1000,
+    "monthlyCapAudit": 500000000,
+    "monthlyCapOps": 500000000,
+    "monthlyCapRd": 500000000,
+    "monthlyCapBuffer": 500000000,
+    "minAuditReserve": 0,
+    "comment": "Launch defaults per economics.md \u00a74.2. min_audit_reserve=0 at launch (non-binding). Future UpdateParams may raise min_audit_reserve as audit-reserve balance grows \u2014 this value is immutable downward."
+  },
+  "keeperAuthInitialParams": {
+    "registrationMode": "GovernanceOnly",
+    "authorizedPkhs": [
+      "MAINNET_FOUNDER_KEEPER_PKH_28_BYTES"
+    ],
+    "bondAmountRequired": 100000000,
+    "cooldownMs": 60000,
+    "maxAuthorizedCount": 10,
+    "rotationPeriodMs": 604800000,
+    "failoverWindowMs": 1800000,
+    "comment": "Mainnet launch: single founder keeper PKH. PermissionlessWithBond mode is deferred until TVL reaches $5-10M (whitepaper \u00a77.2). cooldown_ms = 60s anti-spam; rotation_period_ms = 7 days (inert until multi-keeper Phase 2+); failover_window_ms = 30 min for secondary keepers to step in."
+  },
+  "registryInitialParams": {
+    "protocolHashes": [],
+    "stableTokens": [],
+    "liqwidMarkets": [],
+    "keeperPkh": "MAINNET_FOUNDER_KEEPER_PKH_28_BYTES",
+    "comment": "Empty whitelists at launch \u2014 depositors cannot be routed anywhere. First post-launch governance action: UpdateRegistry adding Liqwid action-validator hashes + Minswap V2 pool script hashes + stable-token identities for DJED/USDM. This is intentional: V1 refuses to ship with pre-populated whitelists that could contain stale addresses from internal-verification-era deployments."
+  },
+  "ceremonyOptions": {
+    "refScriptMinAdaMultiplier": 1.1,
+    "mintDeadlineSlotOffsetMs": 14400000,
+    "awaitConfirmSeconds": 120,
+    "comment": "Mainnet uses 120s Blockfrost indexer wait (Preprod 90s) because mainnet indexing occasionally lags during high-load periods. Ref-script min-ADA multiplier 1.10 provides ~10% headroom."
+  }
+}

@@ -36,17 +36,22 @@ OptiVaults V1 is characterized by the following architectural decisions. Each is
 ## Directory layout
 
 ```
-v1/
+optivaults-protocol/
 ├── README.md                   This file
+├── LICENSE                     Apache License, Version 2.0
+├── contracts/                  V1 Aiken PlutusV3 source — 17 logic validators + 4 NFT mint policies + 1 DEX adapter; 104 unit + property tests / 599 randomized checks; `aiken check` clean
 ├── spec/                       V1 protocol specification
 │   ├── architecture.md         High-level protocol architecture
 │   ├── vault-datum.md          VaultDatum fields, invariants, transitions
 │   ├── treasury.md             Treasury contract specification
 │   ├── keeper-auth.md          Keeper stake-validator specification
 │   ├── order-batch.md          Order + BatchProcess + user-tip specification
-│   └── governance.md           MultisigGov actions + timelock rules
-├── contracts/                  V1 Aiken PlutusV3 source — 17 logic validators + 4 NFT mint policies + 1 DEX adapter; 104 unit + property tests / 599 randomized checks; `aiken check` clean
-├── keeper/                     V1 keeper reference implementation (pending — post-E2E)
+│   ├── governance.md           MultisigGov actions + timelock rules
+│   ├── multisig-gov.md         Multisig internals
+│   ├── gov-nft.md              Governance NFT one-shot design
+│   ├── vault-nft.md            Vault Identity NFT design
+│   ├── ada-swap.md             ADA top-up oracle + SwapAda redeemer
+│   └── swap-adapter.md         Ref-script dispatched DEX adapter interface
 ├── docs/
 │   ├── product-overview.md     Pragmatic user-facing overview (EN) — what you deposit, what you receive, risks in user terms
 │   ├── product-overview-zh-TW.md  繁體中文 product overview
@@ -56,11 +61,14 @@ v1/
 │   ├── audit-scope.md          Pre-audit internal round plan + external audit scope
 │   ├── integration-playbook.md Operator SOP for adding new DEX routes / Liqwid markets
 │   └── contributor-program.md  Open-source contributor rewards (Phase 2+ activation)
+├── deploy/                     Reproducible ceremony: compile + 5-phase deploy orchestrator + tools (reclaim-refs, sunset-ceremony, derive-gov-signers, full-drain helpers) + config templates (preprod-mock, preprod.example, mainnet.example)
 ├── tests/                      V1 regression tests — unit suite under `contracts/lib/vault/tests/`; Preprod E2E plan `preprod-e2e-plan.md` drafted; Preprod TS scripts pending
 └── whitepaper/
     ├── whitepaper.md           V1 public whitepaper (EN)
     └── whitepaper-zh-TW.md     V1 public whitepaper (繁體中文)
 ```
+
+**Note:** keeper reference implementation lives in a separate repository. See `docs/integration-playbook.md` for operator integration.
 
 Each document is written as a standalone V1 reference. No document in this tree assumes the reader has read prior-version documentation.
 
@@ -71,11 +79,11 @@ Each document is written as a standalone V1 reference. No document in this tree 
 V1 is in **early implementation phase**:
 
 - ✅ Spec / docs / whitepaper complete (15 markdown files under `spec/` + `docs/` + `whitepaper/`).
-- ✅ All 17 Aiken logic validators + 4 NFT mint policies + 1 DEX adapter (`minswap_v2_adapter`, §B@launch=1 SwapAdapter) implemented and `aiken check` passes (`v1/contracts/`). Partitioning rationale documented in `spec/architecture.md` §4.1. `UpdateSlippagePolicy` + 2 VaultDatum fields (§5.4 Phase 2) and ref-script SwapAdapter dispatch + `minswap_v2_adapter` + Registry `swap_adapter_hashes` (§B@launch=1) all on-chain.
+- ✅ All 17 Aiken logic validators + 4 NFT mint policies + 1 DEX adapter (`minswap_v2_adapter`, §B@launch=1 SwapAdapter) implemented and `aiken check` passes (`contracts/`). Partitioning rationale documented in `spec/architecture.md` §4.1. `UpdateSlippagePolicy` + 2 VaultDatum fields (§5.4 Phase 2) and ref-script SwapAdapter dispatch + `minswap_v2_adapter` + Registry `swap_adapter_hashes` (§B@launch=1) all on-chain.
 - ✅ Unit + property test suite — **104 tests passing, 599 total checks per `aiken check` run** (8 property tests × up to 100 iterations + deterministic cases including R72 regression coverage).
-- ✅ Preprod E2E test plan drafted (`v1/tests/preprod-e2e-plan.md`) with 100+ scenarios across all vault validators + 4 NFT one-shot policies + cross-validator integration flows. First end-to-end Preprod ceremony executed (38 TX, all phases verified on-chain).
-- ⏳ Keeper reference implementation (`v1/keeper/`) — not started.
-- ⏳ Preprod E2E test scripts (`v1/tests/preprod/*.test.ts`) — not started.
+- ✅ Preprod E2E test plan drafted (`tests/preprod-e2e-plan.md`) with 100+ scenarios across all vault validators + 4 NFT one-shot policies + cross-validator integration flows. First end-to-end Preprod ceremony executed (38 TX, all phases verified on-chain).
+- ⏳ Keeper reference implementation (separate repository) — not started.
+- ⏳ Preprod E2E test scripts (`tests/preprod/*.test.ts`) — not started.
 - ⏳ Internal audit rounds (coverage areas A-F, see `docs/audit-scope.md`) — not started.
 - ⏳ External audit engagement — target Q3 2026, firm not yet selected.
 - ⏳ Mainnet ceremony runbook — not yet written.
@@ -115,7 +123,7 @@ See [docs/audit-scope.md](docs/audit-scope.md) for the development / audit / lau
 
 ## License
 
-OptiVaults V1 is released under the **Apache License, Version 2.0**. This applies to the entire repository — smart contracts, keeper reference implementation, API server, frontend, CLI tools, and documentation. Any team may fork, specialize, or integrate V1's architecture into derivative products consistent with the Apache 2.0 terms (see [LICENSE](../LICENSE)).
+OptiVaults V1 is released under the **Apache License, Version 2.0**. This applies to the entire repository — smart contracts, keeper reference implementation, API server, frontend, CLI tools, and documentation. Any team may fork, specialize, or integrate V1's architecture into derivative products consistent with the Apache 2.0 terms (see [LICENSE](LICENSE)).
 
 The permissive license choice is deliberate: V1's success metric explicitly includes the architecture being forked and specialized by other Cardano teams (see whitepaper §1 "Why we do this"). Restricting reuse during a pre-audit validation phase would contradict that contribution-oriented posture.
 

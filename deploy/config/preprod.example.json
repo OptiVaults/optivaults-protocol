@@ -1,0 +1,80 @@
+{
+  "network": "Preprod",
+  "blockfrost": {
+    "url": "https://cardano-preprod.blockfrost.io/api/v0",
+    "projectId": "preprodYOUR_KEY_HERE_TBD",
+    "projectIdBackup": "preprodBACKUP_KEY_HERE_TBD"
+  },
+  "wallet": {
+    "seedPhrase": "word1 word2 ... word24",
+    "comment": "24-word BIP39 seed of the deploy wallet. MUST hold at least 500 ADA (\u2248400 for ref scripts + ~50 for ceremony fees + headroom) and the initial test USDCx balance (\u224815 USDCx for vault seed)."
+  },
+  "depositToken": {
+    "policy": "REPLACE_WITH_PREPROD_TESTUSDCX_POLICY_28_BYTES_HEX",
+    "name": "5465737455534443",
+    "comment": "Preprod test USDCx. 'policy' is 28-byte hex. 'name' is hex of asset name (e.g. 0x5465737455534443 = ASCII \"TestUSDC\"). Replace both with the actual Preprod test token you intend to use. Most teams mint their own test asset for Preprod.",
+    "decimals": 6
+  },
+  "governance": {
+    "signers": [
+      "REPLACE_WITH_PREPROD_SIGNER_1_PKH_28_BYTES",
+      "REPLACE_WITH_PREPROD_SIGNER_2_PKH_28_BYTES",
+      "REPLACE_WITH_PREPROD_SIGNER_3_PKH_28_BYTES"
+    ],
+    "threshold": 3,
+    "distributePeriodMs": 7776000000,
+    "governanceNftAssetName": "4f7074695661756c74734756",
+    "registryAuthAssetName": "526567697374727941757468",
+    "comment": "3-of-3 unanimity at launch (matches whitepaper \u00a75.5 rationale). Per V1 internal audit, threshold == n is allowed. governanceNftAssetName = hex of \"OptiVaultsGV\" (12 bytes). registryAuthAssetName = hex of \"RegistryAuth\" (12 bytes). Both are arbitrary-length asset names up to 32 bytes."
+  },
+  "vaultInitialParams": {
+    "performanceFeeBps": 450,
+    "earlyWithdrawFeeBps": 10,
+    "minHoldSeconds": 60,
+    "bufferTargetBps": 3500,
+    "keeperFeeBps": 2000,
+    "govFeeBps": 0,
+    "maxSlippageBps": 200,
+    "minSwapPegBps": 9900,
+    "vaultVersion": 1,
+    "seedLovelace": 15000000,
+    "comment": "15 ADA operational buffer for DEX orders + min-UTXO. Launch performance_fee_bps=450 (4.5% hard cap), gov_fee_bps=0 (Phase 1, disabled)."
+  },
+  "treasuryInitialParams": {
+    "auditBps": 3000,
+    "opsBps": 4000,
+    "rdBps": 2000,
+    "bufferBps": 1000,
+    "monthlyCapAudit": 500000000,
+    "monthlyCapOps": 500000000,
+    "monthlyCapRd": 500000000,
+    "monthlyCapBuffer": 500000000,
+    "minAuditReserve": 0,
+    "comment": "30/40/20/10 launch split. min_audit_reserve=0 at launch (non-binding); future UpdateParams can raise but never lower. Monthly caps all 500 USDCx for simplicity \u2014 governance-adjustable via UpdateTreasuryParams."
+  },
+  "keeperAuthInitialParams": {
+    "registrationMode": "GovernanceOnly",
+    "authorizedPkhs": [
+      "REPLACE_WITH_PREPROD_KEEPER_PKH_28_BYTES"
+    ],
+    "bondAmountRequired": 100000000,
+    "cooldownMs": 60000,
+    "maxAuthorizedCount": 10,
+    "rotationPeriodMs": 604800000,
+    "failoverWindowMs": 1800000,
+    "comment": "Phase 1 launch: GovernanceOnly + single keeper PKH = founder keeper. bond_amount_required (100 ADA) + failover mechanics are inert at launch; relevant only when governance later flips RegistrationMode to Mixed/PermissionlessWithBond (post $5-10M TVL)."
+  },
+  "registryInitialParams": {
+    "protocolHashes": [],
+    "stableTokens": [],
+    "liqwidMarkets": [],
+    "keeperPkh": "REPLACE_WITH_PREPROD_KEEPER_PKH_28_BYTES",
+    "comment": "Empty whitelists at launch \u2014 no DeployToProtocol calls work until governance adds protocol_hashes via UpdateRegistry. Liqwid market entries added post-launch per `docs/integration-playbook.md`. keeper_pkh used for KeeperToggleMarket (emergency Liqwid market pause); immutable after deploy per internal verification."
+  },
+  "ceremonyOptions": {
+    "refScriptMinAdaMultiplier": 1.1,
+    "mintDeadlineSlotOffsetMs": 14400000,
+    "awaitConfirmSeconds": 90,
+    "comment": "Ref-script min-ADA multiplier \u2014 10% headroom over Cardano ledger minimum to avoid min-ADA rejection in borderline cases. Mint deadline offset is unused for V1 (mints are cryptographic UTXO-ref one-shots, not native-script deadlines). awaitConfirmSeconds = how long to wait for Blockfrost indexer to see each TX before the next step."
+  }
+}
