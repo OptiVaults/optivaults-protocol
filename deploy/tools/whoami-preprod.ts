@@ -2,10 +2,10 @@
  * One-off helper: connect to the Preprod key daemon, derive the deploy
  * wallet address + payment PKH, and print current balance. Used once
  * during V1 config wiring to fill in registryInitialParams.keeperPkh
- * + keeperAuthInitialParams.authorizedPkhs in v1/deploy/config/preprod.json.
+ * + keeperAuthInitialParams.authorizedPkhs in deploy/config/preprod.json.
  *
  * Usage:
- *   npx tsx v1/deploy/tools/whoami-preprod.ts
+ *   npx tsx deploy/tools/whoami-preprod.ts
  */
 import * as dotenv from "dotenv";
 dotenv.config({ path: "keeper/.env" });

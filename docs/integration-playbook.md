@@ -66,7 +66,7 @@ Every integration proposal must pass **all seven steps** before going to governa
 
 **Outputs:**
 
-1. Five to ten real mainnet TXs of the intended operation (Deposit/Swap/Supply/Withdraw/Cancel). Decoded CBOR for each, stored in `v1/contracts/integrations/<protocol>/traces/`.
+1. Five to ten real mainnet TXs of the intended operation (Deposit/Swap/Supply/Withdraw/Cancel). Decoded CBOR for each, stored in `contracts/integrations/<protocol>/traces/`.
 2. Datum schema — byte-level precise — derived from the traces. No guessing. If three independent TXs agree, the schema is "locked"; if they disagree, investigate before proceeding.
 3. Redeemer schema — including the **cancel** and **expire** redeemers. These are often different from the main execution redeemer and are easy to overlook.
 4. Stake credential encoding — `Constr(0, [...])` vs `Constr(1, [...])` — verified from real TXs, not assumed. (This is the 2026-03-31 lesson.)
@@ -284,4 +284,4 @@ Any unchecked box is grounds for not executing the proposal.
 - `spec/governance.md` §4.6 UpdateRegistry — on-chain authorization mechanism
 - `spec/governance.md` §4.8 FastUpdateMarkets — 1-hour expedited path for protocol migrations
 - `docs/security-model.md` §3 — integration-related attack surface and threat model
-- GitHub repo: `v1/contracts/integrations/` (per-protocol trace archives and schema locks)
+- GitHub repo: `contracts/integrations/` (per-protocol trace archives and schema locks)

@@ -7,7 +7,7 @@
 /// and F-3 have code fixes; tests below cover both.
 ///
 /// F-1 fix is cross-validator — it's tested at the Transaction level
-/// in Preprod E2E (see `v1/tests/preprod-e2e-plan.md` INT-7/8/16).
+/// in Preprod E2E (see `tests/preprod-e2e-plan.md` INT-7/8/16).
 /// At the unit level we can only verify the type-layer plumbing:
 /// that `ReceiveCompoundShare` exists in the `GovRedeemer` enum and
 /// that its Constr index is stable (governance TXs build the redeemer

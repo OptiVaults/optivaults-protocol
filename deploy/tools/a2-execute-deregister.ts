@@ -8,7 +8,7 @@
  * credential, (c) continuing MultisigGov output.
  *
  * Usage:
- *   TARGET=vaultAdmin npx tsx v1/deploy/tools/a2-execute-deregister.ts \
+ *   TARGET=vaultAdmin npx tsx deploy/tools/a2-execute-deregister.ts \
  *     --network Preprod --releaseTag v1-a2-preprod
  */
 import * as dotenv from "dotenv";
@@ -156,7 +156,7 @@ async function main() {
     : process.env.BLOCKFROST_API_KEY!;
   if (!bfKey) throw new Error("Missing Blockfrost key");
 
-  const stateFile = `v1/deploy/state/${args.network.toLowerCase()}-${args.releaseTag}.json`;
+  const stateFile = `deploy/state/${args.network.toLowerCase()}-${args.releaseTag}.json`;
   const state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
   const a2 = state.a2?.[args.target];
   if (!a2) throw new Error(`no queued action for target=${args.target} — run a2-queue-deregister.ts first`);
@@ -170,7 +170,7 @@ async function main() {
   if (nowMs > expiresAtMs) throw new Error(`action expired (${new Date(expiresAtMs).toISOString()})`);
   console.log(`executable window: ${new Date(executableAtMs).toISOString()} → ${new Date(expiresAtMs).toISOString()}`);
 
-  const plutus = JSON.parse(fs.readFileSync("v1/contracts/plutus.json", "utf8"));
+  const plutus = JSON.parse(fs.readFileSync("contracts/plutus.json", "utf8"));
   const provider = createBlockfrostProvider(bfUrl, bfKey);
   const lucid = await Lucid(provider as any, args.network);
   const sock = process.env.KEY_DAEMON_SOCKET || "/home/chrissoft/claude-code-docker/data/key-daemon-preprod.sock";

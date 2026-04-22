@@ -5,7 +5,7 @@
 /// check_swap_order, check_swap_order_at) require Minswap V2 datum
 /// mocking with Output fixtures, which belongs in Preprod E2E tests
 /// per the V1 testing philosophy. Preprod scenario
-/// `DeployToProtocol-swap` in `v1/tests/preprod-e2e-plan.md` MUST
+/// `DeployToProtocol-swap` in `tests/preprod-e2e-plan.md` MUST
 /// exercise both:
 ///   - Real Minswap V2 SwapExactIn order → decoder extracts min_receive
 ///   - Crafted min_receive = 1 order → peg-floor rejects

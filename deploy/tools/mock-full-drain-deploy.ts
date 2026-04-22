@@ -7,7 +7,7 @@
  * will fail at `getCompiledCode()` — see preprod-mock.json `_comment`
  * for the rewrite plan. The v1-mock-drain Preprod ceremony already
  * completed (Vault NFT `9cd81a56…` burned, proxy addr emptied —
- * documented in `v1/deploy/state/recovery-verification.md`), so this
+ * documented in `deploy/state/recovery-verification.md`), so this
  * rewrite is low-priority archival maintenance.
  *
  * Original description:
@@ -30,11 +30,11 @@
  * (keeper) and A2 publish handler (governance), never in Deposit/
  * Withdraw.
  *
- * Writes state to `v1/deploy/state/preprod-<releaseTag>.json` for the
+ * Writes state to `deploy/state/preprod-<releaseTag>.json` for the
  * companion `full-drain-test.ts` to consume.
  *
  * Usage:
- *   npx tsx v1/deploy/tools/mock-full-drain-deploy.ts --releaseTag v1-mock-drain
+ *   npx tsx deploy/tools/mock-full-drain-deploy.ts --releaseTag v1-mock-drain
  */
 import * as dotenv from "dotenv";
 dotenv.config({ path: "keeper/.env" });
@@ -110,7 +110,7 @@ function getCode(bp: Blueprint, prefix: string): string {
 
 async function main() {
   const { releaseTag } = parseArgs();
-  const cfg = JSON.parse(fs.readFileSync("v1/deploy/config/preprod-mock.json", "utf8"));
+  const cfg = JSON.parse(fs.readFileSync("deploy/config/preprod-mock.json", "utf8"));
   const bfKey = process.env[cfg.blockfrost.projectIdEnv];
   if (!bfKey) throw new Error(`${cfg.blockfrost.projectIdEnv} not set`);
   const bfUrl = cfg.blockfrost.url;
@@ -123,7 +123,7 @@ async function main() {
   const walletPkh = paymentCredentialOf(wallet).hash;
   log("INFO", `wallet ${wallet.slice(0, 30)}…${wallet.slice(-8)}`);
 
-  const stateFile = `v1/deploy/state/preprod-${releaseTag}.json`;
+  const stateFile = `deploy/state/preprod-${releaseTag}.json`;
   const state: any = fs.existsSync(stateFile) ? JSON.parse(fs.readFileSync(stateFile, "utf8")) : {
     network: "Preprod",
     releaseTag,
@@ -342,7 +342,7 @@ async function main() {
   log("INFO", `  vault addr: ${proxyAddr}`);
   log("INFO", `  vault NFT: ${vaultNftPolicyId}`);
   log("INFO", `  vusdcx: ${vusdcxPolicy}`);
-  log("INFO", `Next: npx tsx v1/deploy/tools/full-drain-test.ts --releaseTag ${releaseTag}`);
+  log("INFO", `Next: npx tsx deploy/tools/full-drain-test.ts --releaseTag ${releaseTag}`);
 }
 
 main().catch((e) => { log("ERROR", (e as Error).message); if ((e as Error).stack) console.error((e as Error).stack); process.exit(1); });

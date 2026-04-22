@@ -9,10 +9,10 @@
  *
  * Output: prints 3 PKHs (accountIndex 0/1/2, addressType "Base",
  * standard CIP-1852 derivation path `m/1852'/1815'/i'/0/0`). Copy into
- * `v1/deploy/config/preprod.json` governance.signers.
+ * `deploy/config/preprod.json` governance.signers.
  *
  * Usage:
- *   npx tsx v1/deploy/tools/derive-gov-signers.ts
+ *   npx tsx deploy/tools/derive-gov-signers.ts
  */
 import * as dotenv from "dotenv";
 dotenv.config({ path: "keeper/.env" });

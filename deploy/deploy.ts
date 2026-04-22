@@ -3,7 +3,7 @@
  *
  * End-to-end deploy pipeline that walks through the 27-30 ceremony
  * transactions described in whitepaper §8.2, writes state to
- * `v1/deploy/state/<network>-<releaseTag>.json` after every successful TX,
+ * `deploy/state/<network>-<releaseTag>.json` after every successful TX,
  * and resumes cleanly if interrupted.
  *
  * Pipeline phases (step keys in brackets — used by state.ts for resume):
@@ -48,16 +48,16 @@
  *     datum matching the config's initial-params section.
  *
  * Usage:
- *   npx tsx v1/deploy/deploy.ts --network Preprod --releaseTag v1-launch-rc1
+ *   npx tsx deploy/deploy.ts --network Preprod --releaseTag v1-launch-rc1
  *
  *   # Dry-run (no TXs submitted, just logs what would happen):
- *   npx tsx v1/deploy/deploy.ts --network Preprod --releaseTag v1-launch-rc1 --dryRun
+ *   npx tsx deploy/deploy.ts --network Preprod --releaseTag v1-launch-rc1 --dryRun
  *
  *   # Resume a failed ceremony (re-reads state file, picks up where it left off):
  *   (same command; idempotent)
  *
  *   # Reset state and start over:
- *   npx tsx v1/deploy/deploy.ts --network Preprod --releaseTag v1-launch-rc1 --reset
+ *   npx tsx deploy/deploy.ts --network Preprod --releaseTag v1-launch-rc1 --reset
  *
  * Preprod verification notes:
  *   - Requires deploy wallet with ≥ 500 ADA (400 for ref-script lockup + 50
@@ -154,7 +154,7 @@ function parseArgs(): CliArgs {
     } else if (a === "--skipCompile") {
       skipCompile = true;
     } else if (a === "--help" || a === "-h") {
-      console.log(`Usage: npx tsx v1/deploy/deploy.ts [options]
+      console.log(`Usage: npx tsx deploy/deploy.ts [options]
 
 Options:
   --network <Preprod|Mainnet>   Default: Preprod
@@ -378,7 +378,7 @@ async function publishRefScript(
 
 // ---------------------------------------------------------------------
 // Datum constructors — match the Aiken type definitions in
-// `v1/contracts/lib/vault/types.ak`. Constructor indices must match the
+// `contracts/lib/vault/types.ak`. Constructor indices must match the
 // Aiken type order exactly (Aiken assigns variant indices in
 // declaration order starting at 0).
 // ---------------------------------------------------------------------
@@ -562,7 +562,7 @@ async function main() {
   await runPhase4bStateUtxos(lucid!, scripts, cfg, state, hashes);
 
   log("INFO", "=== V1 ceremony complete ===");
-  log("INFO", `State file: v1/deploy/state/${args.network.toLowerCase()}-${args.releaseTag}.json`);
+  log("INFO", `State file: deploy/state/${args.network.toLowerCase()}-${args.releaseTag}.json`);
   log("INFO", `Vault addr: ${state.stateUtxos.vault?.address}`);
   log("INFO", `Registry addr: ${state.stateUtxos.registry?.address}`);
 }

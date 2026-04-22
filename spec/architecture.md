@@ -114,7 +114,7 @@ Feed datum format (InlineDatum on the feed UTXO): `PriceSample { price_bps: Int,
 
 ## 4. Contract catalog
 
-V1 ships with **17 logic validators + 4 NFT mint policies + 1 DEX adapter (`minswap_v2_adapter`) = 22 compiled artefacts total** (canonical count, used consistently across whitepaper §3.1, README size table, and `audit-scope.md` §6 scope statement). All are Aiken PlutusV3; compiled sizes recorded in `v1/README.md`. Partitioning rationale (4 orthogonal seams: authorization-boundary, governance response-latency, bytecode-cost-center, size-fix) covered in §4.1 below.
+V1 ships with **17 logic validators + 4 NFT mint policies + 1 DEX adapter (`minswap_v2_adapter`) = 22 compiled artefacts total** (canonical count, used consistently across whitepaper §3.1, README size table, and `audit-scope.md` §6 scope statement). All are Aiken PlutusV3; compiled sizes recorded in `README.md`. Partitioning rationale (4 orthogonal seams: authorization-boundary, governance response-latency, bytecode-cost-center, size-fix) covered in §4.1 below.
 
 | # | Validator | Role | Authorization model |
 |---|-----------|------|---------------------|

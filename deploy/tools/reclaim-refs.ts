@@ -21,7 +21,7 @@
  * reclaim is supported — re-run to pick up any missed ones later).
  *
  * Usage:
- *   npx tsx v1/deploy/tools/reclaim-refs.ts --network Preprod --releaseTag v1-preprod-e2e
+ *   npx tsx deploy/tools/reclaim-refs.ts --network Preprod --releaseTag v1-preprod-e2e
  *
  * Flags:
  *   --dryRun   build but do not submit (prints TX hash of unsigned body)
@@ -103,7 +103,7 @@ async function main() {
   console.log(`wallet: ${addr.slice(0, 30)}…${addr.slice(-8)}`);
 
   // Load ceremony state
-  const statePath = `v1/deploy/state/${network.toLowerCase()}-${releaseTag}.json`;
+  const statePath = `deploy/state/${network.toLowerCase()}-${releaseTag}.json`;
   const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
   const refScripts = state.refScripts as Record<
     string,

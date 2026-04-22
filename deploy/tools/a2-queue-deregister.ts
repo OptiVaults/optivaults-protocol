@@ -10,7 +10,7 @@
  * override; 14d in production), then call `a2-execute-deregister.ts`.
  *
  * Usage:
- *   TARGET=vaultAdmin npx tsx v1/deploy/tools/a2-queue-deregister.ts \
+ *   TARGET=vaultAdmin npx tsx deploy/tools/a2-queue-deregister.ts \
  *     --network Preprod --releaseTag v1-a2-preprod
  */
 import * as dotenv from "dotenv";
@@ -162,7 +162,7 @@ async function main() {
     : process.env.BLOCKFROST_API_KEY!;
   if (!bfKey) throw new Error("Missing Blockfrost key");
 
-  const stateFile = `v1/deploy/state/${args.network.toLowerCase()}-${args.releaseTag}.json`;
+  const stateFile = `deploy/state/${args.network.toLowerCase()}-${args.releaseTag}.json`;
   if (!fs.existsSync(stateFile)) throw new Error(`state not found: ${stateFile}`);
   const state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
   if (!state.stateUtxos?.governance) throw new Error("gov state UTxO not in state — ceremony PHASE 4b incomplete");

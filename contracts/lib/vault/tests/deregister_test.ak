@@ -8,7 +8,7 @@
 ///
 /// TX-context coverage (publish handler rejection paths — no-gov-input,
 /// wrong action_kind, wrong target, wrong payload, non-ExecuteAction
-/// redeemer) lives in the Preprod E2E scripts: `v1/deploy/tools/
+/// redeemer) lives in the Preprod E2E scripts: `deploy/tools/
 /// mock-full-drain-deploy.ts` + any future `a2-deregister-test.ts`.
 /// The unit-test suite intentionally stops at pure predicates — V1's
 /// broader philosophy is that TX-composition checks belong on-chain,

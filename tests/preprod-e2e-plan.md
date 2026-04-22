@@ -1,19 +1,19 @@
 # OptiVaults V1 — Preprod E2E Test Plan
 
-**Status**: Draft. Implements the test cases listed below as TypeScript scripts under `v1/tests/preprod/` once the V1 keeper / API / deploy pipeline is wired (currently pending — see `v1/keeper/` and `v1/contracts/` empty trees in v1/README.md).
+**Status**: Draft. Implements the test cases listed below as TypeScript scripts under `tests/preprod/` once the V1 keeper / API / deploy pipeline is wired (currently pending — the keeper reference implementation lives in a separate repository).
 
 **Audience**: V1 implementation engineers + future external auditor. The plan enumerates every redeemer that V1 ships with and the minimum verification scenarios required before Mainnet ceremony.
 
-**Reference contract artifacts**: `v1/contracts/plutus.json` (regenerated via `aiken build`).
+**Reference contract artifacts**: `contracts/plutus.json` (regenerated via `aiken build`).
 
 ---
 
 ## 1. Scope
 
-This plan covers **on-chain Preprod transaction submission and verification** for every V1 redeemer. Off-chain unit tests live in `v1/contracts/lib/vault/tests/*.ak` (validation predicates) and `v1/keeper/test/` (keeper engine TS tests, future).
+This plan covers **on-chain Preprod transaction submission and verification** for every V1 redeemer. Off-chain unit tests live in `contracts/lib/vault/tests/*.ak` (validation predicates); keeper engine TS tests live in the separate keeper-implementation repository.
 
 **Out of scope** for this plan:
-- Mainnet operations (covered by `v1/docs/runbooks/v1-mainnet-ceremony.md` once written)
+- Mainnet operations (covered by `docs/runbooks/v1-mainnet-ceremony.md` once written)
 - Off-chain unit tests
 - Property-based / fuzz tests (planned `lib/vault/tests/property_test.ak`)
 - Long-running stability tests (e.g., 90-day quarterly distribution cycle)
@@ -315,8 +315,8 @@ These exercise the full TX patterns where multiple validators must succeed toget
 
 ## 5. Test execution conventions
 
-- Each test script lives at `v1/tests/preprod/<id>.test.ts` (TypeScript w/ Lucid Evolution or CML).
-- Test reads/writes deploy state from `v1/tests/preprod/state/v1-r0-preprod.json` (single-source canonical state file, atomic-write pattern; mirrors `data/v9.3-ref-scripts-preprod.json` from the internal-verification flow).
+- Each test script lives at `tests/preprod/<id>.test.ts` (TypeScript w/ Lucid Evolution or CML).
+- Test reads/writes deploy state from `tests/preprod/state/v1-r0-preprod.json` (single-source canonical state file, atomic-write pattern; mirrors `data/v9.3-ref-scripts-preprod.json` from the internal-verification flow).
 - Each test asserts on TX confirmation + on-chain datum/balance after `awaitTx`.
 - Failing assertions throw with a clear message; successful runs print the TX hash + a one-line summary.
 - A wrapper script `npm run e2e:v1` runs all tests in dependency order (NFT-1 first, then proxy/vusdcx/order, then redeemer-specific, then INT-*).
@@ -329,7 +329,7 @@ Before tagging V1 mainnet candidate:
 - [ ] Every redeemer in `plutus.json` exercised at least once.
 - [ ] At least one negative-path test per redeemer (the "TX fails" rows above).
 - [ ] At least one cross-validator integration scenario per witness combination.
-- [ ] aiken unit-test suite (`v1/contracts/lib/vault/tests/`) passes `aiken check` with 0 failures.
+- [ ] aiken unit-test suite (`contracts/lib/vault/tests/`) passes `aiken check` with 0 failures.
 - [ ] Deploy ceremony (NFT-1 through KAS-1) re-run cleanly on a fresh Preprod address.
 - [ ] Resource budget checks: every TX exec mem < 14 M, exec steps < 10 G (Conway era ceiling).
 - [ ] CBOR-tag-258 / Conway ref-script fee workarounds verified (per `optivaults/contracts/SECURITY.md` §External Trust Boundaries).
@@ -345,12 +345,12 @@ Before tagging V1 mainnet candidate:
 
 ## 8. References
 
-- `v1/spec/architecture.md` — 17-validator catalog (+ 4 one-shot NFT mint policies + 1 DEX adapter = 22 total artefacts; partitioning rationale in §4.1)
-- `v1/spec/governance.md` + `v1/spec/multisig-gov.md` — gov action set
-- `v1/spec/treasury.md` — treasury redeemer details
-- `v1/spec/keeper-auth.md` — keeper rotation + bond mechanics
-- `v1/spec/order-batch.md` — order/batch invariants
-- `v1/spec/ada-swap.md` — SwapAda spec
-- `v1/spec/vault-nft.md` — Vault Identity NFT lifecycle
-- `v1/contracts/plutus.json` — generated blueprint
-- `v1/contracts/lib/vault/tests/validation_test.ak` — datum-transition unit tests
+- `spec/architecture.md` — 17-validator catalog (+ 4 one-shot NFT mint policies + 1 DEX adapter = 22 total artefacts; partitioning rationale in §4.1)
+- `spec/governance.md` + `spec/multisig-gov.md` — gov action set
+- `spec/treasury.md` — treasury redeemer details
+- `spec/keeper-auth.md` — keeper rotation + bond mechanics
+- `spec/order-batch.md` — order/batch invariants
+- `spec/ada-swap.md` — SwapAda spec
+- `spec/vault-nft.md` — Vault Identity NFT lifecycle
+- `contracts/plutus.json` — generated blueprint
+- `contracts/lib/vault/tests/validation_test.ak` — datum-transition unit tests

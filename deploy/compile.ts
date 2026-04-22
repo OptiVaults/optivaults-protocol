@@ -1,7 +1,7 @@
 /**
  * V1 compile step.
  *
- * Takes `v1/contracts/plutus.json` (output of `aiken build`) + one of the
+ * Takes `contracts/plutus.json` (output of `aiken build`) + one of the
  * deploy config files, and produces the full applied-hash set used by the
  * ceremony. The dependency graph is:
  *
@@ -62,7 +62,7 @@
  * (useful for ceremony rehearsal + mainnet announce-the-hashes-ahead-of-time).
  *
  * Usage:
- *   npx tsx v1/deploy/compile.ts --network preprod --utxoRefs <out.json>
+ *   npx tsx deploy/compile.ts --network preprod --utxoRefs <out.json>
  *
  * The `--utxoRefs` file contains the 3 UTxO references that will back the
  * 3 ceremony one-shot NFT policies (vault_nft / governance_nft /
@@ -172,7 +172,7 @@ function loadBlueprint(): Blueprint {
   );
   if (!fs.existsSync(p)) {
     throw new Error(
-      `${p} not found. Run \`cd v1/contracts && rm -rf build plutus.json && aiken build\` first.`,
+      `${p} not found. Run \`cd contracts && rm -rf build plutus.json && aiken build\` first.`,
     );
   }
   return JSON.parse(fs.readFileSync(p, "utf8")) as Blueprint;
@@ -573,14 +573,14 @@ if (require.main === module) {
       output = args[++i];
     } else if (a === "--help" || a === "-h") {
       console.log(`
-Usage: npx tsx v1/deploy/compile.ts [options]
+Usage: npx tsx deploy/compile.ts [options]
 
 Options:
   --network <Preprod|Mainnet>   Network to compile for (default: Preprod)
   --utxoRefs <path>             JSON file with 3 UTxO refs for NFT mints
                                 (required; see example below)
   --output <path>               Where to write compiled-hashes.json
-                                (default: v1/deploy/state/<network>-hashes.json)
+                                (default: deploy/state/<network>-hashes.json)
   -h, --help                    Show this help
 
 utxoRefs JSON format:

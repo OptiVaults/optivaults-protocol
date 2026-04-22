@@ -1,7 +1,7 @@
 /**
  * Deploy ceremony state checkpoint.
  *
- * The ceremony writes state to `v1/deploy/state/<network>-<release_tag>.json`
+ * The ceremony writes state to `deploy/state/<network>-<release_tag>.json`
  * after every successful TX. Reruns resume from the last checkpoint so
  * partial failures do not force restarting from zero.
  *

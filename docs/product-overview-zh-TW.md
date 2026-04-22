@@ -20,7 +20,7 @@ OptiVaults V1 是 Cardano 上的非託管智能合約 vault。使用者存入 US
 以下這些是 V1 提供、而現有 Cardano DeFi 替代方案（Direct Liqwid / CEX earn / 自己保管 USDCx）**沒辦法一次給你的整組特性**——不是行銷話術，每一項都可直接驗證合約原始碼或鏈上狀態：
 
 - **一筆 CIP-30 交易 = 三穩定幣分散 + 自動複利。** Cardano 上唯一打包「45% DJED + 25% USDM + 30% USDCx buffer」一筆 deposit TX 完成的產品。直接 Liqwid supply 要 2-4 筆 TX 進場 + 每次 recall 另一組 TX 來回。
-- **存款人保護是合約 invariant，不是營運承諾。** 4.5% 費率 immutable、沒有 admin-drain redeemer、Withdraw 無暫停開關——全部寫進 validator hash，治理改不掉。驗證方式：讀 `v1/contracts/validators/` 下的 validator 原始碼（使用者流程主要落在 `vault_user.ak` + `vault_keeper_hot.ak`，UpdateFee cap 落在 `vault_gov_policy.ak`）+ `aiken build` 重現 hash 與鏈上部署對照。
+- **存款人保護是合約 invariant，不是營運承諾。** 4.5% 費率 immutable、沒有 admin-drain redeemer、Withdraw 無暫停開關——全部寫進 validator hash，治理改不掉。驗證方式：讀 `contracts/validators/` 下的 validator 原始碼（使用者流程主要落在 `vault_user.ak` + `vault_keeper_hot.ak`，UpdateFee cap 落在 `vault_gov_policy.ak`）+ `aiken build` 重現 hash 與鏈上部署對照。
 - **自助退場不需要任何 OptiVaults 基礎設施。** `withdraw-cli` + `emergency-withdraw` 網頁工具讓你直接對 Cardano 鏈建構並簽署 withdraw TX——不需要我們的 API、keeper、或 server 運作。V1 的 0.1% early-withdraw fee（屬於 buffer 設計的 structural fee）在 keeper 離線 7 天後合約自動免除，所以 self-serve 路徑完全免費。
 - **vUSDCx 是標準 Cardano 原生代幣**（不綁原始存款錢包位置）。可送人、若未來出現二級市場 / lending market 時可抵押或出售——**這是 future-value 特性**，pre-audit 期間不一定直接用得到；對比 Liqwid qToken 必須從原始存款錢包 redeem。
 - **Apache 2.0 完全開源、fork-welcome。** 其他 Cardano 團隊可免費 fork + 特化自己的變體（不同穩定幣組合、風險姿態、區域變體）。

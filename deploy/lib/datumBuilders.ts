@@ -2,7 +2,7 @@
  * Pure datum builders for V1 state UTXOs.
  *
  * Each function returns a Lucid `Data` value whose on-chain bytes match
- * the corresponding Aiken type in `v1/contracts/lib/vault/types.ak`.
+ * the corresponding Aiken type in `contracts/lib/vault/types.ak`.
  * Constructor indices follow Aiken's declaration order (starts at 0).
  *
  * Keeping these in their own module gives us:

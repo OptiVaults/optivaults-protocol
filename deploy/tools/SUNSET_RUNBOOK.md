@@ -69,12 +69,12 @@ One command does the whole sunset sequence:
 
 ```bash
 # Preprod
-npx tsx v1/deploy/tools/sunset-ceremony.ts \
+npx tsx deploy/tools/sunset-ceremony.ts \
   --network Preprod \
   --releaseTag v1-<release-tag>
 
 # Mainnet (DO NOT run casually — 14-day timelock)
-npx tsx v1/deploy/tools/sunset-ceremony.ts \
+npx tsx deploy/tools/sunset-ceremony.ts \
   --network Mainnet \
   --releaseTag v1-<release-tag>
 ```
@@ -91,7 +91,7 @@ Flags:
 - `--dryRun` — print the plan, don't submit any TX.
 
 The orchestrator is **idempotent**: rerunning after a partial completion
-picks up from the state file (`v1/deploy/state/<network>-<tag>.json`).
+picks up from the state file (`deploy/state/<network>-<tag>.json`).
 Already-queued targets are skipped; already-executed targets are skipped.
 Already-reclaimed ref scripts are filtered out by Blockfrost
 `utxosByOutRef`.
@@ -120,7 +120,7 @@ Each step can be run independently:
 
 ```bash
 # 1. Queue one target
-TARGET=vaultUser npx tsx v1/deploy/tools/a2-queue-deregister.ts \
+TARGET=vaultUser npx tsx deploy/tools/a2-queue-deregister.ts \
   --network Preprod --releaseTag <tag>
 
 # Repeat for all 12 targets.
@@ -128,13 +128,13 @@ TARGET=vaultUser npx tsx v1/deploy/tools/a2-queue-deregister.ts \
 # 2. Wait 1h (Preprod) or 14d (Mainnet).
 
 # 3. Execute one target
-TARGET=vaultUser npx tsx v1/deploy/tools/a2-execute-deregister.ts \
+TARGET=vaultUser npx tsx deploy/tools/a2-execute-deregister.ts \
   --network Preprod --releaseTag <tag>
 
 # Repeat for all 12.
 
 # 4. Reclaim refs (ONLY after all 12 executes succeeded).
-npx tsx v1/deploy/tools/reclaim-refs.ts \
+npx tsx deploy/tools/reclaim-refs.ts \
   --network Preprod --releaseTag <tag>
 ```
 
@@ -159,7 +159,7 @@ scripts + 12 stake deposits.
 
 Before starting any sunset:
 
-- [ ] State file exists: `v1/deploy/state/<network>-<tag>.json`
+- [ ] State file exists: `deploy/state/<network>-<tag>.json`
 - [ ] Deploy wallet has ≥ 20 ADA for fees
 - [ ] Governance signer keys are accessible (2 of 3 signers needed for
       every Queue + Execute TX; at least 2 signers' keys must be available)
@@ -173,9 +173,9 @@ Before starting any sunset:
 
 ## Related files
 
-- `v1/deploy/tools/a2-queue-deregister.ts` — single-target queue
-- `v1/deploy/tools/a2-execute-deregister.ts` — single-target execute
-- `v1/deploy/tools/reclaim-refs.ts` — bulk ref-script reclaim
-- `v1/deploy/tools/sunset-ceremony.ts` — orchestrator (this document's subject)
-- `v1/contracts/lib/vault/constants.ak::timelock_deregister_stake_ms` — on-chain timelock
+- `deploy/tools/a2-queue-deregister.ts` — single-target queue
+- `deploy/tools/a2-execute-deregister.ts` — single-target execute
+- `deploy/tools/reclaim-refs.ts` — bulk ref-script reclaim
+- `deploy/tools/sunset-ceremony.ts` — orchestrator (this document's subject)
+- `contracts/lib/vault/constants.ak::timelock_deregister_stake_ms` — on-chain timelock
 - `memory/feedback_ceremony_reclaim_order.md` — the lesson that produced this runbook

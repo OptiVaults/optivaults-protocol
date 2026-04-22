@@ -257,7 +257,7 @@ pub type ActionKind {
   ///   - minswap_v2_adapter (SwapAdapter A2 coverage; adapter is
   ///     parameterized on governance anchors solely to enable this path).
   /// Runs through the standard `is_gov_authorized` m-of-n gate with a
-  /// 14-day timelock. See v1/deploy/state/recovery-verification.md §2.
+  /// 14-day timelock. See deploy/state/recovery-verification.md §2.
   ActDeregisterStake
 }
 

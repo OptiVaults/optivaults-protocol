@@ -204,7 +204,7 @@ Specific dates are announced 14 days ahead of activation via Discord and governa
 
 Before the formal program activates:
 
-1. **Read** `v1/` documentation (this is a good start)
+1. **Read** the V1 documentation in this repository (this is a good start)
 2. **Pick** an issue labeled `good-first-issue` on GitHub, or propose one
 3. **Discuss** in the Discord `#contributions` channel before investing significant effort
 4. **Submit** a pull request following the style guidelines (`CONTRIBUTING.md` at repo root)

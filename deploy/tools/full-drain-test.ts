@@ -27,7 +27,7 @@
  *      - wallet ADA delta ≈ vault seed - fees (±3 ADA)
  *
  * Usage:
- *   npx tsx v1/deploy/tools/full-drain-test.ts --releaseTag v1-mock-drain
+ *   npx tsx deploy/tools/full-drain-test.ts --releaseTag v1-mock-drain
  */
 import * as dotenv from "dotenv";
 dotenv.config({ path: "keeper/.env" });
@@ -115,12 +115,12 @@ function rebuildDatum(
 
 async function main() {
   const { releaseTag } = parseArgs();
-  const cfg = JSON.parse(fs.readFileSync("v1/deploy/config/preprod-mock.json", "utf8"));
+  const cfg = JSON.parse(fs.readFileSync("deploy/config/preprod-mock.json", "utf8"));
   const bfKey = process.env[cfg.blockfrost.projectIdEnv];
   if (!bfKey) throw new Error(`${cfg.blockfrost.projectIdEnv} missing`);
   const bfUrl = cfg.blockfrost.url;
 
-  const stateFile = `v1/deploy/state/preprod-${releaseTag}.json`;
+  const stateFile = `deploy/state/preprod-${releaseTag}.json`;
   if (!fs.existsSync(stateFile)) throw new Error(`state not found: ${stateFile}`);
   const state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
   if (!state.vaultUtxo) throw new Error(`mock deploy incomplete — vaultUtxo missing`);
@@ -134,7 +134,7 @@ async function main() {
   log("INFO", `wallet ${wallet.slice(0, 30)}…`);
 
   // Load compiled scripts from state (applied CBOR was not saved — recompile on the fly)
-  const bp = JSON.parse(fs.readFileSync("v1/contracts/plutus.json", "utf8"));
+  const bp = JSON.parse(fs.readFileSync("contracts/plutus.json", "utf8"));
   const getCode = (prefix: string): string =>
     bp.validators.find((v: any) => v.title.startsWith(prefix + "."))!.compiledCode;
 

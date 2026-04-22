@@ -418,7 +418,7 @@ V1 處於**啟動期（bootstrapping phase）**，直到 TVL 達到自給區間�
    - 所有在途 Minswap V2 訂單 cancel 或過期
    - 治理 queue `UpdateFee` 將 `performance_fee_bps → 0`(「sunset 期間 fee 歸零承諾」)
 3. **90 天窗口期間：** 不接受新存入（frontend gate + keeper 拒絕 BatchProcess deposit orders）、withdraw 完全開放、0% 績效費、keeper 持續送 zero-yield Compound heartbeat 保持 7 天 inactivity guard 有效。
-4. **90 天後：** 剩餘 < dust 門檻的部位可透過治理 `EmergencyWithdraw` 合併；ref-script 資本透過 `v1/deploy/tools/reclaim-refs.ts`（隨 V1 實作一併發佈）回收。
+4. **90 天後：** 剩餘 < dust 門檻的部位可透過治理 `EmergencyWithdraw` 合併；ref-script 資本透過 `deploy/tools/reclaim-refs.ts`（隨 V1 實作一併發佈）回收。
 
 **Sunset 觸發時的啟動資金保留下限。** Sunset protocol 觸發時，啟動實體承諾於啟動資本中保留至少 **~150 ADA**（約 $75-100 USD，依當下 ADA 市價）專款，覆蓋 sunset 的 90 天結算窗口所需鏈上費用：(a) 90 天 keeper 營運週期（zero-yield heartbeat 每 5 天 + 週六排程 Compound + Liqwid market 監控）≈ 60-80 ADA；(b) 1× Liqwid full recall 跨 3 markets ≈ 6 ADA；(c) Minswap V2 router gas 為 stable → USDCx 轉換 ≈ 6 ADA；(d) Conway 期 ref-script fee 附加費(~1.2 ADA × 40 TX)≈ 48 ADA；(e) 20% 安全緩衝。此 150 ADA 保留與「fee=0% 承諾」共同形成 sunset 期間的操作性保證——即使主要啟動資金已耗盡（sunset 觸發條件本身之一），sunset 的 90 天結算仍有獨立資金覆蓋，存入者不會因營運方資金見底而陷入「提領 TX 送不出去」的絕境。
 
@@ -929,7 +929,7 @@ V1 想達到的具體里程碑：**V1 連續 12 個月運作無遷移或重新�
 
 - **V1 全部 12 個 staking credential 的 2 ADA stake 押金都可回收。** `vault_user` / `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada` / `vault_protocol` / `vault_recall` / `vault_liqwid` / `vault_gov_policy` / `vault_gov_emergency` / `vault_admin_deploy` / `keeper_stake_script` / `minswap_v2_adapter` 每個都帶自己的 A2 治理閘門 `publish` handler — sunset 時可透過治理流程合計回收 24 ADA。（早期 monolithic-validator 拓撲因 16 KB ceiling 與 `publish` handler 的 bytecode 衝突，最大 validator 曾有 2 ADA 永久鎖定的 caveat；現在的 partitioning 已經解除這個限制，詳見 `spec/architecture.md §4.1`。）
 - **100K TVL 上限「不」在合約層強制** — 由 operator 透過前端存入 gating + keeper `tvlCapMonitor` 告警執行。這是 V1 刻意的設計選擇，不是疏漏。內部審查曾設計過合約層版本（`max_tvl` datum field + `ActUpdateTvlCap` 7 天 timelock 治理動作，當時稱 Option B），最終沒出貨，理由有二：(1) 上限的存在意義只在 pre-audit 期作為審慎訊號；外審通過後要嘛放寬無限、要嘛 V2 重部署時拿掉，合約層動態調整機制對「一次性生命週期事件」是過度工程。(2) V1 啟動雖為 3-of-3 unanimity 搭配 1 位創辦人 + 2 位獨立 SPO（§5.5），3-of-3 能擋下創辦人單方 queue，但上限調整的「正確性」判斷並非 SPO 的核心領域（他們是 stake pool 營運者，非 vault 經濟模型設計者）；在 pre-audit 期把上限交給 SPO 裁決也不是真正的制衡關係——誠實標記為「operator-enforced」比裝扮成「contract-enforced」更有品格。希望多一層合約層存入上限保護的 存入者，請等 Phase 2 gov 輪替（外部 signer 加入，§6.1）——屆時才有實質 dissent-veto 語意，V2 會重新評估。
-- **Reference-script 資本鎖倉。** V1 的 18 個 reference script UTXO（17 個 logic validator + 1 個 SwapAdapter）部署在 deploy wallet 地址，合計佔用約 **870 ADA**（Conway 時代的 per-byte `minFeeRefScriptCostPerByte` × 1.10× operator safety multiplier — V1 Preprod 實測為 871.51 ADA），若 operator 決定 sunset 部署可透過 `v1/deploy/tools/reclaim-refs.ts` 回收。此外還有 24 ADA 的 stake credential 押金（12 × 2 ADA）可透過 A2 governance 在 14d timelock 後回收。詳見 §8.2 的 pre-launch 審計背景。
+- **Reference-script 資本鎖倉。** V1 的 18 個 reference script UTXO（17 個 logic validator + 1 個 SwapAdapter）部署在 deploy wallet 地址，合計佔用約 **870 ADA**（Conway 時代的 per-byte `minFeeRefScriptCostPerByte` × 1.10× operator safety multiplier — V1 Preprod 實測為 871.51 ADA），若 operator 決定 sunset 部署可透過 `deploy/tools/reclaim-refs.ts` 回收。此外還有 24 ADA 的 stake credential 押金（12 × 2 ADA）可透過 A2 governance 在 14d timelock 後回收。詳見 §8.2 的 pre-launch 審計背景。
 - **架構複雜度成長。** V1 第一版是 12 validators；目前拓撲是 **22 個 artefacts**（17 個 logic validator + 4 個 NFT mint policy + 1 個 DEX adapter），80% 的成長是被 Plutus V3 16 KB reference-script 上限 + §5.4 P3-P5 滑點 stack 新增推動的。每加一個 validator 就增加 (a) 一個獨立的審計範圍面、(b) 一組額外的 compile-time anchor、(c) 一個額外的 reference-script UTXO（目前參數下約 ~50 ADA each）、(d) 一筆額外的 deploy ceremony TX。對首次部署的淨效果：ref-script 鎖定從早期估的 ~400 ADA 增加到實測的 871.51 ADA（+118%），ceremony TX 從 ~18 增加到 27-30（+50%）。對外部審計預算的影響：**12 個 staking-credential 的 A2 `publish` handler 必須各自被審計**（不像之前 single-validator vault_core lock 的情境是被歸在審計範圍外），所以「解除 vault_core 2 ADA 永久鎖定」是用「擴大審計表面」換來的。未來 feature 加入有可能再觸發拆分——一個 V1 cycle 內從 12 → 22 的 trajectory 暗示 V2 需要 (a) 接受更高 artefact 數作為新 baseline，或 (b) 用 on-chain dispatch table 整合。V1 明確選擇 (a)，因為 design freeze → audit → launch 的順序不容許後期重新架構；V2 會重新評估。
 - **Circle / xReserve 信任鏈。** USDCx 的價值依賴 Circle 的 USD reserve 完整性 + xReserve 跨鏈橋安全。兩者各自由其團隊公開審計;V1 不在此之上多加信任假設。
 
@@ -965,7 +965,7 @@ scripts/verify-hashes.sh  # 比對 plutus.json 的 hash 與鏈上部署
 
 ## 11. 相關文件
 
-**規格（位於 `v1/spec/`）**：
+**規格（位於 `spec/`）**：
 
 - `architecture.md` — **17 個 logic validator** 目錄與 redeemer 細節（+ 4 個 one-shot NFT mint policy + 1 個 DEX adapter = 合計 22 個 artefact）；§4.1 說明 partitioning rationale（4 個正交切割面：authorization-boundary / response-latency / bytecode-cost-center / size-fix）
 - `vault-datum.md` — VaultDatum schema（**28 欄位**，§5.4 Phase 2 後加入 `max_slippage_bps` + `min_swap_peg_bps`）、不可變 / 治理可變 / 操作可變分類、每個 redeemer 的 state-transition 矩陣
@@ -978,7 +978,7 @@ scripts/verify-hashes.sh  # 比對 plutus.json 的 hash 與鏈上部署
 - `ada-swap.md` — SwapAda redeemer（金庫 ADA 補充閉環）、Charli3 + Orcfax oracle 讀取
 - `vault-nft.md` — Vault Identity NFT 的 PlutusV3 UTXO-ref one-shot 設計
 
-**文件（位於 `v1/docs/`）**：
+**文件（位於 `docs/`）**：
 
 - `security-model.md` — 對手方分類、六身份分離目標、攻擊面清單、殘餘風險總整
 - `economics.md` — 三方手續費分拆數學、TVL 分層預測、啟動期揭露、簽名者補償機制

@@ -7,7 +7,7 @@ Parameterised Preprod / Mainnet deploy ceremony for the V1 Aiken contracts.
 ## Layout
 
 ```
-v1/deploy/
+deploy/
 ├── config/
 │   ├── preprod.example.json    Template for Preprod
 │   ├── mainnet.example.json    Template for Mainnet
@@ -71,11 +71,11 @@ Every environment-specific value lives in `config/<network>.json`:
 
 ```bash
 # 1. Build V1 contracts (produces plutus.json)
-cd v1/contracts && rm -rf build plutus.json && aiken build && cd -
+cd contracts && rm -rf build plutus.json && aiken build && cd -
 
 # 2. Copy the Preprod template and fill in your real values
-cp v1/deploy/config/preprod.example.json v1/deploy/config/preprod.json
-# Edit v1/deploy/config/preprod.json:
+cp deploy/config/preprod.example.json deploy/config/preprod.json
+# Edit deploy/config/preprod.json:
 #   - blockfrost.projectId   — your preprod Blockfrost key
 #   - wallet.seedPhrase      — deploy wallet BIP39 seed (24 words)
 #   - depositToken.policy/name — test USDCx token you'll use on Preprod
@@ -87,10 +87,10 @@ cp v1/deploy/config/preprod.example.json v1/deploy/config/preprod.json
 #    https://docs.cardano.org/cardano-testnet/tools/faucet
 
 # 4. Dry-run: see the compiled hashes + UTxO-ref plan without submitting TXs
-npx tsx v1/deploy/deploy.ts --network Preprod --releaseTag v1-preprod-rc1 --dryRun
+npx tsx deploy/deploy.ts --network Preprod --releaseTag v1-preprod-rc1 --dryRun
 
 # 5. (When PHASE 2-4 is wired) Live ceremony
-npx tsx v1/deploy/deploy.ts --network Preprod --releaseTag v1-preprod-rc1
+npx tsx deploy/deploy.ts --network Preprod --releaseTag v1-preprod-rc1
 
 # 6. If the ceremony fails mid-way:
 #    - Inspect state/preprod-v1-preprod-rc1.json
@@ -113,9 +113,9 @@ cat > /tmp/utxorefs.json <<EOF
 }
 EOF
 
-npx tsx v1/deploy/compile.ts --network Preprod --utxoRefs /tmp/utxorefs.json
-# outputs: v1/deploy/state/preprod-hashes.json
-#        + v1/deploy/state/preprod-hashes-full.json (with applied CBOR)
+npx tsx deploy/compile.ts --network Preprod --utxoRefs /tmp/utxorefs.json
+# outputs: deploy/state/preprod-hashes.json
+#        + deploy/state/preprod-hashes-full.json (with applied CBOR)
 ```
 
 ---
@@ -168,7 +168,7 @@ npx tsx v1/deploy/compile.ts --network Preprod --utxoRefs /tmp/utxorefs.json
 - 17 spend / withdraw validators (vault_proxy + 12 WZ-dispatched staking validators + treasury + keeper_stake_script + multisig_gov + registry + order + vusdcx)
 - 1 DEX adapter (minswap_v2_adapter, §B@launch=1 SwapAdapter)
 
-Partitioning rationale (4 orthogonal seams: authorization-boundary / response-latency / bytecode-cost-center / size-fix) is documented in `v1/spec/architecture.md §4.1`. Per-extraction details live in the engineering memory store.
+Partitioning rationale (4 orthogonal seams: authorization-boundary / response-latency / bytecode-cost-center / size-fix) is documented in `spec/architecture.md §4.1`. Per-extraction details live in the engineering memory store.
 
 ---
 

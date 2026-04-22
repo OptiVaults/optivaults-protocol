@@ -328,7 +328,7 @@ Governance cannot raise these caps — they are protocol constants in `lib/vault
 
 ### 4.13 DeregisterStake (A2)
 
-**Purpose:** Recover the 2 ADA Cardano stake-registration deposit posted per staking validator when its credential was registered during the V1 deploy ceremony. Addresses the V1 design-gap documented in `v1/deploy/state/recovery-verification.md` §2, where the original staking validators' `else(_) { fail }` catch-all rejected the ledger's Publish purpose.
+**Purpose:** Recover the 2 ADA Cardano stake-registration deposit posted per staking validator when its credential was registered during the V1 deploy ceremony. Addresses the V1 design-gap documented in `deploy/state/recovery-verification.md` §2, where the original staking validators' `else(_) { fail }` catch-all rejected the ledger's Publish purpose.
 
 **Scope at V1 launch:**
 - **All 12 V1 staking credentials** carry a gov-gated `publish` handler and are deregister-able via this action: `vault_user`, `vault_keeper_hot`, `vault_batcher`, `vault_swap_ada`, `vault_protocol`, `vault_recall`, `vault_liqwid`, `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`, `keeper_stake_script`, and the SwapAdapter `minswap_v2_adapter`. Partitioning rationale documented in `spec/architecture.md §4.1`.
@@ -361,7 +361,7 @@ publish(_redeemer, credential, tx) {
 - AT-4 (third-party re-register): anyone can re-register a deregistered stake cred (Register cert is script-free per Cardano ledger rules) by paying 2 ADA themselves. Attacker loses 2 ADA, operator regains their 2 ADA. Net negative for attacker — not exploitable.
 - AT-5 (gov signer compromise): not a new surface — compromised gov can already execute every other Act*.
 
-**Tooling:** `v1/deploy/tools/deregister-stakes.ts` (rewritten for gov flow: `--queue` queues ActDeregisterStake per target, `--execute` runs after timelock).
+**Tooling:** `deploy/tools/deregister-stakes.ts` (rewritten for gov flow: `--queue` queues ActDeregisterStake per target, `--execute` runs after timelock).
 
 ---
 

@@ -5,7 +5,7 @@
 /// Transaction-dependent paths (find_feed_sample, read_fair_price,
 /// check_tier1_bound) require reference-input mocking + datum shaping,
 /// which belongs in Preprod E2E tests per the V1 testing philosophy
-/// (see `v1/tests/preprod-e2e-plan.md`).
+/// (see `tests/preprod-e2e-plan.md`).
 
 use vault/oracle.{find_asset_oracle}
 use vault/types.{AssetOracleEntry, AssetOracleFeed}

@@ -13,7 +13,7 @@
  * memory/feedback_ceremony_reclaim_order.md).
  *
  * Usage:
- *   npx tsx v1/deploy/tools/sunset-ceremony.ts \
+ *   npx tsx deploy/tools/sunset-ceremony.ts \
  *     --network Preprod --releaseTag v1-postphase77d-preprod
  *
  * Flags:
@@ -80,7 +80,7 @@ function parseArgs(): CliArgs {
 
 function stateFilePath(args: CliArgs): string {
   return path.resolve(
-    `v1/deploy/state/${args.network.toLowerCase()}-${args.releaseTag}.json`,
+    `deploy/state/${args.network.toLowerCase()}-${args.releaseTag}.json`,
   );
 }
 
@@ -105,7 +105,7 @@ function runChild(script: string, extraArgs: string[], env: Record<string, strin
   return new Promise((resolve, reject) => {
     const cp = spawn(
       "npx",
-      ["tsx", `v1/deploy/tools/${script}.ts`, ...extraArgs],
+      ["tsx", `deploy/tools/${script}.ts`, ...extraArgs],
       {
         stdio: "inherit",
         env: { ...process.env, ...env },
