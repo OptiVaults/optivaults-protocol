@@ -939,7 +939,7 @@ V1 想達到的具體里程碑：**V1 連續 12 個月運作無遷移或重新�
 
 ## 10. 可重現性
 
-V1 的原始碼真實來源是開源鏡像 https://github.com/OptiVaults/optivaults （這份鏡像對應私有開發儲存庫；依 §9.2 於 V1 主網啟動時發佈）。鏈上發佈的每一個 validator hash，都可以從原始碼重新產出：
+V1 的原始碼真實來源是開源鏡像 https://github.com/OptiVaults/optivaults-protocol （這份鏡像對應私有開發儲存庫；依 §9.2 於 V1 主網啟動時發佈）。鏈上發佈的每一個 validator hash，都可以從原始碼重新產出：
 
 ```bash
 aiken --version    # 必須與下方鎖定的版本一致

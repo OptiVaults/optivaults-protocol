@@ -943,7 +943,7 @@ These are disclosed here, not buried in the spec, because depositors deserve to 
 
 ## 10. Reproducibility
 
-The canonical source of truth for V1 is the open-source mirror at https://github.com/OptiVaults/optivaults (mirror of the private development repository; the mirror is published at V1 mainnet launch per §9.2). Every validator hash published on-chain is reproducible from the source via:
+The canonical source of truth for V1 is the open-source mirror at https://github.com/OptiVaults/optivaults-protocol (mirror of the private development repository; the mirror is published at V1 mainnet launch per §9.2). Every validator hash published on-chain is reproducible from the source via:
 
 ```bash
 aiken --version    # must match the pinned version below

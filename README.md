@@ -132,5 +132,5 @@ The permissive license choice is deliberate: V1's success metric explicitly incl
 ## Contact
 
 - Website: [optivaults.app](https://optivaults.app)
-- Source (open-source mirror): github.com/OptiVaults (repo / branch structure set up separately)
+- Source (open-source mirror): github.com/OptiVaults/optivaults-protocol (repo / branch structure set up separately)
 - Security: optivaults@gmail.com
