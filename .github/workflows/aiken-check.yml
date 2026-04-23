@@ -1,0 +1,49 @@
+# Runs `aiken build` + `aiken check` on every push and PR touching the
+# contracts/ tree. Aiken's `check` exit code signals failure on any
+# failing test, so the job fails if the test suite regresses. The
+# compiler version is pinned via `contracts/aiken.toml` (compiler =
+# "v1.1.21") — keep the `with.version` value here in lockstep with
+# that field, since the Plutus V3 cost model varies across patch
+# versions and validator hashes depend on it.
+name: aiken check
+
+on:
+  push:
+    branches: [v1]
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/aiken-check.yml'
+  pull_request:
+    branches: [v1]
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/aiken-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  aiken-check:
+    name: aiken build + check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Aiken
+        uses: aiken-lang/setup-aiken@v1
+        with:
+          version: v1.1.21
+
+      - name: Print Aiken version
+        run: aiken --version
+
+      - name: aiken build
+        run: aiken build
+
+      - name: aiken check
+        run: aiken check
