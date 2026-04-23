@@ -1,172 +1,234 @@
-# Security Policy
+# Security Policy — OptiVaults V1
 
 ## Reporting Vulnerabilities
 
-If you discover a security vulnerability in OptiVaults smart contracts, please report it responsibly:
+If you discover a security vulnerability in OptiVaults V1 smart contracts, deploy tooling, or reference implementations, please report it privately. **Do not open a public issue.**
 
-**Email:** optivaults@gmail.com
+**Email:** `optivaults@gmail.com`
+**PGP key:** `optivaults.app/security` (encrypt sensitive technical details)
 
 **Please include:**
 - Description of the vulnerability
-- Steps to reproduce
-- Potential impact assessment
+- Steps to reproduce (or theoretical attack walkthrough if exploit is not implemented)
+- Potential impact assessment (severity + affected validator / redeemer)
 - Suggested fix (if any)
 
 **Response timeline:**
-- Acknowledgment: within 48 hours
-- Initial assessment: within 1 week
-- Fix deployment: depends on severity
+- Acknowledgment: within 72 hours
+- Initial triage: within 7 days
+- Fix + patch notice: depends on severity; CRITICAL / HIGH findings target 30-day remediation with operator-mitigation notice published immediately
+
+---
 
 ## Scope
 
-The following are in scope for security reports:
+### In scope
 
-- Smart contract logic (`validators/vault_proxy.ak`, `validators/vault_core.ak`, `validators/vault_protocol.ak`, `validators/vault_liqwid.ak`, `validators/vault_nft.ak`, `validators/governance.ak`, `validators/vusdcx.ak`, `validators/order.ak`, `validators/registry.ak`)
-- Validation logic (`lib/vault/validation.ak`, `lib/vault/helpers.ak`)
-- Type definitions that affect on-chain behavior (`lib/vault/types.ak`, `lib/vault/order_types.ak`, `lib/vault/governance_types.ak`)
+- **Aiken smart contracts** under `contracts/validators/`:
+  - `vault_proxy.ak` — Withdraw-Zero forwarding + phantom-vault defense
+  - `vault_user.ak` — Deposit / Withdraw / full-drain
+  - `vault_keeper_hot.ak` — Compound / RebalanceBuffer / SwapAda (gov-share binding)
+  - `vault_batcher.ak` — BatchProcess (payout uniqueness + no-vUSDCx-leak)
+  - `vault_swap_ada.ak` — SwapAda dual-feed oracle reader
+  - `vault_protocol.ak` — DeployToProtocol (adapter-dispatched peg-floor + Tier 1 oracle)
+  - `vault_recall.ak` — RecallFromProtocol / MergeUtxo (secondary allowlist)
+  - `vault_liqwid.ak` — SupplyToLiqwid / RecallFromLiqwid (gov-path orphan guard)
+  - `vault_gov_policy.ak` — UpdateStrategy / UpdateFee / UpdateFeeSplit / UpdateSlippagePolicy
+  - `vault_gov_emergency.ak` — EmergencyWithdraw (loss write-off + freeze)
+  - `vault_admin_deploy.ak` — AdminDeployNonDeposit (7d keeper-inactive fallback)
+  - `multisig_gov.ak` — m-of-n governance state machine + ExecuteAction + RotateSigners
+  - `treasury.ak` — 4-bucket budget + 24h cooldown + audit-reserve floor
+  - `keeper_stake_script.ak` — keeper authorization (GovernanceOnly at launch)
+  - `registry.ak` — protocol whitelist + stable_tokens + liqwid_markets + asset_oracles + swap_adapter_hashes
+  - `order.ak` — Order UTXO + Cancel + Expire + Process via BatchProcess
+  - `vusdcx.ak` — vUSDCx share minting policy + 10^18 over-mint cap
+  - `minswap_v2_adapter.ak` — SwapAdapter (§B@launch=1)
 
-The following are **also in scope:**
-- API server (`api/src/`)
-- Frontend (`frontend/src/`)
-- Keeper bot (`keeper/src/`)
+- **NFT mint policies**:
+  - `vault_nft.ak` — one-shot Vault Identity NFT (compile-time anchor on proxy / vusdcx / order)
+  - `governance_nft.ak` — one-shot Governance NFT (anchors `is_gov_authorized`)
+  - `gov_signer_nft.ak` — soul-bound signer recognition NFT
+  - `registry_auth_nft.ak` — one-shot Registry Auth NFT
 
-The following are **out of scope:**
-- Test files (`*_test.ak`, `*.test.ts`)
-- Development scripts (`scripts/`)
-- Social engineering attacks
+- **Shared validation + helper libraries**:
+  - `contracts/lib/vault/constants.ak`
+  - `contracts/lib/vault/types.ak` — VaultDatum (28 fields) / GovDatum / RegistryDatum / TreasuryDatum / OrderDatum / etc.
+  - `contracts/lib/vault/validation.ak` — per-redeemer datum-transition predicates
+  - `contracts/lib/vault/helpers.ak` — `is_gov_authorized` / `find_vault_utxo` / token preservation / payload hashing
+  - `contracts/lib/vault/oracle.ak` — dual-feed oracle reader (§5.4 P3)
+  - `contracts/lib/vault/swap_adapter.ak` — SwapAdapter dispatch + Tier 2 peg-floor (§5.4 P4)
 
-## Security Model
+- **Deploy pipeline** (`deploy/`): off-chain failures that could leak operator keys, misconfigure ceremony state, or produce invalid on-chain identity anchors.
 
-### On-Chain Guarantees
+### Out of scope (for V1)
 
-1. **No admin drain** -- Admin operations validated on-chain; all tokens verified preserved (V3: `verify_all_tokens_preserved` checks every token in EmergencyWithdraw)
-2. **Keeper/Admin separation** -- `keeper_pkh` for automated operations (compound/rebalance/batch/merge), `governance_policy/governance_name` for governance via MultisigGov (strategy/fee/emergency, m-of-n + 7d timelock)
-3. **15 immutable fields + compile-time Vault NFT anchor** (V10) -- governance_policy, governance_name, keeper_pkh, fee_collector, vault_version, performance_fee_bps, early_withdraw_fee_bps, min_hold_seconds, buffer_target_bps, vusdcx_policy, deposit_token_policy, deposit_token_name, order_script_hash, registry_hash, registry_auth_policy checked on every operation (25-field VaultDatum V10). `vault_nft_policy` is a **compile-time parameter** on `vault_proxy` / `vusdcx` / `order` — physically baked into each validator's script hash at deploy time, providing a stronger trust anchor than datum-level immutability. R55 closed the self-referential phantom-vUSDCx attack path; R65 added symmetric `no_new_tokens` on Registry + EmergencyWithdraw token allowlist; R66 added soft allocation ceiling on EmergencyWithdraw.
-4. **Emergency escape** -- Users can force-withdraw after 7 days of keeper inactivity
-5. **Fee caps** -- Performance fee hard-capped at 4.5% (450 bps), immutable on-chain; adjustable within 0–4.5% via Governance UpdateFee with 7-day cooldown
-6. **Anti-inflation** -- 1M share multiplier prevents ERC-4626 style inflation attacks
-7. **Minimum deposit** -- 10 USDCx minimum prevents dust attacks
-8. **Double satisfaction** -- Single vault input enforced per transaction (V3: MergeUtxo allows 2-5 with strict controls)
-9. **Slippage protection** -- Order contract enforces minimum receive amounts (total value: lovelace+tokens)
-10. **Allocation bounds** -- `alloc_sum + idle_buffer <= total_deposited` enforced on compound/rebalance/strategy/merge, max 10 entries
-11. **Expire refund validation** -- Full order amount (total value) returned to owner
-12. **Deposit exact match** -- Deposit amount validated with `==` to prevent overpayment exploits
-13. **Compound cooldown** -- On-chain enforced cooldown between compound operations
-14. **Compound exact value** -- Output value must increase by exactly `harvested_amount` (prevents phantom value theft)
-15. **No-mint enforcement** -- All admin/keeper ops enforce `no_mint`
-16. **Input validation** -- `amount > 0` and `idle_buffer >= 0` enforced on-chain
-17. **Withdraw datum immutability** -- idle_buffer, strategy_allocations, last_compound_time validated immutable in Withdraw
-18. **Full withdraw datum continuity** -- Full withdraw+fee validates continuing datum
-19. **BatchProcess input validation** -- Requires order script inputs; order_script_hash from datum; order amounts summed on-chain
-20. **Early withdrawal fee** -- Direct withdraw always 0.1% fee; batch orders free
-21. **V3: MergeUtxo all-token verification** -- `flatten(total_input_value)` iterates every token; output must have `>=` each input token; prevents token theft during UTXO merge
-22. **V3: MergeUtxo secondary NoDatum only** -- Secondary vault inputs must be NoDatum (blocks InlineDatum and DatumHash); prevents fake datum injection
-23. **V3: EmergencyWithdraw buffer protection** -- `idle_buffer` can only increase (non-decrease enforced); `last_compound_time` immutable
-24. **V3: RecallFromProtocol multi-token** -- `recall_token_policy/name` in redeemer enables DJED/USDM/USDCx recall; value check uses specified token
-25. **V3: None datum gate** -- Datum-less vault inputs only allowed with MergeUtxo redeemer; all other redeemers require datum (fail with error message)
-26. **Buffer-funded Compound** -- On-chain yield = `idle_buffer + non_deposit_value - total_deposited` (tamper-proof, no keeper injection); `allocs_empty` required
-27. **burn_token triple validation** -- RecallFromProtocol burn_token verified: not deposit token, minted negative, decreased in output
-28. **Loss compound support** -- Negative yield allowed with fee=0, prevents vault bricking on protocol losses
-29. **vusdcx first deposit cap** -- 10^18 cap prevents initial mint dilution attacks
-30. **on_chain_yield tamper-proof** -- Yield derived from on-chain state, not keeper-provided values
-31. **NDV stable_tokens guard (R40)** -- `DeployToProtocol` and `RecallFromProtocol` only modify `non_deposit_value` for tokens in `registry.stable_tokens`; non-stable tokens (airdrops/garbage) cannot inflate or deflate NDV; `DeployToProtocol` enforces `NDV >= 0` floor to prevent negative-NDV DoS on Compound
+- **Keeper reference implementation** — not yet started (`keeper/` empty). Findings welcome once implementation lands.
+- **API server** — no public API ships with V1 source tree. External integrators building their own API do so under their own security posture.
+- **Frontend** — V1 open-source release focuses on the contract layer + deploy tooling. Frontend security posture (CIP-30 wallet integration, JWT handling, etc.) is part of the operator's own deployment, not V1's scope.
+- **Test files** (`*_test.ak`, `*.test.ts`) — intentionally adversarial; failures there are a feature.
+- **Social engineering attacks** against governance signers, operators, or depositors.
+- **Third-party infrastructure** — Cardano node / Blockfrost / Ogmios / Kupo / Liqwid Finance / Minswap V2 / Circle xReserve — each has its own disclosure process.
 
-### Test Coverage
+---
+
+## Security model
+
+### On-chain guarantees (contract-enforced)
+
+Three guarantees hold unconditionally in deployed V1 Aiken validators, independent of any operator action:
+
+1. **No admin-drain redeemer.** No redeemer moves vault principal to a non-depositor address. Emergency paths route through `vault_gov_emergency.EmergencyWithdraw` with governance multi-sig + public disclosure.
+2. **4.5% performance-fee cap is immutable.** `max_performance_fee_bps = 450` in `constants.ak` is compile-time-anchored via the shared `validate_update_fee` helper called from `vault_gov_policy.UpdateFee`. Governance CAN adjust `performance_fee_bps` within `[0, 450]` but CANNOT exceed the cap under any circumstance.
+3. **7-day keeper-inactivity waiver.** When `now > last_compound_time + 7 days`, `vault_user.Withdraw` automatically waives `early_withdraw_fee_bps` per the `keeper_inactive_ms` check. Depositors can exit fee-free if the keeper goes permanently silent.
+
+Additional invariants enforced on-chain (not exhaustive — see `docs/audit-scope.md §1`):
+
+- **Non-deposit token preservation.** `verify_other_tokens_preserved` pattern on 7+ redeemers prevents silent token injection or extraction.
+- **Allocation invariant.** `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal` enforced on `Compound` / `DeployToProtocol` / `RebalanceBuffer` / `UpdateStrategy` / `MergeUtxo` (via shared `valid_allocs` predicate family). Note: R73 audit flagged a `vault_recall.MergeUtxo` admissibility gap vs this invariant in `EmergencyWithdraw` / `AdminDeployNonDeposit` — fix queued; see §"Known open findings" below.
+- **First-depositor protection.** `initial_share_multiplier = 10^6` + `valid_deposited > 0` prevent ERC-4626-style inflation attacks.
+- **Minimum deposit.** 10 USDCx minimum on Direct Deposit (queued Order bypasses for dust-safe batching; BatchProcess enforces non-zero share mint).
+- **Anti-double-satisfaction.** `vault_user.Withdraw` enforces `receiver_output_idx` hard binding (R48 M-1). BatchProcess enforces `payout_output_index` uniqueness across multiple orders (R52 H-1).
+- **No-vUSDCx-leak.** BatchProcess fails any TX minting vUSDCx to an address outside `(order_owner ∪ proxy_hash)` (R51 H-1).
+- **Deferred-yield Withdraw.** `withdraw_amount = base_withdraw − early_fee`; the early-fee stays physically in vault → share price rises by `(early_fee / total_shares)` → remaining depositors benefit. R49 M-4 closed the prior accounting drift.
+- **Compile-time Vault NFT anchor.** `vault_proxy` / `vusdcx` / `order` all parameterized on `vault_nft_policy` at deploy time, not datum. R55 C-1 closed the phantom-vUSDCx self-referential datum attack.
+- **15 immutable VaultDatum fields.** `governance_policy` / `governance_name` / `keeper_pkh` / `fee_collector` / `vault_version` / `performance_fee_bps` / `early_withdraw_fee_bps` / `min_hold_seconds` / `buffer_target_bps` / `vusdcx_policy` / `deposit_token_policy` / `deposit_token_name` / `order_script_hash` / `registry_hash` / `registry_auth_policy`. The 16th anchor (`vault_nft_policy`) is stronger — compile-time, not datum. Note: `performance_fee_bps` is "immutable field" in the sense the schema position is fixed; the value adjusts within `[0, 450]` via Governance `UpdateFee`. See `contracts/docs/vault-state-machine.md` (or V1 spec/vault-datum.md) for full field semantics.
+- **Governance cancel veto.** Every `QueueAction` has a 1-of-n `CancelAction` veto window; execution requires both m-of-n signatures AND action survives the timelock without cancellation.
+- **Validity-range width cap.** Every time-writing redeemer (Compound / UpdateFee / RotateSigners / UpdateStrategy / SwapAda / RebalanceBuffer) caps `upper - now ≤ 1 hour` to bound timestamp-manipulation surface (R58 F-1).
+- **Governance signer floor.** `valid_signer_set` requires `signers ≥ 3, threshold ≥ 2, threshold ≤ n, unique` (R51 H-1 + defense-in-depth).
+- **Empty-hash governance delegation.** Documented design trade-off — see §"Known design decisions" below.
+
+### Off-chain-dependent guarantees
+
+The following depositor-facing promises depend on external infrastructure remaining available:
+
+- **Withdraw settles in 1:1 USDCx.** Requires Cardano chain uptime + depositor wallet ADA for TX fees + Liqwid availability (if vault has Liqwid positions) + USDCx liquidity.
+- **Share price tracks underlying yield accurately.** Requires keeper execution of periodic Compound cycles. If keeper is inactive for > 7 days, the 7-day waiver lets depositors exit without early-fee penalty (contract-enforced), but share price temporarily fails to reflect new Liqwid interest accrued during the dormancy window until a subsequent Compound.
+- **Emergency self-serve recovery.** Requires Cardano chain + USDCx liquidity. The `emergency-withdraw` self-serve tool is packaged in the open-source source tree; any depositor can run it without operator coordination.
+
+---
+
+## Test coverage
 
 | Category | Tests | Status |
-|----------|-------|--------|
-| Aiken smart contracts | 1,600 | All pass |
-| Aiken property-based fuzz | 2,500 | All pass |
-| Keeper vitest | 710 | All pass |
-| API vitest | 131 | All pass |
-| Frontend vitest | 461 | All pass |
-| Preprod E2E | 19 | All pass (V10 7/7 + Vault 6/6 + Complete 6/6; vault_liqwid split + bounded ADA spend + Buffer-funded Compound verified on-chain) |
-| **Total** | **5,267+** | **All pass** |
+|----------|------:|--------|
+| Aiken unit tests | 96 | All pass |
+| Aiken property-based fuzz (`aiken/fuzz` v2.2.0) | 8 × ≤100 iter | All pass |
+| Total via `aiken check` | 104 tests / 599 randomized checks | All pass |
+| Preprod E2E scripts (`tests/preprod/`) | 16 scripts | See `EXECUTION-ORDER.md` — Phase B/C/D covered; E/F/H/I/J pending |
+| Keeper vitest | 0 (implementation pending) | — |
+| API vitest | 0 (not in V1 scope) | — |
+| Frontend vitest | 0 (not in V1 scope) | — |
 
-- Comprehensive automated test coverage
-- 71 internal audit rounds, 268+ fixes, findings addressed, Q3 2026 third-party audit pending
-- Preprod E2E: V10 full flow verified — 19/19 on-chain (7 V10-specific + 6 Vault core + 6 Complete; DeployToProtocol bounded ADA spend + UseLiqwid route + KeeperToggleMarket + FastUpdateMarkets + Buffer-funded Compound)
-- 170+ tests covering MergeUtxo, multi-token Recall, EmergencyWithdraw token protection, None datum branch, boundary cases, vulnerability attacks
-- Buffer-funded Compound, burn_token validation, loss compound, relaxed MergeUtxo bounds
-- V9 MultisigGov governance, Withdraw-Zero pattern, stable_tokens NDV guard
+Preprod E2E verification state:
+- **`v1-preprod-p3`** (2026-04-23, current): B1 Direct Deposit + B2 Partial Withdraw + A2 Queue on vault_user verified on-chain.
+- **`v1-postphase77d-preprod`** (2026-04-22): B1-B9 + D1/D2/D4/D5/D6 + C1 + H1-H5 Queue/Cancel verified (Phase 84 session).
 
-## Security Audit Summary
+---
 
-Comprehensive automated test suite covering all components.
+## Audit status
 
-| Round | Scope | Fixes | Severity |
-|-------|-------|-------|----------|
-| 1-3 | Contract core | 19 | Deposit exact match, token preservation, mint/burn ratio |
-| 4 | Frontend | 3 | Blind signing, slippage, CBOR handling |
-| 5 | API + Keeper | 20 | JWT, CORS, key management, arithmetic precision |
-| 6 | Contract + integration | 15 | Compound fee, batch burn, fair exchange pricing |
-| 7 | ProtocolRegistry + datum | 8 | Registry whitelist, 18-field datum |
-| 8-9 | Full withdraw + hardening | 15+ | Empty allocation, edge cases, E2E |
-| 10 | V3: MergeUtxo + security | 10+ | Token drain, DatumHash injection, None datum bypass |
-| 11-15 | V3 hardening + E2E | 20+ | Extended validation, Preprod E2E |
-| 16 | Full re-audit | 12 | Non-deposit token theft (C-1/C-2), registry auth (H-1), mint bounds (H-2) |
-| 17 | Security hardening | 9 | no_order_inputs (C-1), recall source (C-2), NDV/frozen (H-2~H-4) |
-| 18-19 | Contract fixes + alignment | 11 | Full-drain NDV block (M-1), withdraw rounding, whitepaper-code sync |
-| 20 | Verification audit | 0 | All R17-R19 fixes verified, 0 CRITICAL/HIGH/MEDIUM |
-| 21 | Deep security audit | 5 | BatchProcess buffer floor (C-01), admin recall fallback (H-01), keeper token filter (H-02) |
-| 22-25 | Contract hardening | 5+ | Additional validation, edge case fixes, +33 tests |
-| 27 | Fee protection | 1 | Max fee 20%→10%, 7-day UpdateFee cooldown |
-| 28 | V4 refactor audit | 0 | 0 CRITICAL, shared helpers refactor verified |
-| 29-34 | V7 design + regression | ~20 | Buffer-funded compound, R34 regression tests |
-| 36 (×4) | V8.1 split | 36 | Order injection (H-1), qToken (H-2), min_hold (H-3), token bloat (H-4) |
-| 37-38 | V9 MultisigGov | 49 | Datum spoofing, governance checks, double satisfaction, token preservation |
-| 39 | Full V9 production audit | 0 | 0 CRITICAL / 0 HIGH / 2 MEDIUM (not exploitable) |
-| 40 | Defense-in-depth | 2 | NDV stable_tokens guard for Deploy/Recall + NDV >= 0 floor |
-| 41 | Proxy + Liqwid hardening | 3 | Proxy vusdcx_policy defense, RecallFromLiqwid governance partial, EmergencyWithdraw position clear |
-| 42 | Final hardening | 3 | Subset invariant, governance loss accounting, Cancel order_input_count |
-| 43 | Full V9 re-audit + C-1 | 1 | R43 C-1 CRITICAL fake VaultDatum injection fix; 2 LOW + 4 INFO |
-| 44 | Hacker-perspective audit | 0 | 10 attack paths analyzed, all blocked; 0 CRIT/HIGH/MED |
-| 45 | Phantom vault + Vault NFT | 2 | R45 C-1 CRITICAL phantom vUSDCx (Vault NFT one-shot), M-1 NFT continuing output |
-| 46 | Vault NFT preservation | 1 | Registry auth NFT preservation on UpdateRegistry |
-| 47 | Full 24-redeemer matrix | 0 | 24 redeemers × 10 checks = 240 items verified; 0 CRIT/HIGH/MED |
-| 48 | Withdraw anti-double-sat | 1 | M-1 receiver_output_idx hard binding (fixes list.any ambiguity) |
-| 49 | Hacker-perspective deep audit | 2 | M-4 early withdraw fee drift (vault_core), L-6 governance emergency+empty_hash bypass |
-| 50 | Adversarial R49 re-audit | 0 | R49 M-4 / L-6 regression-checked; empty-hash delegation path documented as design trade-off |
-| 51 | External audit verification | 2 | **C-1 HIGH** vault_core BatchProcess `no_vusdcx_leak` (multi-order same-user vUSDCx diversion); H-1/M-3 governance signer floor `signers >= 3` (defense-in-depth vs misconfigured 2-of-2) |
-| 52-54 | Corner-case sweep + hardening | 30+ | MergeUtxo token allowlist, NDV floors, gov-path orphan guards, reference-input NFT gate, payout uniqueness, exact mint/burn ratios |
-| 55 | Compile-time Vault NFT anchor | 1 | **C-1 CRITICAL** phantom vUSDCx via self-referential datum NFT field → `vault_nft_policy` moved to compile-time parameter on `vault_proxy` / `vusdcx` / `order` |
-| 56-58 | Deep sweeps + size optimization | 10+ | MergeUtxo whitelist, NDV ≥ 0, Order.Expire full-value, Withdraw full-drain NFT burn, `no_new_tokens` on helpers, Compound/UpdateFee validity-range width cap |
-| 59-61 | Clean rounds + methodology | 3 INFO | Constant-delay cross-validator grep symmetry, invariant transitivity (RecallFromLiqwid gov-path liveness guards), value-flow conservation + boundary-value fuzzing |
-| 62 | Property-based foundation | 0 | `aiken/fuzz` v2.2.0 + `property_fuzz_test.ak` + `property_fuzz_extended_test.ak` (25 properties × 100 iterations = 2,500 randomized checks) |
-| 63 | Off-chain runtime audit | 10 | API/keeper R55 `vault_nft_policy` env param, `/submit-tx` auth, awaitTx-before-cooldown, Blockfrost key rotation, LRU cache cap, cooldown persistence, opti-gov empty-hash warning, frozen field index |
-| 64 | Deploy pipeline audit | 10 | `RELEASE_TAG` gate, mixed-asset change bundling, per-script flushState, NFT deadline extensions, legacy filename primary-with-fallback, `placeholderHash` 56-hex, deprecation READMEs |
-| 65 | R64-c follow-up batch | 3 | **N-1 MEDIUM** EmergencyWithdraw secondary allowlist (symmetric MergeUtxo R56 M-1); **N-2 LOW** Order.Expire full-value refund (MEV skim closure); **N-3 LOW** Registry `no_new_tokens` (symmetric R57 F-1) |
-| 66 | R64-a L-2 + audit complete | 1 | **L-2 LOW** EmergencyWithdraw soft alloc ceiling (`alloc_sum + idle_buffer ≤ TD + NDV + liqwid_principal`) preventing governance mis-configuration soft-brick |
-| 67 | V10 registry deadlock + keeper runbook | 2 | V10 deploy script keeper_pkh field backfill; keeper-outage-recovery runbook + V10 gov-fallback CLI skeletons |
-| 68 | V10 Mainnet GO-LIVE | 0 | Task C gov-fallback Preprod E2E; V10-R71 mainnet ceremony 15 TX; role-separated 6 identities |
-| 69-70 | Keeper self-healing + Settlement tier | 0 | 4-step auto-recovery chain (buffer-shortage → Recall → reverse swap → NDV consolidation); 4-tier TVL settlement schedule; 3-hop USDCx↔DJED via NIGHT route |
-| 71 | V10 deploy pipeline audit | 3 | **M-1 MEDIUM** Registry `keeper_pkh` immutability on UpdateRegistry; **L-1 LOW** DeployToProtocol 10-USDCx minimum per-TX floor (anti-dust); **L-2 LOW** Registry KeeperToggleMarket no-op rejection |
-| **Total** | **All components** | **268+** | |
+### Methodology
 
-Full audit details in `docs/audit-report.md`.
+V1 uses a **coverage-area methodology** (areas A–F, see `docs/audit-scope.md §4`) for its internal audit history. This replaces the per-round numbering earlier internal-verification versions used. Coverage areas map to validator clusters + cross-validator integration flows rather than being tied to chronological audit rounds.
 
-## Audit Status
+### Internal round history
 
-- Comprehensive automated test suite
-- 1,600 Aiken unit + 2,500 property-based fuzz + 607 keeper + 113 API + 428 frontend + 19 Preprod E2E = 5,267+ regression checks
-- 71 audit rounds, 268+ fixes
-- Internal findings addressed; **Q3 2026 third-party audit pending** (pre-audit 100K USDCx TVL cap enforced until external review completes)
-- Community audit: contributions welcome
+Internal adversarial audit rounds executed against V1 contract code (additional rounds covered the internal-verification-phase heritage prior to V1 cutover — see `spec/architecture.md §4.1`):
 
-## Design Decisions (Documented)
+| Round | Scope | Severity breakdown | Status |
+|-------|-------|-------------------:|--------|
+| R72 | Post-Phase-77d hacker-mindset on full V1 set (17 logic + 4 NFT + 1 adapter) | 0 CRIT / 0 HIGH / 1 MEDIUM / 3 LOW / 6 INFO | MEDIUM + 3 LOW fixed on-chain; INFO documented |
+| R73 | `valid_allocs × vault_recall.MergeUtxo` admissibility gap | 0 CRIT / 0 HIGH / 1 MEDIUM | Fix queued for next contract revision (see `private/audits/r73-donation-gap.md`) |
 
-The following items have been raised in audits and are confirmed as intentional design choices:
+### Coverage-area status (pending external audit)
 
-**"Immutable field" semantics:** When the audit reports and documentation refer to "15 immutable fields," this means the **datum field reference** cannot be altered by any redeemer — the field must remain present with the same type and meaning across every vault state transition. For most fields, this also means the **value** itself never changes after deployment (e.g., `keeper_pkh`, `fee_collector`, `deposit_token_policy`). One field is a deliberate exception: `performance_fee_bps` is an immutable field whose value can be adjusted within 0–4.5% by Governance via the two-step `UpdateFee` flow (m-of-n Queue → 7-day timelock → 1-of-n Execute, with 7-day cooldown between updates). The 4.5% hard cap itself is enforced on-chain and cannot be exceeded under any circumstance. In V10, the 16th anchor (`vault_nft_policy`) is no longer a datum field — it is a **compile-time parameter** baked into the `vault_proxy` / `vusdcx` / `order` validator script hashes (R55 C-1), which is a strictly stronger trust anchor than datum-level immutability. See whitepaper §3.2 and `contracts/docs/vault-state-machine.md` §4.7.
+| Area | Scope | Status |
+|------|-------|--------|
+| A | Keeper authorization + stake-script state machine | Not started |
+| B | Treasury + 4-bucket budget flows | Not started |
+| C | Governance state machine + m-of-n + timelocks | Not started |
+| D | Compound / fee split / keeper-gov-treasury triple flow | Not started |
+| E | SwapAdapter dispatch + multi-DEX lifecycle | Not started |
+| F | Cross-validator integration + full-drain + sunset paths | Not started |
 
-**Withdraw allowed during Emergency Freeze (R40 F-1):** The `Withdraw` redeemer intentionally does not check `frozen == 0`. This is a core design principle: user funds are never locked, regardless of vault state. The `frozen` flag blocks operational actions (Compound, BatchProcess, RebalanceBuffer, DeployToProtocol, SupplyToLiqwid) that could compound incorrect accounting, while Withdraw, Recall, and MergeUtxo remain available for fund recovery. The `idle_buffer >= base_withdraw` constraint naturally prevents over-withdrawal. Confirmed in R37, R37-a, R39 audits.
+### External audit
 
-**BatchProcess zero-share edge case (R40 F-4):** When `total_shares > 0 && total_deposited == 0`, BatchProcess mints 0 shares. This state requires 100% fund loss — the vault is worthless and 0-share mint is the correct behavior. Under normal operation, `total_deposited > 0` ensures positive share calculations.
+- **Target**: Q3 2026.
+- **Candidate firms** (narrow list of teams with Plutus V3 + Aiken experience as of 2025-2026 publication): Anastasia Labs / MLabs / Certik-Cardano / TxPipe + independent Aiken reviewers. Final firm selection + scope will be publicly announced at least 2 weeks before engagement start.
+- **Pre-engagement posture**: operator-enforced TVL cap of 100K USDCx (see whitepaper §8.2).
 
-**Governance empty-hash delegation (R40 C-1 / R50 documented):** The `QueueAction` empty `target_tx_hash` path allows m-of-n governance to pre-authorize a VaultAdmin/RegistryAdmin capability that any 1-of-n signer can execute after a 14-day minimum timelock. This exists because `target_tx_hash` has an unavoidable circular dependency on the governance UTXO reference (tx.id depends on the queued datum which contains target_tx_hash). On-chain defenses retained during the execution window: `CancelAction` (1-of-n veto), `action_ttl_ms` 37-day absolute cap, `GovNFT == 1`, target script must be a spent input, ADA preservation, and all 16 immutable VaultDatum fields. **Off-chain operator obligations:** empty-hash `QueueAction` must be publicly broadcast within 1 hour, ≥1 honest signer must monitor the queue for 14–30 days and use `CancelAction` on any anomaly, and the signer set must include ≥2 non-colluding parties with independent monitoring. Prefer explicit `target_tx_hash` whenever the TX body can be pre-computed. Confirmed in R40, R49, R50 audits.
+---
 
-**Garbage token dust in vault UTXO (R40 F-5):** Airdropped garbage tokens absorbed by MergeUtxo with `NDV = 0` cannot be removed via AdminDeployNonDeposit. This is accepted: garbage tokens are inert dust. Full drain destroys the vault UTXO entirely, releasing all tokens.
+## Known open findings
 
-## Bug Bounty
+### R73 F-1 — `vault_recall.MergeUtxo` admissibility gap (MEDIUM, queued for fix)
 
-We plan to launch a formal bug bounty program before mainnet. In the meantime, responsible disclosures will be acknowledged and credited.
+`vault_recall.MergeUtxo` accepts arbitrary deposit-token (USDCx) donations into the vault. Its datum-preservation helpers preserve `total_deposited` bit-for-bit (correct — donations should not mint shares), but bump `idle_buffer` by `buffer_increase`. Downstream redeemers (`vault_gov_emergency.EmergencyWithdraw`, `vault_admin_deploy.AdminDeployNonDeposit`) check `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal` at execute time — which can become false after a donation that raises LHS without raising RHS.
+
+**Impact**: governance can be temporarily denied access to the on-chain emergency path after an attacker-coordinated donation + keeper-initiated MergeUtxo, until normal Compound yield catches `total_deposited` back up. **Not fund theft** — donated USDCx is recoverable via subsequent Withdraw activity or explicit recovery. DoS on governance liveness, not principal loss.
+
+**Fix option (planned)**: add `new.idle_buffer ≤ new.total_deposited + new.non_deposit_value + Σ liqwid_principal` admissibility check inside `vault_recall.MergeUtxo`. ~6 LOC + 4 regression tests.
+
+Full finding: `private/audits/r73-donation-gap.md` (operator-visible; flagged for Q3 2026 external audit escalation).
+
+---
+
+## Known design decisions (documented, not findings)
+
+### Withdraw allowed during Emergency Freeze
+
+`vault_user.Withdraw` does **not** check `frozen == 0`. This is deliberate: depositor funds are never locked regardless of vault state. The `frozen` flag blocks operational actions that could compound incorrect accounting (Compound / BatchProcess / RebalanceBuffer / DeployToProtocol / SupplyToLiqwid), while Withdraw / RecallFromProtocol / RecallFromLiqwid / MergeUtxo remain available for fund recovery. The `idle_buffer ≥ base_withdraw` constraint naturally prevents over-withdrawal. Confirmed across multiple audit rounds.
+
+### Governance empty-hash delegation
+
+`multisig_gov.QueueAction` permits an empty `target_tx_hash` (`#""`), which lets m-of-n governance pre-authorize a `VaultAdmin` / `RegistryAdmin` capability that any 1-of-n signer can execute after the action kind's timelock (minimum 14 days for most action kinds, 60s Preprod override during testing).
+
+This exists because `target_tx_hash` has an unavoidable circular dependency on the governance UTXO reference (TX body includes the queued datum which contains target_tx_hash — TX hash can't be known at queue time for actions whose executing TX hasn't been constructed yet).
+
+**On-chain defenses retained during execution window**: `CancelAction` (1-of-n veto), `action_ttl_ms` 37-day absolute cap, `GovNFT == 1` uniqueness, target script must be a spent input, ADA preservation, all 15 immutable VaultDatum fields.
+
+**Off-chain operator obligations**:
+- Empty-hash `QueueAction` must be publicly broadcast within 1 hour.
+- ≥1 honest signer must monitor the governance queue for the full timelock + TTL window and use `CancelAction` on any anomaly.
+- The signer set must include ≥2 non-colluding parties with independent monitoring infrastructure.
+- Prefer explicit `target_tx_hash` whenever the executing TX body can be pre-computed.
+
+### Governance zero-share BatchProcess edge case
+
+When `total_shares > 0 && total_deposited == 0`, BatchProcess correctly mints 0 shares. This state requires 100% fund loss (vault is worthless), and 0-share mint is the correct behavior. Under normal operation `total_deposited > 0` ensures positive share calculations.
+
+### Garbage token dust in vault UTXO
+
+Airdropped tokens absorbed into a vault UTXO via `MergeUtxo` with `non_deposit_increase = 0` are preserved but cannot be removed via `AdminDeployNonDeposit` (which only routes whitelisted `stable_tokens`). This is accepted: garbage tokens are inert dust. Full drain destroys the vault UTXO entirely, releasing all tokens.
+
+---
+
+## Bug bounty
+
+V1 plans a formal bug bounty program before mainnet launch. Pre-mainnet posture:
+
+- **Floor**: 2,000 USDCx per valid CRITICAL finding, funded from Treasury audit reserve. See `docs/audit-scope.md §6` for full tier table.
+- **Scope**: matches §"In scope" above (Aiken contracts + deploy pipeline).
+- **Disclosure expectation**: 30-day embargo from initial report to any public disclosure, extendable if fix requires extended remediation.
+- **Below-market-rate disclosure**: V1 bounty floor is below Immunefi-tier ($50K-$500K typical CRITICAL payouts). This reflects V1's non-commercial public-goods positioning + pre-audit operational scale — not an undervaluing of researchers' work. Higher-tier bounties are planned post-TVL scale + revenue growth per whitepaper §8.3 milestones.
+
+Pre-engagement responsible disclosures will be acknowledged + credited in the V1 audit report.
+
+---
+
+## Contact
+
+- **Security disclosure**: `optivaults@gmail.com` (PGP on `optivaults.app/security`)
+- **General / non-sensitive**: Discord (invite on `optivaults.app`)
+- **Commercial / partnership**: not solicited — V1 is a public-goods reference implementation, not a commercial service
+
+---
+
+## See also
+
+- `whitepaper/whitepaper.md` §5 (Risks) + §6 (Trust + Governance) + §12 (Disclosure)
+- `docs/security-model.md` — trust boundaries + threat model + residual risks
+- `docs/audit-scope.md` — full coverage-area methodology + external audit plan
+- `spec/governance.md` — MultisigGov action kinds + timelock rules
+- `spec/swap-adapter.md` — SwapAdapter threat model + post-launch DEX addition lifecycle
+- `CONTRIBUTING.md` — contribution + disclosure workflow
