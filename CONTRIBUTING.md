@@ -149,7 +149,7 @@ Findings classified internally as LOW or INFO are tracked internally and don't b
 - **Email**: `optivaults@gmail.com`
 - **PGP key**: `optivaults.app/security` (encrypt sensitive technical details)
 
-We aim to acknowledge within 72 hours + triage within 7 days. V1's bug bounty posture is documented in `docs/audit-scope.md §6` (2,000 USDCx floor from treasury audit reserve during pre-audit phase; below-market-rate by design because V1 is not yet commercial-scale).
+We aim to acknowledge within 72 hours + triage within 7 days. V1's bug bounty posture is documented in `docs/audit-scope.md §6` (500 USDCx CRITICAL floor; HIGH/MEDIUM/LOW tiered below; Phase 1 payouts funded from founder founding capital, not treasury audit reserve, until the vault reaches self-sustain scale).
 
 If you're unsure whether a finding is security-sensitive, err on the side of private disclosure. We'd rather receive a low-severity finding privately and ask you to open a public issue than learn about a CRITICAL via a public bug tracker.
 

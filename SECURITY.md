@@ -207,9 +207,10 @@ Airdropped tokens absorbed into a vault UTXO via `MergeUtxo` with `non_deposit_i
 
 V1 plans a formal bug bounty program before mainnet launch. Pre-mainnet posture:
 
-- **Floor**: 2,000 USDCx per valid CRITICAL finding, funded from Treasury audit reserve. See `docs/audit-scope.md §6` for full tier table.
+- **Floor**: 500 USDCx per valid CRITICAL finding (scales up to 10% of TVL at discovery or 10,000 USDCx, whichever is lower). See `docs/audit-scope.md §6` for the full tier table.
 - **Scope**: matches §"In scope" above (Aiken contracts + deploy pipeline).
-- **Disclosure expectation**: 30-day embargo from initial report to any public disclosure, extendable if fix requires extended remediation.
+- **Disclosure expectation**: 90-day window from triage, extendable by 30 days if operator needs to prepare a fix TX.
+- **Funding source**: Phase 1 (pre-self-sustain TVL < ~25M USDCx) payouts come from founder founding capital, not treasury audit reserve — Phase 1 treasury accrual is too small to absorb individual CRITICAL payouts. Treasury audit reserve takes over once TVL reaches self-sustain scale (see `docs/economics.md §6.3`).
 - **Below-market-rate disclosure**: V1 bounty floor is below Immunefi-tier ($50K-$500K typical CRITICAL payouts). This reflects V1's non-commercial public-goods positioning + pre-audit operational scale — not an undervaluing of researchers' work. Higher-tier bounties are planned post-TVL scale + revenue growth per whitepaper §8.3 milestones.
 
 Pre-engagement responsible disclosures will be acknowledged + credited in the V1 audit report.

@@ -187,15 +187,16 @@ Candidate firms (to be evaluated): Runtime Verification, CertiK, Tweag, MLabs, A
 
 **Scope:** V1 validators (**17 logic validators + 4 one-shot NFT mint policies + 1 DEX adapter = 22 compiled artefacts total** — see `spec/architecture.md` §4.1 for partitioning rationale), deploy scripts, keeper code, API server.
 
-**Severity tiers (USDCx from treasury audit reserve):**
+**Severity tiers (USDCx):**
 | Severity | Payout |
 |----------|--------|
-| CRITICAL (fund loss) | **2,000 USDCx floor** (from treasury audit reserve), scaling up to 10,000 USDCx or 10% of TVL at discovery, whichever is lower |
-| HIGH (fund freeze, operational DoS) | 2,000 USDCx |
-| MEDIUM (invariant violation without fund loss) | 500 USDCx |
-| LOW (defense-in-depth) | 100 USDCx |
+| CRITICAL (fund loss) | **500 USDCx floor**, scaling up to 10% of TVL at discovery or 10,000 USDCx, whichever is lower |
+| HIGH (fund freeze, operational DoS) | 250 USDCx |
+| MEDIUM (invariant violation without fund loss) | 100 USDCx |
 
-**Phase 1 below-market-rate disclosure.** During pre-audit Phase 1 (TVL range $500–$25K per `whitepaper §8.2`), the 10%-of-TVL formula yields CRITICAL payouts of $50–$2,500 — well below the $50K–$500K market rate offered by mature DeFi bug bounties (e.g., on Immunefi). The **2,000 USDCx floor** above ensures a baseline that's at least proportionate to a competent reviewer's time investment for a CRITICAL finding, and the floor is funded from treasury audit reserve regardless of vault TVL at discovery time. This intentionally below-market structure reflects V1's pre-audit, public-goods positioning + operating-capital constraints; post-external-audit cap lift + TVL growth scale the upper tier toward market norms automatically.
+**LOW / defense-in-depth / style findings** are acknowledged + credited in the public audit report but do not carry a bounty payout in Phase 1. This posture is reviewed once the vault reaches self-sustain scale and the treasury audit reserve can absorb additional tiers without drawing on founder capital.
+
+**Funding source.** Phase 1 (pre-self-sustain, TVL range $500–$25K per `whitepaper §8.2`) bounty payouts come from **founder founding capital** — the same bucket funding the Q3 2026 external audit — not from treasury audit-reserve accrual. Phase 1 treasury audit-reserve inflow is ~$0.3–$15 USDCx/year at that TVL range (30% of the treasury bucket × 30% of realised yield), so a single CRITICAL payout would take over a century to accrue. Treasury audit reserve only takes over funding responsibility once TVL crosses self-sustain scale (approximately 25M+ USDCx TVL per `docs/economics.md §6.3`), at which point accumulated reserve can absorb payouts without founder subsidy. The 500-USDCx CRITICAL floor is set below market-rate ($50K–$500K CRITICAL payouts on Immunefi-tier bounty programs) to match Phase 1's sub-$25K TVL scale; post-audit + TVL growth scale the tiers toward market norms automatically (CRITICAL ceiling already at 10%-of-TVL or 10,000 USDCx cap, whichever is lower, which kicks in above $5K TVL).
 
 **Submission:** `optivaults@gmail.com` with PGP encryption (public key at optivaults.app/security).
 
