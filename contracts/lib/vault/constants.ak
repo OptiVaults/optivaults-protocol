@@ -186,13 +186,11 @@ pub const timelock_rotate_signers_ms: Int = 14 * 86_400 * 1_000
 /// SlashBond (Phase 3+ only; per spec/keeper-auth.md §3.6)
 pub const timelock_slash_bond_ms: Int = 14 * 86_400 * 1_000
 
-/// ActDeregisterStake (A2, 2026-04-20): governance-gated stake credential
-/// deregister path enabling recovery of 2 ADA per staking validator deposit.
-/// PRODUCTION = 14 * 86_400 * 1_000 (14 days, matches
-/// `timelock_update_keeper_auth_ms`). Temporarily overridden to 1 hour for
-/// the in-progress Preprod A2 verification ceremony (`v1-a2-preprod` state).
-/// MUST revert to the 14d production value before any mainnet build.
-pub const timelock_deregister_stake_ms: Int = 60 * 60 * 1_000
+/// ActDeregisterStake: governance-gated stake credential deregister path
+/// enabling recovery of 2 ADA per staking validator deposit. Matches
+/// `timelock_update_keeper_auth_ms` on the 14-day tier because stake-
+/// registration deposits are high-impact structural state.
+pub const timelock_deregister_stake_ms: Int = 14 * 86_400 * 1_000
 
 /// UpdateSlippagePolicy (§5.4 Phase 2, 2026-04-21): governance-gated
 /// adjustment of `max_slippage_bps` + `min_swap_peg_bps`. 48 hours chosen
