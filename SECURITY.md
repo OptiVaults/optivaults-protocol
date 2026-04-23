@@ -84,7 +84,7 @@ Three guarantees hold unconditionally in deployed V1 Aiken validators, independe
 Additional invariants enforced on-chain (not exhaustive — see `docs/audit-scope.md §1`):
 
 - **Non-deposit token preservation.** `verify_other_tokens_preserved` pattern on 7+ redeemers prevents silent token injection or extraction.
-- **Allocation invariant.** Two variants enforced across the vault operational set — a stricter `alloc_sum + idle_buffer ≤ total_deposited` via the shared `validate_allocations` helper (used by `Compound` / `DeployToProtocol` / `RecallFromProtocol` / `UpdateStrategy` / `AdminDeployNonDeposit` / `vault_liqwid` ops) and a looser `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal` inline check in `vault_gov_emergency.EmergencyWithdraw`. Note: R73 audit flagged a `vault_recall.MergeUtxo` admissibility gap against BOTH forms — donations bump `idle_buffer` without bumping the RHS, and the resulting broken state denies all 7 affected redeemers until Compound yield catches back up. Fix queued; full scope + economic-viability analysis in §"Known open findings" below.
+- **Allocation invariant.** Two variants enforced across the vault operational set — a stricter `alloc_sum + idle_buffer ≤ total_deposited` via the shared `validate_allocations` helper (used by `Compound` / `DeployToProtocol` / `RecallFromProtocol` / `UpdateStrategy` / `AdminDeployNonDeposit` / `vault_liqwid` ops) and a looser `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal` inline check in `vault_gov_emergency.EmergencyWithdraw`. `vault_recall.MergeUtxo` guards the looser form at the source of donation-driven state changes via `valid_merge_utxo_admissibility` (R73 F-1 fix) — a MergeUtxo post-state that satisfies the looser form automatically satisfies the stricter form downstream because NDV and Σ liqwid_principal are non-negative.
 - **First-depositor protection.** `initial_share_multiplier = 10^6` + `valid_deposited > 0` prevent ERC-4626-style inflation attacks.
 - **Minimum deposit.** 10 USDCx minimum on Direct Deposit (queued Order bypasses for dust-safe batching; BatchProcess enforces non-zero share mint).
 - **Anti-double-satisfaction.** `vault_user.Withdraw` enforces `receiver_output_idx` hard binding (R48 M-1). BatchProcess enforces `payout_output_index` uniqueness across multiple orders (R52 H-1).
@@ -138,7 +138,7 @@ Internal adversarial audit rounds executed against V1 contract code (additional 
 | Round | Scope | Severity breakdown | Status |
 |-------|-------|-------------------:|--------|
 | R72 | Post-Phase-77d hacker-mindset on full V1 set (17 logic + 4 NFT + 1 adapter) | 0 CRIT / 0 HIGH / 1 MEDIUM / 3 LOW / 6 INFO | MEDIUM + 3 LOW fixed on-chain; INFO documented |
-| R73 | `valid_allocs × vault_recall.MergeUtxo` admissibility gap | 0 CRIT / 0 HIGH / 1 MEDIUM | Fix queued for next contract revision (full description in §"Known open findings" below) |
+| R73 | `valid_allocs × vault_recall.MergeUtxo` admissibility gap | 0 CRIT / 0 HIGH / 1 MEDIUM | **FIXED** via `valid_merge_utxo_admissibility` in `lib/vault/validation.ak` + `vault_recall.MergeUtxo` invocation; 6 regression tests in `lib/vault/tests/r73_test.ak` |
 
 ### Coverage-area status (pending external audit)
 
@@ -161,38 +161,23 @@ Internal adversarial audit rounds executed against V1 contract code (additional 
 
 ## Known open findings
 
-### R73 F-1 — `vault_recall.MergeUtxo` admissibility gap (MEDIUM, queued for fix)
+_No currently open audit findings above LOW severity. See "Recently fixed" below for recently-closed entries._
 
-**Root cause.** `vault_recall.MergeUtxo` accepts arbitrary deposit-token (USDCx) donations into the vault. Its datum-preservation helpers preserve `total_deposited` bit-for-bit (correct — donations should not mint shares), but bump `idle_buffer` by `buffer_increase`. Two accounting invariants downstream check forms of `alloc_sum + idle_buffer ≤ <some denominator>`, both of which can become false after a donation that raises LHS without raising RHS:
+---
 
-- **Stricter form** (`alloc_sum + idle_buffer ≤ total_deposited`) — enforced by the shared `validate_allocations` helper in `lib/vault/validation.ak`
-- **Looser form** (`alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal`) — inline check in `vault_gov_emergency.EmergencyWithdraw`
+## Recently fixed
 
-**Affected redeemers** (7 total — this is wider than a governance-emergency-only DoS):
+### R73 F-1 — `vault_recall.MergeUtxo` admissibility gap (MEDIUM, FIXED)
 
-| Redeemer | Check form | Path |
-|----------|------------|------|
-| `vault_keeper_hot.Compound` | stricter | keeper hot-path, routine |
-| `vault_protocol.DeployToProtocol` | stricter | keeper, routine allocation |
-| `vault_recall.RecallFromProtocol` | stricter | keeper, routine allocation |
-| `vault_liqwid` ops (Supply / Recall) | stricter (inline) | keeper, routine |
-| `vault_gov_policy.UpdateStrategy` | stricter | governance, routine policy change |
-| `vault_admin_deploy.AdminDeployNonDeposit` | stricter | governance, 7d-fallback |
-| `vault_gov_emergency.EmergencyWithdraw` | looser (inline) | governance, emergency |
+**Root cause.** `vault_recall.MergeUtxo` accepted deposit-token (USDCx) donations that pushed `idle_buffer` without bumping `total_deposited` / `non_deposit_value` / `liqwid_principal` correspondingly. Downstream, seven redeemers (`vault_keeper_hot.Compound`, `vault_protocol.DeployToProtocol`, `vault_recall.RecallFromProtocol`, `vault_liqwid` Supply/Recall, `vault_gov_policy.UpdateStrategy`, `vault_admin_deploy.AdminDeployNonDeposit`, `vault_gov_emergency.EmergencyWithdraw`) enforced an allocation invariant of `alloc_sum + idle_buffer ≤ RHS` where RHS was one of two forms (stricter `total_deposited` or looser `total_deposited + non_deposit_value + Σ liqwid_principal`). A donation that pushed `idle_buffer` past RHS bricked all seven until Compound yield caught up, giving an attacker sub-dollar-per-day sustained DoS on keeper + governance paths at Phase 1 TVL.
 
-**Impact**. Post-donation, the broken invariant denies execution on ALL seven redeemers until `total_deposited` catches up enough to satisfy it. Compound (which bumps `total_deposited` via `harvested_amount`) is the natural healer — but Compound itself is one of the seven blocked redeemers, so the vault can only heal when Compound's internal ordering (harvested added to `total_deposited` BEFORE `validate_allocations` check) allows the check to pass on the post-harvest state. In the meantime:
+**Not fund theft** — donated USDCx accrued to existing depositors pro-rata on subsequent Withdraw activity; donor received nothing back. Attack class was DoS on operational + governance liveness, not principal loss. User `Withdraw` was never affected (no `validate_allocations` call on that path).
 
-- Keeper cycle stalls on the blocked redeemers; yield accrual pauses.
-- Governance cannot change allocation strategy, cannot execute AdminDeploy fallback, cannot execute EmergencyWithdraw.
-- User `Withdraw` is NOT affected (separate path, no `validate_allocations` call).
+**Fix** (this commit): `valid_merge_utxo_admissibility` predicate in `lib/vault/validation.ak` enforces the looser-form invariant at the source of the state change (`vault_recall.MergeUtxo`). Guarding the looser form is strictly sufficient because NDV and Σ liqwid_principal are non-negative, so any post-merge state satisfying the looser form also satisfies the stricter form downstream. Attack prevented because the donation that would break the invariant is rejected at MergeUtxo time, so the vault never enters the broken state.
 
-**Not fund theft** — donated USDCx is absorbed by the vault and distributed pro-rata to existing depositors on subsequent Withdraw activity. The donor has no shares and receives nothing back. DoS on operational + governance liveness, not principal loss.
+Six regression tests in `lib/vault/tests/r73_test.ak` cover: legitimate donation (pass), over-donation (reject), stable-token donation bumping NDV on both sides (pass), exact-boundary equality (pass), Liqwid principal contribution to RHS (pass), `alloc_sum` contribution to LHS with over-allocation (reject).
 
-**Economic viability of attack**. At Phase 1 TVL of $5K with 6% APY and weekly Compound, weekly yield ≈ $5.77. An attacker who donates ~$6 per week (~$0.85/day) can maintain the invariant-broken state indefinitely — each Compound attempt would heal just enough to re-break on the next donation. Low cost-to-impact ratio for sustained governance denial during high-leverage moments (e.g., pending EmergencyWithdraw queue); higher-TVL phases raise both yield pace and the donation required to sustain DoS, but the pattern holds proportionally.
-
-**Fix option (planned)**: add a `new.idle_buffer ≤ new.total_deposited + new.non_deposit_value + Σ liqwid_principal` admissibility check inside `vault_recall.MergeUtxo` (matches the looser form used by `EmergencyWithdraw`; rejecting donations that would break the invariant prevents the DoS at the root). ~6 LOC in `vault_recall.ak` + 4 regression tests. A stricter guard using `≤ total_deposited` would also work but would reject some donations that don't actually break anything downstream.
-
-Flagged for Q3 2026 external audit escalation.
+Flagged for Q3 2026 external audit verification.
 
 ---
 
@@ -204,7 +189,7 @@ Flagged for Q3 2026 external audit escalation.
 
 ### Governance empty-hash delegation
 
-`multisig_gov.QueueAction` permits an empty `target_tx_hash` (`#""`), which lets m-of-n governance pre-authorize a `VaultAdmin` / `RegistryAdmin` capability that any 1-of-n signer can execute after the action kind's timelock (minimum 14 days for most action kinds, 60s Preprod override during testing).
+`multisig_gov.QueueAction` permits an empty `target_tx_hash` (`#""`), which lets m-of-n governance pre-authorize a `VaultAdmin` / `RegistryAdmin` capability that any 1-of-n signer can execute after the action kind's timelock (7-21 days depending on `ActionKind` per `lib/vault/constants.ak`).
 
 This exists because `target_tx_hash` has an unavoidable circular dependency on the governance UTXO reference (TX body includes the queued datum which contains target_tx_hash — TX hash can't be known at queue time for actions whose executing TX hasn't been constructed yet).
 

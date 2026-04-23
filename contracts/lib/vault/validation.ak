@@ -226,6 +226,50 @@ pub fn validate_allocations(
 }
 
 // ─────────────────────────────────────────────────────────────────────
+// R73 F-1 admissibility guard (vault_recall.MergeUtxo)
+//
+// MergeUtxo accepts donations — idle_buffer and non_deposit_value can
+// both increase without changing total_deposited or liqwid_positions.
+// The seven downstream redeemers that read the post-merge vault state
+// (Compound / DeployToProtocol / RecallFromProtocol / Liqwid Supply +
+// Recall / UpdateStrategy / AdminDeployNonDeposit / EmergencyWithdraw)
+// each check some form of an allocation invariant:
+//
+//   stricter (validate_allocations helper):
+//     alloc_sum + idle_buffer <= total_deposited
+//
+//   looser (vault_gov_emergency.EmergencyWithdraw inline):
+//     alloc_sum + idle_buffer <= total_deposited + non_deposit_value
+//                              + Σ liqwid_principal
+//
+// Without this guard, an attacker can donate USDCx via MergeUtxo to
+// push idle_buffer past ANY of those denominators, bricking all seven
+// redeemers until Compound yield catches up — a sub-dollar-per-day
+// sustained DoS at Phase 1 TVL. Guarding the LOOSER form here is
+// strictly sufficient, because non_deposit_value and liqwid_principal
+// are always non-negative, so `<= TD` is a subset of
+// `<= TD + NDV + liqwid_principal`. A MergeUtxo post-state that
+// satisfies this check satisfies BOTH invariant forms downstream.
+//
+// See `SECURITY.md §"Known open findings" R73 F-1` + audit round
+// report for the full scope + economic-viability analysis.
+pub fn valid_merge_utxo_admissibility(new_datum: VaultDatum) -> Bool {
+  let alloc_sum =
+    list.foldl(
+      new_datum.strategy_allocations,
+      0,
+      fn(a, acc) { acc + a.amount },
+    )
+  let liqwid_principal_sum =
+    list.foldl(
+      new_datum.liqwid_positions,
+      0,
+      fn(p, acc) { acc + p.supplied_value },
+    )
+  alloc_sum + new_datum.idle_buffer <= new_datum.total_deposited + new_datum.non_deposit_value + liqwid_principal_sum
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // Share-mint math (ERC-4626; integer division rounds toward favor of
 // existing holders / vault).
 // ─────────────────────────────────────────────────────────────────────

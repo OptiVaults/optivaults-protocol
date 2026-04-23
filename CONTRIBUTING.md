@@ -136,7 +136,7 @@ V1 uses a **coverage-area methodology** (areas A–F, see `docs/audit-scope.md`)
 
 Known open audit findings to be aware of when contributing:
 
-- **R73 F-1 (MEDIUM)**: `vault_recall.MergeUtxo` admissibility gap vs `valid_allocs` invariant in `vault_gov_emergency.EmergencyWithdraw` / `vault_admin_deploy.AdminDeployNonDeposit`. Fix is queued for the next contract revision; full description in [SECURITY.md](SECURITY.md) §"Known open findings". If you touch `vault_recall.ak` or the shared `verify_protocol_fields_preserved` helper, be aware this is pending.
+- **R73 F-1** (MEDIUM, FIXED) — `vault_recall.MergeUtxo` admissibility gap. Closed via `valid_merge_utxo_admissibility` predicate + 6 regression tests (`lib/vault/tests/r73_test.ak`). See [SECURITY.md](SECURITY.md) §"Recently fixed" for the full root-cause + fix write-up. If you touch `vault_recall.ak` or the shared predicate, keep the admissibility guard on any new state-mutation paths.
 
 Findings classified internally as LOW or INFO are tracked internally and don't block contributions unless you're changing the affected validator area; SECURITY.md summarises anything above LOW.
 

@@ -3,7 +3,7 @@
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![Aiken](https://img.shields.io/badge/aiken-v1.1.x-red)
 [![CI](https://github.com/OptiVaults/optivaults-protocol/actions/workflows/aiken-check.yml/badge.svg?branch=v1)](https://github.com/OptiVaults/optivaults-protocol/actions/workflows/aiken-check.yml)
-![Tests](https://img.shields.io/badge/tests-104%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-110%20passing-brightgreen)
 ![Checks](https://img.shields.io/badge/randomized%20checks-599-brightgreen)
 ![Audit Status](https://img.shields.io/badge/audit-RFP%20in%20progress-yellow)
 ![Mainnet](https://img.shields.io/badge/mainnet-pre--launch-orange)
@@ -60,7 +60,7 @@ OptiVaults V1 is characterized by the following architectural decisions. Each is
 │   ├── ada-swap.md             SwapAda redeemer + dual-feed oracle reader
 │   ├── vault-nft.md            Vault Identity NFT one-shot mint pattern
 │   └── swap-adapter.md         SwapAdapter interface + B@launch=1 post-launch DEX addition lifecycle
-├── contracts/                  V1 Aiken PlutusV3 source — 17 logic validators + 4 NFT mint policies + 1 DEX adapter; 104 unit + property tests / 599 randomized checks; `aiken check` clean
+├── contracts/                  V1 Aiken PlutusV3 source — 17 logic validators + 4 NFT mint policies + 1 DEX adapter; 110 unit + property tests / 599 randomized checks; `aiken check` clean
 ├── keeper/                     V1 keeper reference implementation (pending)
 ├── deploy/                     Deploy pipeline
 │   ├── deploy.ts               Single-command ceremony orchestrator (idempotent + resumable)
@@ -138,7 +138,7 @@ V1 is in **early implementation phase**:
 
 - ✅ Spec / docs / whitepaper complete (15 markdown files under `spec/` + `docs/` + `whitepaper/`).
 - ✅ All 17 Aiken logic validators + 4 NFT mint policies + 1 DEX adapter (`minswap_v2_adapter`, §B@launch=1 SwapAdapter) implemented and `aiken check` passes (`contracts/`). Partitioning rationale documented in `spec/architecture.md` §4.1. `UpdateSlippagePolicy` + 2 VaultDatum fields (§5.4 Phase 2) and ref-script SwapAdapter dispatch + `minswap_v2_adapter` + Registry `swap_adapter_hashes` (§B@launch=1) all on-chain.
-- ✅ Unit + property test suite — **104 tests passing, 599 total checks per `aiken check` run** (8 property tests × up to 100 iterations + deterministic cases including R72 regression coverage).
+- ✅ Unit + property test suite — **110 tests passing, 599 total checks per `aiken check` run** (8 property tests × up to 100 iterations + deterministic cases including R72 + R73 regression coverage).
 - ✅ Preprod E2E test plan drafted (`tests/preprod-e2e-plan.md`) with 100+ scenarios across all vault validators + 4 NFT one-shot policies + cross-validator integration flows.
 - ✅ Preprod E2E test scripts (`tests/preprod/*.ts`) — 16 scripts covering ceremony health + Phase B (Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw) + Phase C (zero-yield Compound) + Phase D (MergeUtxo donation paths including 2 negative-path rejections). Phase E (real Minswap V2) / Phase F (mock Liqwid stack) / Phase H (governance state machine) pending.
 - ✅ Two Preprod ceremonies executed — see "Preprod deploy status" below. 38 TX per ceremony, all phases verified on-chain.
@@ -146,7 +146,7 @@ V1 is in **early implementation phase**:
 - ✅ Mainnet ceremony runbook drafted (`deploy/runbooks/v1-mainnet-ceremony.md`, 501 lines) — capital budget + pre-flight + phase-by-phase + partial-failure handling + post-ceremony backfill + sunset path.
 - ✅ Off-chain byte-for-byte decoder `deploy/tools/verify-minswap-v2-decode.ts` exposes the Minswap V2 adapter's decode logic for pre-mainnet decode verification against historical on-chain TXs without re-submitting.
 - ⏳ Keeper reference implementation (`keeper/`) — not started.
-- ⏳ Internal audit rounds (coverage areas A-F, see `docs/audit-scope.md`) — R72 (post-Phase-77d, 1 MEDIUM + 3 LOW fixed) and R73 (valid_allocs × MergeUtxo donation gap, 1 MEDIUM queued for fix) complete; areas A-F walkthrough pending.
+- ⏳ Internal audit rounds (coverage areas A-F, see `docs/audit-scope.md`) — R72 (post-Phase-77d, 1 MEDIUM + 3 LOW fixed) and R73 (valid_allocs × MergeUtxo donation gap, 1 MEDIUM fixed) complete; areas A-F walkthrough pending.
 - ⏳ External audit engagement — target Q3 2026, firm not yet selected.
 
 ### Preprod deploy status

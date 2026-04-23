@@ -44,6 +44,7 @@ use vault/validation.{
   check_immutable_fields, check_policy_fields_unchanged,
   has_no_order_inputs as val_has_no_order_inputs,
   require_keeper_stake_script_or_governance_fallback, validate_allocations,
+  valid_merge_utxo_admissibility,
 }
 
 validator vault_recall(
@@ -263,6 +264,10 @@ validator vault_recall(
           )
         let valid_preserved = verify_protocol_fields_preserved(old_datum, new_datum)
 
+        // R73 F-1 admissibility guard — see validation.ak header for
+        // rationale + downstream-redeemer impact analysis.
+        let valid_admissibility = valid_merge_utxo_admissibility(new_datum)
+
         and {
           authorized,
           valid_preserved,
@@ -280,6 +285,7 @@ validator vault_recall(
           valid_non_deposit,
           all_secondary_whitelisted,
           new_datum.non_deposit_value >= 0,
+          valid_admissibility,
         }
       }
 
