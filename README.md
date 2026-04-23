@@ -1,5 +1,14 @@
 # OptiVaults V1
 
+![License](https://img.shields.io/badge/license-Apache%202.0-blue)
+![Aiken](https://img.shields.io/badge/aiken-v1.1.x-red)
+![Tests](https://img.shields.io/badge/tests-104%20passing-brightgreen)
+![Checks](https://img.shields.io/badge/randomized%20checks-599-brightgreen)
+![Audit Status](https://img.shields.io/badge/audit-RFP%20in%20progress-yellow)
+![Mainnet](https://img.shields.io/badge/mainnet-pre--launch-orange)
+
+> **Active development branch: `v1`.** There is no `main` branch — V1 is the first public release, and we use the version tag as the branch name by convention. Future major versions (V2, V3, ...) will live on their own parallel branches.
+
 **OptiVaults V1 is a Cardano DeFi public-goods reference implementation — a non-custodial, on-chain auto-yield stablecoin vault, published as an open-source Apache-2.0-licensed reference for the Cardano DeFi commons. It is not optimized for commercial scale.** See whitepaper Executive Summary + §12 Disclosure for depositor-expectation framing, funding strategy, and regulatory posture.
 
 This directory contains the V1 design, specification, implementation, and migration documentation. All content here is written for V1 on its own terms — it is not a carry-over or patch of prior versions.
@@ -36,22 +45,44 @@ OptiVaults V1 is characterized by the following architectural decisions. Each is
 ## Directory layout
 
 ```
-optivaults-protocol/
+.
 ├── README.md                   This file
-├── LICENSE                     Apache License, Version 2.0
-├── contracts/                  V1 Aiken PlutusV3 source — 17 logic validators + 4 NFT mint policies + 1 DEX adapter; 104 unit + property tests / 599 randomized checks; `aiken check` clean
 ├── spec/                       V1 protocol specification
-│   ├── architecture.md         High-level protocol architecture
-│   ├── vault-datum.md          VaultDatum fields, invariants, transitions
+│   ├── architecture.md         High-level protocol architecture (incl. §4.1 split history)
+│   ├── vault-datum.md          VaultDatum fields, invariants, transitions (28 fields)
 │   ├── treasury.md             Treasury contract specification
 │   ├── keeper-auth.md          Keeper stake-validator specification
 │   ├── order-batch.md          Order + BatchProcess + user-tip specification
-│   ├── governance.md           MultisigGov actions + timelock rules
-│   ├── multisig-gov.md         Multisig internals
-│   ├── gov-nft.md              Governance NFT one-shot design
-│   ├── vault-nft.md            Vault Identity NFT design
-│   ├── ada-swap.md             ADA top-up oracle + SwapAda redeemer
-│   └── swap-adapter.md         Ref-script dispatched DEX adapter interface
+│   ├── governance.md           MultisigGov actions + timelock rules (14 ActionKind variants)
+│   ├── multisig-gov.md         MultisigGov internals + is_gov_authorized cross-validator predicate
+│   ├── gov-nft.md              Governance signer soul-bound NFT
+│   ├── ada-swap.md             SwapAda redeemer + dual-feed oracle reader
+│   ├── vault-nft.md            Vault Identity NFT one-shot mint pattern
+│   └── swap-adapter.md         SwapAdapter interface + B@launch=1 post-launch DEX addition lifecycle
+├── contracts/                  V1 Aiken PlutusV3 source — 17 logic validators + 4 NFT mint policies + 1 DEX adapter; 104 unit + property tests / 599 randomized checks; `aiken check` clean
+├── keeper/                     V1 keeper reference implementation (pending)
+├── deploy/                     Deploy pipeline
+│   ├── deploy.ts               Single-command ceremony orchestrator (idempotent + resumable)
+│   ├── compile.ts              Offline hash derivation (applyParams across 22 artefacts)
+│   ├── lib/                    blockfrostProvider + config loader + state file + datum builders + phase helpers
+│   ├── config/                 preprod.json (real) + mainnet.example.json (template) + preprod-mock.json
+│   ├── state/                  Ceremony state checkpoints (gitignored — per-releaseTag JSON)
+│   ├── tools/                  Operator CLI
+│   │   ├── deregister-stakes.ts        Legacy (pre-A2)
+│   │   ├── derive-gov-signers.ts       PKH derivation helper
+│   │   ├── whoami-preprod.ts           Wallet sanity print
+│   │   ├── a2-queue-deregister.ts      A2 Queue (idempotent — Phase 84 backport)
+│   │   ├── a2-execute-deregister.ts    A2 Execute (idempotent)
+│   │   ├── a2-cancel-deregister.ts     A2 Cancel (idempotent)
+│   │   ├── h-emergency-benign.ts       ActEmergencyWithdraw(0,0) Queue+Execute smoke
+│   │   ├── verify-minswap-v2-decode.ts Off-chain Minswap V2 order decoder verifier
+│   │   ├── reclaim-refs.ts             Ref-script ADA reclaim at sunset
+│   │   ├── full-drain-test.ts          SUPERSEDED (pre-Phase-77 topology)
+│   │   ├── mock-full-drain-deploy.ts   SUPERSEDED (pre-Phase-77 topology)
+│   │   ├── sunset-ceremony.ts          Orchestrate full-sunset flow
+│   │   └── SUNSET_RUNBOOK.md           Operator sunset SOP
+│   └── runbooks/
+│       └── v1-mainnet-ceremony.md      V1 mainnet deploy runbook (pre-flight + phases + failure handling + sunset)
 ├── docs/
 │   ├── product-overview.md     Pragmatic user-facing overview (EN) — what you deposit, what you receive, risks in user terms
 │   ├── product-overview-zh-TW.md  繁體中文 product overview
@@ -61,16 +92,46 @@ optivaults-protocol/
 │   ├── audit-scope.md          Pre-audit internal round plan + external audit scope
 │   ├── integration-playbook.md Operator SOP for adding new DEX routes / Liqwid markets
 │   └── contributor-program.md  Open-source contributor rewards (Phase 2+ activation)
-├── deploy/                     Reproducible ceremony: compile + 5-phase deploy orchestrator + tools (reclaim-refs, sunset-ceremony, derive-gov-signers, full-drain helpers) + config templates (preprod-mock, preprod.example, mainnet.example)
-├── tests/                      V1 regression tests — unit suite under `contracts/lib/vault/tests/`; Preprod E2E plan `preprod-e2e-plan.md` drafted; Preprod TS scripts pending
+├── private/                    Operator-only (gitignored) — audit reports, state archives, sensitive config
+│   ├── audits/                 Internal audit round reports (R72, R73, Minswap static review)
+│   ├── state/                  Ceremony state archives + recovery-verification notes
+│   └── preprod-deploy-config.json    Real Blockfrost keys + signer PKHs
+├── tests/
+│   ├── preprod-e2e-plan.md     Specification-level scenario catalog (100+)
+│   └── preprod/                Executable TS scripts (16 scripts — Phase B + C + D coverage;
+│                                  Phase E/F/H/I/J pending)
+│       ├── 00-ceremony-health.ts
+│       ├── 10-deposit-direct.ts
+│       ├── 11-withdraw-direct-partial.ts
+│       ├── 12-withdraw-full-drain.ts
+│       ├── 13-queue-deposit-order.ts
+│       ├── 14-batch-process-single.ts
+│       ├── 15-batch-multi-order.ts
+│       ├── 16-order-cancel.ts
+│       ├── 17-order-expire.ts
+│       ├── 18-withdraw-queue-batch.ts
+│       ├── 20-compound-zero-yield.ts
+│       ├── 30-merge-ada-donation.ts
+│       ├── 31-merge-deposit-token.ts
+│       ├── 32-merge-multi-secondary.ts
+│       ├── 33-merge-reject-datum.ts              (NEGATIVE path)
+│       ├── 34-merge-reject-garbage-token.ts      (NEGATIVE path)
+│       ├── helpers.ts
+│       └── EXECUTION-ORDER.md
 └── whitepaper/
     ├── whitepaper.md           V1 public whitepaper (EN)
     └── whitepaper-zh-TW.md     V1 public whitepaper (繁體中文)
 ```
 
-**Note:** keeper reference implementation lives in a separate repository. See `docs/integration-playbook.md` for operator integration.
-
 Each document is written as a standalone V1 reference. No document in this tree assumes the reader has read prior-version documentation.
+
+---
+
+### Development history note
+
+This repository was initialized at the **`v1-postphase77d-preprod`** release tag on 2026-04-22. The codebase has earlier development history (~1,000+ commits across prior internal-verification-phase iterations) that was consolidated at V1 cutover. The internal-verification phase is covered in `spec/architecture.md §4.1` (partitioning history) and `docs/migration.md` (sunset plan).
+
+For audit engagement: the V1 audit baseline is the `v1-postphase77d-preprod` tag. Earlier development history is available on request under informal confidentiality.
 
 ---
 
@@ -81,41 +142,53 @@ V1 is in **early implementation phase**:
 - ✅ Spec / docs / whitepaper complete (15 markdown files under `spec/` + `docs/` + `whitepaper/`).
 - ✅ All 17 Aiken logic validators + 4 NFT mint policies + 1 DEX adapter (`minswap_v2_adapter`, §B@launch=1 SwapAdapter) implemented and `aiken check` passes (`contracts/`). Partitioning rationale documented in `spec/architecture.md` §4.1. `UpdateSlippagePolicy` + 2 VaultDatum fields (§5.4 Phase 2) and ref-script SwapAdapter dispatch + `minswap_v2_adapter` + Registry `swap_adapter_hashes` (§B@launch=1) all on-chain.
 - ✅ Unit + property test suite — **104 tests passing, 599 total checks per `aiken check` run** (8 property tests × up to 100 iterations + deterministic cases including R72 regression coverage).
-- ✅ Preprod E2E test plan drafted (`tests/preprod-e2e-plan.md`) with 100+ scenarios across all vault validators + 4 NFT one-shot policies + cross-validator integration flows. First end-to-end Preprod ceremony executed (38 TX, all phases verified on-chain).
-- ⏳ Keeper reference implementation (separate repository) — not started.
-- ⏳ Preprod E2E test scripts (`tests/preprod/*.test.ts`) — not started.
-- ⏳ Internal audit rounds (coverage areas A-F, see `docs/audit-scope.md`) — not started.
+- ✅ Preprod E2E test plan drafted (`tests/preprod-e2e-plan.md`) with 100+ scenarios across all vault validators + 4 NFT one-shot policies + cross-validator integration flows.
+- ✅ Preprod E2E test scripts (`tests/preprod/*.ts`) — 16 scripts covering ceremony health + Phase B (Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw) + Phase C (zero-yield Compound) + Phase D (MergeUtxo donation paths including 2 negative-path rejections). Phase E (real Minswap V2) / Phase F (mock Liqwid stack) / Phase H (governance state machine) pending.
+- ✅ Two Preprod ceremonies executed — see "Preprod deploy status" below. 38 TX per ceremony, all phases verified on-chain.
+- ✅ A2 governance-gated stake deregister tools (`deploy/tools/a2-{queue,execute,cancel}-deregister.ts`) with idempotency + CBOR-Constr payload encoding.
+- ✅ Mainnet ceremony runbook drafted (`deploy/runbooks/v1-mainnet-ceremony.md`, 501 lines) — capital budget + pre-flight + phase-by-phase + partial-failure handling + post-ceremony backfill + sunset path.
+- ✅ Minswap V2 adapter static review complete (`private/audits/minswap-v2-adapter-static-review.md`) + off-chain byte-for-byte decoder `deploy/tools/verify-minswap-v2-decode.ts` for pre-mainnet decode verification against historical on-chain TXs without re-submitting.
+- ⏳ Keeper reference implementation (`keeper/`) — not started.
+- ⏳ Internal audit rounds (coverage areas A-F, see `docs/audit-scope.md`) — R72 (post-Phase-77d, 1 MEDIUM + 3 LOW fixed) and R73 (valid_allocs × MergeUtxo donation gap, 1 MEDIUM queued for fix) complete; areas A-F walkthrough pending.
 - ⏳ External audit engagement — target Q3 2026, firm not yet selected.
-- ⏳ Mainnet ceremony runbook — not yet written.
 
-Compiled validator sizes (all under the 16 KB PlutusV3 limit, sorted largest → smallest):
+### Preprod deploy status
+
+| Release tag | Date | Vault address | Vault NFT policy | Notes |
+|-------------|------|---------------|------------------|-------|
+| `v1-preprod-p3` | 2026-04-23 | `addr_test1wz87t7qnkpk3cgy2057rsrnsz6px88ks23y3ktd46q0jzfg5zfddz` | `7a0eea53cfa90b949009729bd0eaa73e3cb9f2f8056cc235d57218c5` | Current. Ceremony after timelock constants shrunk to 60s for Preprod E2E iteration speed. B1 Deposit + B2 Partial Withdraw + A2 Queue on vault_user all verified on-chain. |
+| `v1-postphase77d-preprod` | 2026-04-22 | `addr_test1wqca8hpe87tcfx0r0q7ju3uxf2thpr4jjcyjg44cc8kpvngysgja2` | — | Pre-timelock-shrink ceremony. Phase 84 E2E B1-B9 + D1/D2/D4/D5/D6 + C1 + H1-H5 Queue/Cancel verified on-chain. |
+
+Both ceremonies' stake-registration deposits (12 × 2 ADA = 24 ADA per ceremony) + ref-script min-ADA lockups (~870 ADA per ceremony) are reclaimable via `deploy/tools/a2-{queue,execute}-deregister.ts` + `deploy/tools/reclaim-refs.ts`, contingent on the A2 governance flow (14d production timelock; 1h Preprod override for ceremony iteration).
+
+Compiled validator sizes (all under the 16 KB PlutusV3 limit, sorted largest → smallest). Measured from the **current** `v1-preprod-p3` build; `timelock_*_ms` constants currently at Preprod override 60s for 11 action kinds (all governance paths except `timelock_emergency_ms=0`, `timelock_fast_update_markets_ms=1h`, `timelock_deregister_stake_ms=1h`). Production timelocks (7-21d) MUST be restored before any mainnet build — see `constants.ak` header note + `deploy/runbooks/v1-mainnet-ceremony.md` §0.
 
 | Validator | Size (bytes) | Headroom |
 |-----------|-------------:|---------:|
-| vault_liqwid | 13,482 | 2,902 B |
-| vault_recall | 13,428 | 2,956 B |
-| vault_admin_deploy | 13,213 | 3,171 B |
-| vault_protocol | 13,219 | 3,165 B |
-| vault_gov_policy | 12,640 | 3,744 B |
-| vault_keeper_hot | 12,505 | 3,879 B |
-| vault_swap_ada | 12,254 | 4,130 B |
-| vault_user | 11,940 | 4,444 B |
-| vault_batcher | 11,643 | 4,741 B |
-| vault_gov_emergency | 10,917 | 5,467 B |
-| treasury | 9,902 | 6,482 B |
-| keeper_stake_script | 8,830 | 7,554 B |
+| vault_liqwid | 13,392 | 2,992 B |
+| vault_recall | 13,337 | 3,047 B |
+| vault_admin_deploy | 13,157 | 3,227 B |
+| vault_protocol | 13,130 | 3,254 B |
+| vault_gov_policy | 12,584 | 3,800 B |
+| vault_keeper_hot | 12,381 | 4,003 B |
+| vault_swap_ada | 12,164 | 4,220 B |
+| vault_user | 11,885 | 4,499 B |
+| vault_batcher | 11,553 | 4,831 B |
+| vault_gov_emergency | 10,861 | 5,523 B |
+| treasury | 9,851 | 6,533 B |
+| keeper_stake_script | 8,774 | 7,610 B |
 | registry | 8,504 | 7,880 B |
-| multisig_gov | 8,392 | 7,992 B |
-| vault_proxy | 5,296 | 11,088 B |
-| minswap_v2_adapter | 5,075 | 11,309 B |
-| order | 3,861 | 12,523 B |
-| vusdcx | 1,327 | 15,057 B |
+| multisig_gov | 8,233 | 8,151 B |
+| minswap_v2_adapter | 5,020 | 11,364 B |
+| vault_proxy | 4,912 | 11,472 B |
+| order | 3,788 | 12,596 B |
+| vusdcx | 1,255 | 15,129 B |
 | gov_signer_nft | 399 | 15,985 B |
 | vault_nft | 337 | 16,047 B |
 | governance_nft | 319 | 16,065 B |
 | registry_auth_nft | 319 | 16,065 B |
 
-Sizes measured from V1 Preprod deploy 2026-04-22 (release tag `v1-postphase77d-preprod`). Tightest headroom is `vault_liqwid` at 2,902 B free (17.7% from ceiling).
+Tightest headroom is `vault_liqwid` at 2,992 B free (18.3% from ceiling). Production-timelock rebuild will shift `multisig_gov` back up by ~100-200 B (const-inlined constants are larger) but does not change non-multisig_gov validator hashes.
 
 See [docs/audit-scope.md](docs/audit-scope.md) for the development / audit / launch timeline.
 
@@ -123,7 +196,7 @@ See [docs/audit-scope.md](docs/audit-scope.md) for the development / audit / lau
 
 ## License
 
-OptiVaults V1 is released under the **Apache License, Version 2.0**. This applies to the entire repository — smart contracts, keeper reference implementation, API server, frontend, CLI tools, and documentation. Any team may fork, specialize, or integrate V1's architecture into derivative products consistent with the Apache 2.0 terms (see [LICENSE](LICENSE)).
+OptiVaults V1 is released under the **Apache License, Version 2.0**. This applies to the entire repository — smart contracts, keeper reference implementation, API server, frontend, CLI tools, and documentation. Any team may fork, specialize, or integrate V1's architecture into derivative products consistent with the Apache 2.0 terms (see [LICENSE](../LICENSE)).
 
 The permissive license choice is deliberate: V1's success metric explicitly includes the architecture being forked and specialized by other Cardano teams (see whitepaper §1 "Why we do this"). Restricting reuse during a pre-audit validation phase would contradict that contribution-oriented posture.
 
@@ -132,5 +205,5 @@ The permissive license choice is deliberate: V1's success metric explicitly incl
 ## Contact
 
 - Website: [optivaults.app](https://optivaults.app)
-- Source (open-source mirror): github.com/OptiVaults/optivaults-protocol (repo / branch structure set up separately)
+- Source (open-source mirror): [github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol) (branch `v1`)
 - Security: optivaults@gmail.com
