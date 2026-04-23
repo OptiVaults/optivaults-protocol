@@ -2,6 +2,7 @@
 
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![Aiken](https://img.shields.io/badge/aiken-v1.1.x-red)
+[![CI](https://github.com/OptiVaults/optivaults-protocol/actions/workflows/aiken-check.yml/badge.svg?branch=v1)](https://github.com/OptiVaults/optivaults-protocol/actions/workflows/aiken-check.yml)
 ![Tests](https://img.shields.io/badge/tests-104%20passing-brightgreen)
 ![Checks](https://img.shields.io/badge/randomized%20checks-599-brightgreen)
 ![Audit Status](https://img.shields.io/badge/audit-RFP%20in%20progress-yellow)
