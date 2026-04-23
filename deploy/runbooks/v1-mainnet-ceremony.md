@@ -18,7 +18,7 @@ Do NOT start this ceremony if any of these are false:
 - [ ] Deploy wallet has ≥ 15 USDCx (`1f3aec8b…` policy; actual mainnet deposit token) for the vault seed. Verified not-frozen on Circle side.
 - [ ] Blockfrost Mainnet quota: ≥ 2,000 requests headroom (ceremony consumes ~400–600 requests over 10–15 min).
 - [ ] Key daemon running on the deploy host with the mainnet deploy wallet seed unlocked. Socket path canonicalized.
-- [ ] `git status` clean on `crypto-claude/` main. `aiken check` in `contracts/` passes 104 tests / 599 checks / 0 errors.
+- [ ] `git status` clean on the working tree. `aiken check` in `contracts/` passes 104 tests / 599 checks / 0 errors.
 - [ ] `deploy/state/mainnet-<releaseTag>.json` does NOT exist (or is archived). Starting fresh.
 
 ---
@@ -42,7 +42,7 @@ Mainnet wallet budget recommendation: **≥ 1,000 ADA** (as above, with headroom
 ### 2.1 Build + inspect contracts
 
 ```bash
-cd crypto-claude/contracts
+cd contracts
 rm -rf build plutus.json
 aiken build
 aiken check                      # 104 tests / 599 checks / 0 failed
@@ -240,7 +240,7 @@ These are non-blocking but worth resolving at external audit handoff:
 
 - **`timelock_deregister_stake_ms` production value**: constants.ak has a Preprod override at 1h; production is 14d. Runbook `§0` enforces the revert but a `grep` hook in CI or an explicit mainnet-build sanity check would be safer.
 - **Minswap V2 adapter decoder**: `spec/swap-adapter.md §9` specifies byte-for-byte verification against real mainnet TXs. That verification has not been done (it will require spending some TX on mainnet Minswap V2 with matching payload structures and comparing the adapter's decode against the on-chain datum format). Must happen before governance populates `swap_adapter_hashes` with the mainnet adapter.
-- **R73 `valid_allocs × MergeUtxo donation gap` fix** (see `private/audits/r73-donation-gap.md`): Option A fix (~6 LOC in `vault_recall.MergeUtxo`) queued for next contract revision. If deployed before mainnet, changes `vault_recall` hash → one ref-script rewrite + one A2 deregister/re-register cycle. If deployed post-mainnet, a V2 migration is needed. Recommend: include in pre-mainnet revision.
+- **R73 `valid_allocs × MergeUtxo donation gap` fix** (full description in `SECURITY.md` §"Known open findings"): Option A fix (~6 LOC in `vault_recall.MergeUtxo`) queued for next contract revision. If deployed before mainnet, changes `vault_recall` hash → one ref-script rewrite + one A2 deregister/re-register cycle. If deployed post-mainnet, a V2 migration is needed. Recommend: include in pre-mainnet revision.
 - **VPS backfill automation**: the manual env-sync flow in §5.2 is error-prone. `backfill-vps-env.ts` tool to auto-generate `.env` content from state file should be written and tested on Preprod before mainnet.
 - **3-sig governance signing protocol**: need a documented off-chain communication protocol for the 3 signers to coordinate on Queue/Execute payload_hash verification (how they independently reconstruct the payload, compare hashes, and sign only after consensus). This is a social-engineering surface, not a contract surface, but it's the critical governance-liveness piece.
 

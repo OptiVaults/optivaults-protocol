@@ -92,10 +92,6 @@ OptiVaults V1 is characterized by the following architectural decisions. Each is
 │   ├── audit-scope.md          Pre-audit internal round plan + external audit scope
 │   ├── integration-playbook.md Operator SOP for adding new DEX routes / Liqwid markets
 │   └── contributor-program.md  Open-source contributor rewards (Phase 2+ activation)
-├── private/                    Operator-only (gitignored) — audit reports, state archives, sensitive config
-│   ├── audits/                 Internal audit round reports (R72, R73, Minswap static review)
-│   ├── state/                  Ceremony state archives + recovery-verification notes
-│   └── preprod-deploy-config.json    Real Blockfrost keys + signer PKHs
 ├── tests/
 │   ├── preprod-e2e-plan.md     Specification-level scenario catalog (100+)
 │   └── preprod/                Executable TS scripts (16 scripts — Phase B + C + D coverage;
@@ -147,7 +143,7 @@ V1 is in **early implementation phase**:
 - ✅ Two Preprod ceremonies executed — see "Preprod deploy status" below. 38 TX per ceremony, all phases verified on-chain.
 - ✅ A2 governance-gated stake deregister tools (`deploy/tools/a2-{queue,execute,cancel}-deregister.ts`) with idempotency + CBOR-Constr payload encoding.
 - ✅ Mainnet ceremony runbook drafted (`deploy/runbooks/v1-mainnet-ceremony.md`, 501 lines) — capital budget + pre-flight + phase-by-phase + partial-failure handling + post-ceremony backfill + sunset path.
-- ✅ Minswap V2 adapter static review complete (`private/audits/minswap-v2-adapter-static-review.md`) + off-chain byte-for-byte decoder `deploy/tools/verify-minswap-v2-decode.ts` for pre-mainnet decode verification against historical on-chain TXs without re-submitting.
+- ✅ Off-chain byte-for-byte decoder `deploy/tools/verify-minswap-v2-decode.ts` exposes the Minswap V2 adapter's decode logic for pre-mainnet decode verification against historical on-chain TXs without re-submitting.
 - ⏳ Keeper reference implementation (`keeper/`) — not started.
 - ⏳ Internal audit rounds (coverage areas A-F, see `docs/audit-scope.md`) — R72 (post-Phase-77d, 1 MEDIUM + 3 LOW fixed) and R73 (valid_allocs × MergeUtxo donation gap, 1 MEDIUM queued for fix) complete; areas A-F walkthrough pending.
 - ⏳ External audit engagement — target Q3 2026, firm not yet selected.

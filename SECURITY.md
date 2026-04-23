@@ -138,7 +138,7 @@ Internal adversarial audit rounds executed against V1 contract code (additional 
 | Round | Scope | Severity breakdown | Status |
 |-------|-------|-------------------:|--------|
 | R72 | Post-Phase-77d hacker-mindset on full V1 set (17 logic + 4 NFT + 1 adapter) | 0 CRIT / 0 HIGH / 1 MEDIUM / 3 LOW / 6 INFO | MEDIUM + 3 LOW fixed on-chain; INFO documented |
-| R73 | `valid_allocs × vault_recall.MergeUtxo` admissibility gap | 0 CRIT / 0 HIGH / 1 MEDIUM | Fix queued for next contract revision (see `private/audits/r73-donation-gap.md`) |
+| R73 | `valid_allocs × vault_recall.MergeUtxo` admissibility gap | 0 CRIT / 0 HIGH / 1 MEDIUM | Fix queued for next contract revision (full description in §"Known open findings" below) |
 
 ### Coverage-area status (pending external audit)
 
@@ -169,7 +169,7 @@ Internal adversarial audit rounds executed against V1 contract code (additional 
 
 **Fix option (planned)**: add `new.idle_buffer ≤ new.total_deposited + new.non_deposit_value + Σ liqwid_principal` admissibility check inside `vault_recall.MergeUtxo`. ~6 LOC + 4 regression tests.
 
-Full finding: `private/audits/r73-donation-gap.md` (operator-visible; flagged for Q3 2026 external audit escalation).
+Flagged for Q3 2026 external audit escalation.
 
 ---
 

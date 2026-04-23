@@ -12,7 +12,7 @@ This doc covers: how to set up the dev environment, what kinds of contributions 
 2. `aiken check` in `contracts/` must pass (104 tests / 599 randomized checks / 0 errors).
 3. For contract changes, include a regression test in `lib/vault/tests/`.
 4. For spec / doc changes, ensure internal cross-references still work (validator names, redeemer tags, field counts).
-5. Don't commit secrets, mainnet signer PKHs, or real Blockfrost keys. They belong in `private/` (gitignored) or operator `.env`, never in the repo.
+5. Don't commit secrets, mainnet signer PKHs, or real Blockfrost keys. They belong in operator `.env` (gitignored), never in the repo.
 6. **Security-sensitive findings go to `optivaults@gmail.com` (PGP on optivaults.app/security), NOT a public issue.** See §Security disclosure below.
 
 ---
@@ -136,9 +136,9 @@ V1 uses a **coverage-area methodology** (areas A–F, see `docs/audit-scope.md`)
 
 Known open audit findings to be aware of when contributing:
 
-- **R73 F-1 (MEDIUM)**: `vault_recall.MergeUtxo` admissibility gap vs `valid_allocs` invariant in `vault_gov_emergency.EmergencyWithdraw` / `vault_admin_deploy.AdminDeployNonDeposit`. Fix is queued (see `private/audits/r73-donation-gap.md` — operator copy only). If you touch `vault_recall.ak` or the shared `verify_protocol_fields_preserved` helper, be aware this is pending.
+- **R73 F-1 (MEDIUM)**: `vault_recall.MergeUtxo` admissibility gap vs `valid_allocs` invariant in `vault_gov_emergency.EmergencyWithdraw` / `vault_admin_deploy.AdminDeployNonDeposit`. Fix is queued for the next contract revision; full description in [SECURITY.md](SECURITY.md) §"Known open findings". If you touch `vault_recall.ak` or the shared `verify_protocol_fields_preserved` helper, be aware this is pending.
 
-Findings classified internally as LOW or INFO are captured in the per-round audit files (operator-visible in `private/audits/`) and don't block contributions unless you're changing the affected validator area.
+Findings classified internally as LOW or INFO are tracked internally and don't block contributions unless you're changing the affected validator area; SECURITY.md summarises anything above LOW.
 
 ---
 
