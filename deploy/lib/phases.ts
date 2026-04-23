@@ -276,7 +276,7 @@ function estMinAda(size: number, multiplier: number): bigint {
 
 /**
  * Publish a single reference script. Uses the `deployRefScripts` helper
- * from `scripts/utils/deployRefScript.ts` which handles the Conway
+ * from `./deployRefScript.ts` (from `scripts/utils/deployRefScript.ts` original) which handles the Conway
  * per-byte ref-script fee that Lucid Evolution's own fee estimator
  * under-reports.
  */
@@ -288,7 +288,7 @@ async function publishOneRef(
   bfUrl: string,
   bfKey: string,
 ): Promise<{ txHash: string; outputIndex: number; scriptHash: string; sizeBytes: number; minAda: string }> {
-  const deployRefScripts = (await import("../../../scripts/utils/deployRefScript.js")).deployRefScripts;
+  const deployRefScripts = (await import("./deployRefScript.js")).deployRefScripts;
   const [r] = await deployRefScripts(lucid, [script], [minAda], bfUrl, bfKey);
   const sizeBytes = Math.floor(script.script.length / 2);
   const scriptHash = validatorToScriptHash(script);

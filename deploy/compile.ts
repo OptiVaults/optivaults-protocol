@@ -73,14 +73,20 @@
  */
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
 import {
   applyParamsToScript,
+  Constr,
   Data,
   mintingPolicyToId,
   validatorToScriptHash,
   type Script,
 } from "@lucid-evolution/lucid";
 import { loadConfig, summarizeConfig, type NetworkName } from "./lib/config.js";
+
+// ESM shim for __dirname (tsx/Node.js ESM).
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface UtxoRef {
   txHash: string;
@@ -227,7 +233,7 @@ function applyAndHash(
  */
 function encodeUtxoRef(ref: UtxoRef): Data {
   const txIdBytes = ref.txHash;
-  return new (require("@lucid-evolution/lucid").Constr)(0, [
+  return new Constr(0, [
     txIdBytes,
     BigInt(ref.outputIndex),
   ]) as unknown as Data;
@@ -554,7 +560,16 @@ export function compile(
 }
 
 // ---- CLI entry point ----
-if (require.main === module) {
+// ESM-compatible "is this being run directly?" check. `require.main === module`
+// doesn't work under tsx/Node.js ESM; compare `import.meta.url` against the
+// first positional argv entry instead.
+const __compileIsMain =
+  typeof import.meta !== "undefined" &&
+  typeof process !== "undefined" &&
+  process.argv[1] !== undefined &&
+  (import.meta.url === `file://${process.argv[1]}` ||
+    import.meta.url.endsWith(process.argv[1].replace(/^\/+/, "/")));
+if (__compileIsMain) {
   const args = process.argv.slice(2);
   let network: NetworkName = "Preprod";
   let utxoRefsPath: string | undefined;

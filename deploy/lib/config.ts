@@ -9,6 +9,12 @@
  */
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+
+// ESM shim: `__dirname` doesn't exist under tsx/Node.js ESM; derive it from
+// `import.meta.url`.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export type NetworkName = "Preprod" | "Mainnet";
 

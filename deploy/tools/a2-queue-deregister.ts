@@ -29,7 +29,7 @@ import {
 } from "@lucid-evolution/lucid";
 import type { LucidEvolution, Script, UTxO } from "@lucid-evolution/lucid";
 import { blake2b } from "@noble/hashes/blake2b";
-import { createBlockfrostProvider } from "../../../scripts/utils/blockfrostProvider.js";
+import { createBlockfrostProvider } from "../lib/blockfrostProvider.js";
 
 type Net = "Preprod" | "Mainnet";
 type Target =
@@ -215,6 +215,54 @@ async function main() {
   const distributePeriodMs = govDatumFields[7] as bigint;
   const nonce = govDatumFields[8] as bigint;
   console.log(`gov signers: ${signers.length}, threshold: ${threshold}, nonce: ${nonce}, queued: ${queued.length}`);
+
+  // Idempotency (Phase 84 backport from h-emergency-benign): if a matching
+  // ActDeregisterStake for this target is already in the queue (e.g. previous
+  // run's Queue TX confirmed but this script crashed before state.a2 persist,
+  // or state file was lost), skip the Queue submit, read the existing action's
+  // (action_id, executable_at_ms, expires_at_ms) from the queued entry, and
+  // write them back into state.a2. Matching criteria: same action_kind +
+  // target_script + payload_hash (nonce is not part of the match — each
+  // Queue bumps nonce, so a re-run with a new nonce would produce a DIFFERENT
+  // action_id even for the same payload, which is by design to avoid collision.
+  // The idempotency target is the pre-existing action, not a new one under a
+  // new nonce.).
+  const existingQueued = queued.find((q: any) => {
+    const qf = q.fields as any[];
+    const qKind = qf[1] as Constr<any>;
+    const qTarget = qf[2] as string;
+    const qPayload = qf[4] as string;
+    return (
+      qKind.index === ACTION_KIND_DEREGISTER &&
+      qTarget.toLowerCase() === tgtHash.toLowerCase() &&
+      qPayload.toLowerCase() === payloadHashHex.toLowerCase()
+    );
+  });
+  if (existingQueued) {
+    const ef = existingQueued.fields as any[];
+    const existingActionId = ef[0] as string;
+    const existingQueuedAt = ef[5] as bigint;
+    const existingExecutableAt = ef[6] as bigint;
+    const existingExpiresAt = ef[7] as bigint;
+    console.log(`\nℹ️  matching ActDeregisterStake(${args.target}) already queued — skipping Queue submit`);
+    console.log(`  action_id:        ${existingActionId}`);
+    console.log(`  queued_at_ms:     ${existingQueuedAt} (${new Date(Number(existingQueuedAt)).toISOString()})`);
+    console.log(`  executable_at_ms: ${existingExecutableAt} (${new Date(Number(existingExecutableAt)).toISOString()})`);
+    console.log(`  expires_at_ms:    ${existingExpiresAt}`);
+    state.a2 = state.a2 || {};
+    state.a2[args.target] = {
+      queuedTx: state.a2?.[args.target]?.queuedTx || "(pre-existing, queuing TX hash unknown)",
+      actionId: existingActionId,
+      queuedAtMs: Number(existingQueuedAt),
+      executableAtMs: Number(existingExecutableAt),
+      expiresAtMs: Number(existingExpiresAt),
+      targetHash: tgtHash,
+      payloadHash: payloadHashHex,
+    };
+    fs.writeFileSync(stateFile, JSON.stringify(state, null, 2) + "\n");
+    console.log(`state.a2.${args.target} populated from pre-existing queued action; exit idempotent.`);
+    return;
+  }
 
   // Compute action_id = blake2b_256(kind_byte || target || payload_hash ||
   //                                  cbor(queued_at_ms) || cbor(nonce))

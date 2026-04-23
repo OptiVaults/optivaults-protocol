@@ -26,7 +26,7 @@ import {
   validatorToRewardAddress,
 } from "@lucid-evolution/lucid";
 import type { LucidEvolution, Script, UTxO } from "@lucid-evolution/lucid";
-import { createBlockfrostProvider } from "../../../scripts/utils/blockfrostProvider.js";
+import { createBlockfrostProvider } from "../lib/blockfrostProvider.js";
 
 type Net = "Preprod" | "Mainnet";
 type Target =
@@ -203,7 +203,19 @@ async function main() {
   const actionIdHex = actionId.toLowerCase();
   const newQueued = queued.filter((q: any) => (q.fields[0] as string).toLowerCase() !== actionIdHex);
   if (newQueued.length === queued.length) {
-    throw new Error(`action_id ${actionIdHex} not found in queue — already executed or cancelled?`);
+    // Idempotency (Phase 84 backport from h-emergency-benign): action not in
+    // queue. Two possible states:
+    //   (a) state.a2.<target>.executedAtMs already set → previously executed
+    //       successfully; skip silently (idempotent re-run).
+    //   (b) No executedAtMs → either previously cancelled, expired, or state
+    //       file diverged from on-chain. Bail with a clear error — the
+    //       operator should re-Queue (a2-queue-deregister) to continue.
+    const prior = state.a2?.[args.target]?.executedAtMs;
+    if (prior) {
+      console.log(`\nℹ️  action ${actionIdHex} already executed at ${new Date(prior).toISOString()} — exit idempotent.`);
+      return;
+    }
+    throw new Error(`action_id ${actionIdHex} not found in queue and no executedAtMs in state — already cancelled, expired, or state diverged. Re-run a2-queue-deregister to re-queue.`);
   }
 
   // ExecuteAction redeemer: Constr(2, [action_id])

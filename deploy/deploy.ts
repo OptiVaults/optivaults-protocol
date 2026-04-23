@@ -102,7 +102,7 @@ import {
   runPhase4bStateUtxos,
 } from "./lib/phases.js";
 import type { CeremonyHashes } from "./lib/datumBuilders.js";
-import { createBlockfrostProvider } from "../../scripts/utils/blockfrostProvider.js";
+import { createBlockfrostProvider } from "./lib/blockfrostProvider.js";
 
 const C = {
   reset: "\x1b[0m",
