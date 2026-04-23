@@ -84,7 +84,7 @@ Three guarantees hold unconditionally in deployed V1 Aiken validators, independe
 Additional invariants enforced on-chain (not exhaustive — see `docs/audit-scope.md §1`):
 
 - **Non-deposit token preservation.** `verify_other_tokens_preserved` pattern on 7+ redeemers prevents silent token injection or extraction.
-- **Allocation invariant.** `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal` enforced on `Compound` / `DeployToProtocol` / `RebalanceBuffer` / `UpdateStrategy` / `MergeUtxo` (via shared `valid_allocs` predicate family). Note: R73 audit flagged a `vault_recall.MergeUtxo` admissibility gap vs this invariant in `EmergencyWithdraw` / `AdminDeployNonDeposit` — fix queued; see §"Known open findings" below.
+- **Allocation invariant.** Two variants enforced across the vault operational set — a stricter `alloc_sum + idle_buffer ≤ total_deposited` via the shared `validate_allocations` helper (used by `Compound` / `DeployToProtocol` / `RecallFromProtocol` / `UpdateStrategy` / `AdminDeployNonDeposit` / `vault_liqwid` ops) and a looser `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal` inline check in `vault_gov_emergency.EmergencyWithdraw`. Note: R73 audit flagged a `vault_recall.MergeUtxo` admissibility gap against BOTH forms — donations bump `idle_buffer` without bumping the RHS, and the resulting broken state denies all 7 affected redeemers until Compound yield catches back up. Fix queued; full scope + economic-viability analysis in §"Known open findings" below.
 - **First-depositor protection.** `initial_share_multiplier = 10^6` + `valid_deposited > 0` prevent ERC-4626-style inflation attacks.
 - **Minimum deposit.** 10 USDCx minimum on Direct Deposit (queued Order bypasses for dust-safe batching; BatchProcess enforces non-zero share mint).
 - **Anti-double-satisfaction.** `vault_user.Withdraw` enforces `receiver_output_idx` hard binding (R48 M-1). BatchProcess enforces `payout_output_index` uniqueness across multiple orders (R52 H-1).
@@ -163,11 +163,34 @@ Internal adversarial audit rounds executed against V1 contract code (additional 
 
 ### R73 F-1 — `vault_recall.MergeUtxo` admissibility gap (MEDIUM, queued for fix)
 
-`vault_recall.MergeUtxo` accepts arbitrary deposit-token (USDCx) donations into the vault. Its datum-preservation helpers preserve `total_deposited` bit-for-bit (correct — donations should not mint shares), but bump `idle_buffer` by `buffer_increase`. Downstream redeemers (`vault_gov_emergency.EmergencyWithdraw`, `vault_admin_deploy.AdminDeployNonDeposit`) check `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal` at execute time — which can become false after a donation that raises LHS without raising RHS.
+**Root cause.** `vault_recall.MergeUtxo` accepts arbitrary deposit-token (USDCx) donations into the vault. Its datum-preservation helpers preserve `total_deposited` bit-for-bit (correct — donations should not mint shares), but bump `idle_buffer` by `buffer_increase`. Two accounting invariants downstream check forms of `alloc_sum + idle_buffer ≤ <some denominator>`, both of which can become false after a donation that raises LHS without raising RHS:
 
-**Impact**: governance can be temporarily denied access to the on-chain emergency path after an attacker-coordinated donation + keeper-initiated MergeUtxo, until normal Compound yield catches `total_deposited` back up. **Not fund theft** — donated USDCx is recoverable via subsequent Withdraw activity or explicit recovery. DoS on governance liveness, not principal loss.
+- **Stricter form** (`alloc_sum + idle_buffer ≤ total_deposited`) — enforced by the shared `validate_allocations` helper in `lib/vault/validation.ak`
+- **Looser form** (`alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal`) — inline check in `vault_gov_emergency.EmergencyWithdraw`
 
-**Fix option (planned)**: add `new.idle_buffer ≤ new.total_deposited + new.non_deposit_value + Σ liqwid_principal` admissibility check inside `vault_recall.MergeUtxo`. ~6 LOC + 4 regression tests.
+**Affected redeemers** (7 total — this is wider than a governance-emergency-only DoS):
+
+| Redeemer | Check form | Path |
+|----------|------------|------|
+| `vault_keeper_hot.Compound` | stricter | keeper hot-path, routine |
+| `vault_protocol.DeployToProtocol` | stricter | keeper, routine allocation |
+| `vault_recall.RecallFromProtocol` | stricter | keeper, routine allocation |
+| `vault_liqwid` ops (Supply / Recall) | stricter (inline) | keeper, routine |
+| `vault_gov_policy.UpdateStrategy` | stricter | governance, routine policy change |
+| `vault_admin_deploy.AdminDeployNonDeposit` | stricter | governance, 7d-fallback |
+| `vault_gov_emergency.EmergencyWithdraw` | looser (inline) | governance, emergency |
+
+**Impact**. Post-donation, the broken invariant denies execution on ALL seven redeemers until `total_deposited` catches up enough to satisfy it. Compound (which bumps `total_deposited` via `harvested_amount`) is the natural healer — but Compound itself is one of the seven blocked redeemers, so the vault can only heal when Compound's internal ordering (harvested added to `total_deposited` BEFORE `validate_allocations` check) allows the check to pass on the post-harvest state. In the meantime:
+
+- Keeper cycle stalls on the blocked redeemers; yield accrual pauses.
+- Governance cannot change allocation strategy, cannot execute AdminDeploy fallback, cannot execute EmergencyWithdraw.
+- User `Withdraw` is NOT affected (separate path, no `validate_allocations` call).
+
+**Not fund theft** — donated USDCx is absorbed by the vault and distributed pro-rata to existing depositors on subsequent Withdraw activity. The donor has no shares and receives nothing back. DoS on operational + governance liveness, not principal loss.
+
+**Economic viability of attack**. At Phase 1 TVL of $5K with 6% APY and weekly Compound, weekly yield ≈ $5.77. An attacker who donates ~$6 per week (~$0.85/day) can maintain the invariant-broken state indefinitely — each Compound attempt would heal just enough to re-break on the next donation. Low cost-to-impact ratio for sustained governance denial during high-leverage moments (e.g., pending EmergencyWithdraw queue); higher-TVL phases raise both yield pace and the donation required to sustain DoS, but the pattern holds proportionally.
+
+**Fix option (planned)**: add a `new.idle_buffer ≤ new.total_deposited + new.non_deposit_value + Σ liqwid_principal` admissibility check inside `vault_recall.MergeUtxo` (matches the looser form used by `EmergencyWithdraw`; rejecting donations that would break the invariant prevents the DoS at the root). ~6 LOC in `vault_recall.ak` + 4 regression tests. A stricter guard using `≤ total_deposited` would also work but would reject some donations that don't actually break anything downstream.
 
 Flagged for Q3 2026 external audit escalation.
 
