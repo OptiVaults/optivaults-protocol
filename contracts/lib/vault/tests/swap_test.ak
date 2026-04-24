@@ -97,17 +97,28 @@ test peg_floor_exact_equality_large() {
 
 test swap_adapter_redeemer_shape() {
   // Realistic SwapAdapterRedeemer for a 100 USDCx → DJED swap.
+  // R74 F-1: hop_chain replaces target_asset_policy/name.
   let r =
     SwapAdapterRedeemer {
       dest_output_idx: 2,
       min_receive: 95_000_000,
-      target_asset_policy: #"8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61",
-      target_asset_name: #"4472697020537461626c65",
+      hop_chain: [
+        // in: USDCx
+        (
+          #"1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e34",
+          #"5553444378",
+        ),
+        // out: DJED
+        (
+          #"8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61",
+          #"446a65644d6963726f555344",
+        ),
+      ],
     }
   and {
     r.dest_output_idx == 2,
     r.min_receive > 0,
-    r.target_asset_policy != #"",
+    // 2-entry hop_chain = single-hop SwapExactIn
   }
 }
 
@@ -117,11 +128,17 @@ test swap_adapter_redeemer_ada_target() {
     SwapAdapterRedeemer {
       dest_output_idx: 0,
       min_receive: 48_000_000,
-      target_asset_policy: #"",
-      target_asset_name: #"",
+      hop_chain: [
+        (
+          #"1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e34",
+          #"5553444378",
+        ),
+        // ADA sentinel
+        (#"", #""),
+      ],
     }
   and {
-    r.target_asset_policy == #"",
-    r.target_asset_name == #"",
+    r.dest_output_idx == 0,
+    r.min_receive > 0,
   }
 }

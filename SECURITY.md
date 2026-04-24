@@ -111,9 +111,9 @@ The following depositor-facing promises depend on external infrastructure remain
 
 | Category | Tests | Status |
 |----------|------:|--------|
-| Aiken unit tests | 96 | All pass |
+| Aiken unit tests (including 24 inline in `minswap_v2_adapter`) | 136 | All pass |
 | Aiken property-based fuzz (`aiken/fuzz` v2.2.0) | 8 × ≤100 iter | All pass |
-| Total via `aiken check` | 104 tests / 599 randomized checks | All pass |
+| Total via `aiken check` | 144 tests / 639 randomized checks | All pass |
 | Preprod E2E scripts (`tests/preprod/`) | 16 scripts | See `EXECUTION-ORDER.md` — Phase B/C/D covered; E/F/H/I/J pending |
 | Keeper vitest | 0 (implementation pending) | — |
 | API vitest | 0 (not in V1 scope) | — |
@@ -139,6 +139,7 @@ Internal adversarial audit rounds executed against V1 contract code (additional 
 |-------|-------|-------------------:|--------|
 | R72 | Post-Phase-77d hacker-mindset on full V1 set (17 logic + 4 NFT + 1 adapter) | 0 CRIT / 0 HIGH / 1 MEDIUM / 3 LOW / 6 INFO | MEDIUM + 3 LOW fixed on-chain; INFO documented |
 | R73 | `valid_allocs × vault_recall.MergeUtxo` admissibility gap | 0 CRIT / 0 HIGH / 1 MEDIUM | **FIXED** via `valid_merge_utxo_admissibility` in `lib/vault/validation.ak` + `vault_recall.MergeUtxo` invocation; 6 regression tests in `lib/vault/tests/r73_test.ak` |
+| R74 | Phase O pre-mainnet Minswap V2 decoder byte-for-byte verification against real mainnet order | 0 CRIT / 1 HIGH / 0 MEDIUM | **FIXED** this commit — see R74 F-1 entry in "Recently fixed" below |
 
 ### Coverage-area status (pending external audit)
 
@@ -166,6 +167,22 @@ _No currently open audit findings above LOW severity. See "Recently fixed" below
 ---
 
 ## Recently fixed
+
+### R74 F-1 — `minswap_v2_adapter` `lp_asset` decoder format mismatch (HIGH, FIXED)
+
+**Discovery.** Phase O pre-mainnet Minswap V2 decoder byte-for-byte verification against a real mainnet 3-hop SwapMultiRouting order caught the adapter rejecting the order during decoding.
+
+**Root cause.** `minswap_v2_adapter.ak::extract_target_from_lp` decoded the Minswap V2 order datum's `lp_asset` field as a 2-asset pair — either a 4-field flat `[policy_a, name_a, policy_b, name_b]` form or a 2-field nested `[Asset_a, Asset_b]` form. Real Minswap V2 `lp_asset` is a single LP-token identifier `Constr(0, [LP_policy_28B, LP_name_32B])` (the pool's LP-token asset, not its underlying pair). The nested-Constr branch invoked `un_constr_data` on the LP-name ByteArray and trapped in UPLC — every real Minswap V2 order would have been rejected on-chain.
+
+**Severity rationale.** The adapter was effectively non-functional on mainnet, so no direct exploit was possible in the shipped form. But the class of bug — an adapter accepting DEX datums without independently verifying the swap's output asset — is a HIGH severity concern: a compromised keeper could in principle route vault stablecoins to an arbitrary non-whitelisted pool and deliver worthless tokens masquerading as the committed target asset. Graded HIGH and treated as a pre-mainnet blocker.
+
+**Fix** (this commit): `SwapAdapterRedeemer` replaces the `target_asset_policy` + `target_asset_name` fields with `hop_chain: List<(ByteArray, ByteArray)>` — 2 entries for SwapExactIn (`[asset_in, target_out]`), N+1 entries for N-hop SwapMultiRouting. `minswap_v2_adapter.ak::compute_lp_asset_name` implements Minswap's canonical LP-name formula (`sha3_256(sha3_256(policy_a || name_a) || sha3_256(policy_b || name_b))`, with inputs canonically sorted policy-first-then-name). `verify_routing_chain` iterates each on-chain routing hop paired with adjacent `hop_chain` entries and rejects any TX where the on-chain LP name doesn't re-hash to the committed pair. `last_hop_target` exposes the chain's final entry for downstream Tier 2 peg-floor + optional Tier 1 oracle bound.
+
+27 new tests exercise the formula (including Minswap's own test vector and three real mainnet LPs), chain-verification happy/failure paths, and structural rules (empty chain / single-entry / adjacent duplicates all rejected). `swap_test.ak` is updated to the new redeemer shape.
+
+**Hash drift.** `minswap_v2_adapter`, `vault_protocol`, `vault_gov_emergency`, `vault_admin_deploy`, and the parameterised `vault_proxy` form all change. Any off-chain TX builder emitting the adapter redeemer must populate `hop_chain`.
+
+Flagged for Q3 2026 external audit verification.
 
 ### R73 F-1 — `vault_recall.MergeUtxo` admissibility gap (MEDIUM, FIXED)
 

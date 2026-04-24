@@ -59,14 +59,15 @@ Defined in `lib/vault/swap_adapter.ak`:
 pub type SwapAdapterRedeemer {
   dest_output_idx: Int,
   min_receive: Int,
-  target_asset_policy: ByteArray,
-  target_asset_name: ByteArray,
+  hop_chain: List<(ByteArray, ByteArray)>,
 }
 ```
 
 - `dest_output_idx` — index into `tx.outputs` of the DEX order UTXO this adapter is validating.
 - `min_receive` — the adapter-committed `minimum_receive` field from the order datum; vault_protocol applies peg-floor on this.
-- `target_asset_policy` / `target_asset_name` — the asset this swap produces (output of the swap). ADA convention: both `#""`. Used by vault_protocol to look up `asset_oracles` for optional Tier 1 oracle bound.
+- `hop_chain` — the asset sequence the swap traverses: `[asset_in, mid_1, ..., target_out]`. A single-hop SwapExactIn has 2 entries (`[in, out]`); an N-hop SwapMultiRouting has N+1 entries, one per pool boundary. Each entry is `(policy_id, asset_name)`; ADA is `(#"", #"")`. The target asset (what the swap produces) is `hop_chain[last]`; `vault_protocol` exposes it for `asset_oracles` Tier 1 lookup via the `last_hop_target` helper.
+
+**Why hop_chain instead of a direct target_asset**: DEX order datums do not universally expose the swap's output asset directly. In particular, Minswap V2 orders carry a single LP-token identifier (`[LP_policy, LP_name]`) rather than the pool's underlying asset pair, so the output asset cannot be derived from the order datum alone. `hop_chain` commits the routing topology asset-by-asset; the adapter verifies each on-chain routing hop's LP name byte-for-byte against `compute_lp_asset_name(chain[i], chain[i+1])`, binding the endpoint asset to the committed chain. A compromised keeper cannot route to an arbitrary non-whitelisted pool because the LP name would not match. See `SECURITY.md §"Recently fixed"` for the full finding history.
 
 ## 4. Adapter contract
 
@@ -77,8 +78,9 @@ A SwapAdapter is a PlutusV3 staking validator with one `withdraw` handler. When 
 3. It verifies:
    - The datum represents a **swap** order (not LP deposit, withdraw, etc.).
    - The decoded `minimum_receive` equals `redeemer.min_receive`.
-   - The decoded swap output asset equals `redeemer.target_asset_policy` + `redeemer.target_asset_name`.
-4. It returns `True` iff all three checks pass.
+   - `redeemer.hop_chain` is well-formed (≥ 2 entries, no adjacent duplicates).
+   - For each routing hop (SwapMultiRouting) or the single SwapExactIn `lp_asset`, the on-chain LP name matches `compute_lp_asset_name(chain[i], chain[i+1])` where `compute_lp_asset_name` is the DEX's canonical LP-asset-name formula.
+4. It returns `True` iff all checks pass.
 
 If any check fails the ledger runs the adapter's `withdraw → False`, the TX reverts, and vault_protocol never sees an adapter success.
 

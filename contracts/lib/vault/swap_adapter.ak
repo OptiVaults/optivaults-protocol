@@ -8,8 +8,11 @@
 ///
 ///   1. The dest output at `redeemer.dest_output_idx` carries a valid
 ///      order datum for THIS adapter's target DEX.
-///   2. The `min_receive`, `target_asset_policy`, `target_asset_name`
-///      in the redeemer match the decoded DEX datum.
+///   2. The `min_receive` and `hop_chain` in the redeemer match the
+///      decoded DEX datum (R74 F-1: hop_chain is a list of
+///      `(policy, name)` pairs committing the routing topology
+///      asset-by-asset; each on-chain routing hop's LP name must
+///      re-hash to the canonical formula of the matching chain pair).
 ///
 /// vault_protocol (the caller) then:
 ///
@@ -21,8 +24,8 @@
 ///      `dest_output_idx`.
 ///   5. Applies Tier 2 peg-floor on `redeemer.min_receive` vs
 ///      `deploy_amount * min_swap_peg_bps`.
-///   6. (Optional) If registry.asset_oracles has an entry for
-///      `(redeemer.target_asset_policy, redeemer.target_asset_name)`,
+///   6. (Optional) If registry.asset_oracles has an entry for the
+///      target asset (derived from `last_hop_target(redeemer.hop_chain)`),
 ///      applies Tier 1 fair-price bound via `oracle.check_tier1_bound`.
 ///
 /// Policy separation: adapter decodes DEX-specific datum (DEX-format
@@ -62,14 +65,27 @@ pub type SwapAdapterRedeemer {
   /// verify this matches the decoded DEX datum's `minimum_receive`
   /// field; callers (vault_protocol) apply peg-floor on this value.
   min_receive: Int,
-  /// Policy id of the asset this swap produces. Adapter MUST verify
-  /// this matches the decoded DEX datum's target asset (typically
-  /// derived from the pool's lp_asset + direction flag for SwapExactIn
-  /// or the final hop for SwapMultiRouting).
-  /// ADA convention: policy == #"".
-  target_asset_policy: ByteArray,
-  /// Asset name under `target_asset_policy`. ADA: name == #"".
-  target_asset_name: ByteArray,
+  /// Asset chain: `[asset_in, mid_1, mid_2, ..., target_out]`. For a
+  /// single-hop SwapExactIn this has exactly 2 entries (`[in, target]`);
+  /// for an N-hop SwapMultiRouting it has N+1 entries, one per pool
+  /// boundary.
+  ///
+  /// **Security rationale (R74 F-1 fix)**: Minswap V2 order datum's
+  /// `lp_asset` field is a single LP token identifier
+  /// `(LP_policy, LP_name)` — NOT a 2-asset pair. The target asset
+  /// cannot be derived from the order datum alone.
+  ///
+  /// The adapter re-computes the expected Minswap V2 LP name from each
+  /// consecutive `(hop_chain[i], hop_chain[i+1])` pair and verifies it
+  /// matches the on-chain routing's lp_asset name. This binds the
+  /// routing topology + final target asset to what governance / the
+  /// adapter witness committed — a compromised keeper cannot route to
+  /// an arbitrary non-whitelisted target.
+  ///
+  /// Each entry is `(policy_id, asset_name)`. ADA: `(#"", #"")`.
+  /// `hop_chain[0]` MUST equal the swap input asset; `hop_chain[last]`
+  /// is the target asset callers expose for oracle + peg-floor checks.
+  hop_chain: List<(ByteArray, ByteArray)>,
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -138,6 +154,49 @@ pub fn read_adapter_redeemer(
   }
 }
 
+/// Extract `hop_chain`'s final entry (target asset) — the asset the
+/// swap produces. Returns `None` if the chain is empty.
+pub fn last_hop_target(
+  hop_chain: List<(ByteArray, ByteArray)>,
+) -> Option<(ByteArray, ByteArray)> {
+  when hop_chain is {
+    [] -> None
+    [only] -> Some(only)
+    [_, ..rest] -> last_hop_target(rest)
+  }
+}
+
+/// Structural sanity check on a hop_chain. Requires at least 2 entries
+/// (input + output) and no adjacent duplicates (a no-op hop would
+/// pass Minswap's LP name binding only by mapping to a dead pool).
+pub fn hop_chain_well_formed(
+  hop_chain: List<(ByteArray, ByteArray)>,
+) -> Bool {
+  when hop_chain is {
+    [] -> False
+    [_] -> False
+    [a, b, ..rest] ->
+      if a == b {
+        False
+      } else {
+        hop_chain_non_adjacent_dup([b, ..rest])
+      }
+  }
+}
+
+fn hop_chain_non_adjacent_dup(xs: List<(ByteArray, ByteArray)>) -> Bool {
+  when xs is {
+    [] -> True
+    [_] -> True
+    [a, b, ..rest] ->
+      if a == b {
+        False
+      } else {
+        hop_chain_non_adjacent_dup([b, ..rest])
+      }
+  }
+}
+
 /// Tier 2 peg-floor on an adapter-committed `min_receive`.
 ///
 ///   min_receive × 10_000 >= deploy_amount × peg_bps
@@ -187,21 +246,26 @@ pub fn verify_swap_via_adapter(
               adapter_r.min_receive,
               min_swap_peg_bps,
             ),
-            when find_asset_oracle(
-              asset_oracles,
-              adapter_r.target_asset_policy,
-              adapter_r.target_asset_name,
-            ) is {
-              Some(entry) ->
-                check_tier1_bound(
-                  tx,
-                  entry,
-                  deploy_amount,
-                  adapter_r.min_receive,
-                  max_slippage_bps,
-                )
-              None -> True
+            when last_hop_target(adapter_r.hop_chain) is {
+              Some((target_policy, target_name)) ->
+                when find_asset_oracle(asset_oracles, target_policy, target_name) is {
+                  Some(entry) ->
+                    check_tier1_bound(
+                      tx,
+                      entry,
+                      deploy_amount,
+                      adapter_r.min_receive,
+                      max_slippage_bps,
+                    )
+                  None -> True
+                }
+              // R74 F-1: hop_chain must have >= 2 entries (in + target) for
+              // a meaningful swap. Empty / single-asset hop_chain is rejected.
+              None -> False
             },
+            // hop_chain non-degeneracy: at least 2 entries, no duplicate
+            // consecutive entries (protects against no-op swaps).
+            hop_chain_well_formed(adapter_r.hop_chain),
           }
         None -> False
       }
