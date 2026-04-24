@@ -228,17 +228,41 @@ Airdropped tokens absorbed into a vault UTXO via `MergeUtxo` with `non_deposit_i
 
 ---
 
-## Bug bounty
+## Responsible disclosure + ex gratia recognition
 
-V1 plans a formal bug bounty program before mainnet launch. Pre-mainnet posture:
+V1 does **not** operate a structured bug bounty program at launch.
+Bounty tier matrices work when the protocol is post-external-audit and
+TVL is large enough that the audit-reserve accrual supports market-
+competitive payouts. V1's Phase 1 scale ($500–$25K TVL) cannot support
+that without a sub-market tier structure — a design that looks like a
+commitment but isn't competitive, invites "scale mismatch" critique
+from audit firms, and contradicts V1's non-commercial public-goods
+positioning.
 
-- **Floor**: 500 USDCx per valid CRITICAL finding (scales up to 10% of TVL at discovery or 10,000 USDCx, whichever is lower). See `docs/audit-scope.md §6` for the full tier table.
-- **Scope**: matches §"In scope" above (Aiken contracts + deploy pipeline).
-- **Disclosure expectation**: 90-day window from triage, extendable by 30 days if operator needs to prepare a fix TX.
-- **Funding source**: Phase 1 (pre-self-sustain TVL < ~25M USDCx) payouts come from founder founding capital, not treasury audit reserve — Phase 1 treasury accrual is too small to absorb individual CRITICAL payouts. Treasury audit reserve takes over once TVL reaches self-sustain scale (see `docs/economics.md §6.3`).
-- **Below-market-rate disclosure**: V1 bounty floor is below Immunefi-tier ($50K-$500K typical CRITICAL payouts). This reflects V1's non-commercial public-goods positioning + pre-audit operational scale — not an undervaluing of researchers' work. Higher-tier bounties are planned post-TVL scale + revenue growth per whitepaper §8.3 milestones.
+Instead, V1 ships a standard Responsible Disclosure Policy + ex gratia
+recognition framework. Full terms in `docs/audit-scope.md §6`.
+Summary:
 
-Pre-engagement responsible disclosures will be acknowledged + credited in the V1 audit report.
+- **Scope**: matches the §"In scope" list above (Aiken contracts +
+  deploy pipeline + keeper + API server + 22 compiled artefacts).
+- **Disclosure window**: 90 days from triage (extendable by 30 days if
+  remediation requires extended coordination with Liqwid / Minswap V2 /
+  Circle-xReserve).
+- **Acknowledgement**: within 72 hours; triage + initial remediation
+  plan within 7 days.
+- **Recognition (discretionary, ex gratia)**: public credit in the V1
+  audit report + repository, co-authored case-study collaboration on
+  the finding + fix, priority access to future internal-audit drafts +
+  pre-mainnet test deployments, and an operator-discretionary
+  appreciation payment from founder founding capital (explicitly not a
+  market-rate bounty — V1 Phase 1 treasury audit-reserve accrual
+  cannot fund that; see `docs/audit-scope.md §6.2`).
+- **No legal threats** for good-faith disclosure operating under this
+  policy.
+
+A structured bounty tier program is a post-external-audit + post-TVL-
+scale consideration (preconditions in `docs/audit-scope.md §6.3`), not
+a V1 launch commitment.
 
 ---
 

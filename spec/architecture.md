@@ -57,7 +57,7 @@ Category buckets:
 |--------|-----------------|---------|--------------|
 | Audit reserve | 30% | Accumulate toward periodic third-party audits | Governance-gated; requires `audit_invoice_ref` in proposal |
 | Operations | 40% | Hosted infrastructure costs (VPS, Blockfrost, monitoring, domains) | Governance-gated, 24h per-category cooldown |
-| R&D | 20% | Protocol development, bug bounties, ecosystem grants | Governance-gated, 24h per-category cooldown |
+| R&D | 20% | Protocol development, future bounty program (post-audit + TVL-scale per `docs/audit-scope.md §6.3`), ecosystem grants | Governance-gated, 24h per-category cooldown |
 | Buffer | 10% | Unexpected costs, legal, incident response | Governance-gated, 24h per-category cooldown |
 
 Category ratios are governance-adjustable within bounds (each category in [0%, 50%], sum to exactly 100%, update cooldown 180 days).

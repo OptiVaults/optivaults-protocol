@@ -430,7 +430,7 @@ V1 處於**啟動期（bootstrapping phase）**，直到 TVL 達到自給區間�
 
 Treasury 累積 80% 的績效費（V1 啟動時的分拆比例，3-way split 後續 phase 見 §2.4），資產以 **USDCx** 計價。啟動時的類別分配：
 
-- **審計儲備 30% 進帳分配**——用於資助未來審計與 bug bounty。有兩條獨立的治理硬下限保護：
+- **審計儲備 30% 進帳分配**——用於資助未來審計與未來安全研究者計畫（V1 上線採用「責任揭露政策 + ex gratia 認可框架」，而非固定結構化 bounty tier，詳見 `docs/audit-scope.md §6`；結構化 bounty 計畫啟用前提於 §6.3 說明）。有兩條獨立的治理硬下限保護：
   - **進帳比例下限**：`audit_bps ≥ 2000`（每次 Compound 的手續費流入必須有 20% 進審計類別）——由 `treasury.ak` 在 `UpdateParams` 時強制；治理無法把審計的進帳比例調降到 20% 以下。
   - **餘額下限**：`audit_reserve_balance ≥ min_audit_reserve`——`min_audit_reserve` 是部署當下設定的**不可變** datum 欄位（V1 啟動值為 0，也就是一開始沒有約束力）。若未來的 `UpdateParams` 把 floor 拉高，就不可再調低。任何治理動作都不能把餘額花到低於當前的 `min_audit_reserve`。
 - **營運 40%**——基礎設施費用（VPS、監控、Blockfrost key）以及 keeper 冗餘。

@@ -168,13 +168,30 @@ This keeps the contributor program on the public audit trail (every payout is an
 
 ---
 
-## 7. Relationship to audit bounty
+## 7. Relationship to security disclosure
 
-Security researcher bounties for **vulnerability disclosures** are funded from the Treasury `audit_reserve` category, not R&D. The program rules are described in `docs/audit-scope.md` §6 (bug bounty tiers). This document (§3 Mechanism A table row for "Security researcher") is a cross-reference, not a separate policy.
+Security disclosures are **not** handled through this contributor
+program. V1's responsible disclosure posture is a **Responsible
+Disclosure Policy + ex gratia recognition** framework — described in
+`docs/audit-scope.md` §6. Ex gratia appreciation payments for valid
+disclosures are funded from founder founding capital, not from
+Treasury audit reserve (Phase 1 treasury accrual at $500–$25K TVL is
+too slow to offer a predictable source).
 
-The distinction matters because:
-- R&D budget varies with TVL growth; vulnerability bounties must remain stable regardless
-- Audit reserve has an immutable floor (`min_audit_reserve` in `spec/treasury.md` §4) ensuring ongoing bounty availability even in financial stress
+This document (§3 Mechanism A table row for "Security researcher") is
+a cross-reference to that policy, not a separate bounty scheme.
+
+A structured bounty tier program is a post-external-audit + post-TVL-
+scale consideration (preconditions in `docs/audit-scope.md §6.3`),
+**not** a V1 launch commitment. When and if such a program is
+introduced, it will:
+- Fund from Treasury `audit_reserve` accrual (which by then will be
+  large enough to support market-competitive payouts without drawing
+  on founder capital).
+- Pass a governance-ratified `UpdateTreasuryParams` that authorises
+  the audit-reserve outflow backing it.
+- Use a documented tier structure reviewed and approved by V1's then-
+  active governance signer set.
 - Vulnerability disclosure requires tighter coordination (NDA windows, responsible disclosure) than generic contributor work
 
 ---
@@ -217,7 +234,7 @@ Before the formal program activates:
 ## 11. See also
 
 - `docs/economics.md` §7C — R&D budget math and TVL projections
-- `docs/audit-scope.md` §6 — bug bounty tiers for security disclosures
+- `docs/audit-scope.md` §6 — Responsible Disclosure Policy + ex gratia recognition framework for security disclosures
 - `spec/gov-nft.md` — soul-bound NFT mechanism that inspires the Contributor NFT design
 - `spec/governance.md` §4.10 TreasurySpend — on-chain authorization for bounty payouts
 - `spec/treasury.md` §3.4 UpdateParams — how governance can adjust R&D allocation over time

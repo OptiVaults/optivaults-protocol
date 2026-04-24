@@ -71,7 +71,7 @@ All figures in USDCx. Numbers are illustrative reference points, not forecasts.
 |----------|-------|-------------------|-----------------|------------------|
 | Audit reserve (30%) | 65 | 648 | 6,480 | Accumulates toward the next third-party audit invoice |
 | Operations (40%) | 86 | 864 | 8,640 | Hosted infrastructure: VPS, Blockfrost, monitoring, domains, CF Pages |
-| R&D (20%) | 43 | 432 | 4,320 | Protocol development, bug bounties, ecosystem grants |
+| R&D (20%) | 43 | 432 | 4,320 | Protocol development, future bounty program (post-audit + TVL-scale, `docs/audit-scope.md §6.3`), ecosystem grants |
 | Buffer (10%) | 22 | 216 | 2,160 | Unexpected costs, legal consultation, incident response |
 
 ---

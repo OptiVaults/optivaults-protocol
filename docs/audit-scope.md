@@ -181,26 +181,110 @@ Candidate firms (to be evaluated): Runtime Verification, CertiK, Tweag, MLabs, A
 
 ---
 
-## 6. Bug Bounty
+## 6. Responsible Disclosure + Ex Gratia Recognition
 
-**Launched at V1 audit completion.**
+**V1 does not operate a structured bug bounty program at launch.** A
+bounty tier matrix is a specific tool for a specific protocol stage —
+post-external-audit, with TVL large enough that the audit-reserve
+accrual rate supports payouts at market-competitive levels. V1's Phase 1
+scale ($500–$25K TVL, audit-reserve accrual at ~$0.3–$15/year) cannot
+support that without a below-market tier structure, which creates worse
+problems than the absence of any tier at all: it looks like a commitment
+to a payout level that is in fact symbolic, it invites "scale mismatch"
+critique from audit firms evaluating our security posture, and it sits
+uncomfortably against V1's non-commercial public-goods positioning.
 
-**Scope:** V1 validators (**17 logic validators + 4 one-shot NFT mint policies + 1 DEX adapter = 22 compiled artefacts total** — see `spec/architecture.md` §4.1 for partitioning rationale), deploy scripts, keeper code, API server.
+Instead, V1 ships with a standard industry-practice **Responsible
+Disclosure Policy (RDP)** + **ex gratia recognition** framework.
 
-**Severity tiers (USDCx):**
-| Severity | Payout |
-|----------|--------|
-| CRITICAL (fund loss) | **500 USDCx floor**, scaling up to 10% of TVL at discovery or 10,000 USDCx, whichever is lower |
-| HIGH (fund freeze, operational DoS) | 250 USDCx |
-| MEDIUM (invariant violation without fund loss) | 100 USDCx |
+### 6.1 Responsible Disclosure Policy
 
-**LOW / defense-in-depth / style findings** are acknowledged + credited in the public audit report but do not carry a bounty payout in Phase 1. This posture is reviewed once the vault reaches self-sustain scale and the treasury audit reserve can absorb additional tiers without drawing on founder capital.
+**Scope:** V1 on-chain validators (**17 logic validators + 4 one-shot
+NFT mint policies + 1 DEX adapter = 22 compiled artefacts total** — see
+`spec/architecture.md` §4.1 for partitioning rationale), deploy scripts,
+keeper code, API server.
 
-**Funding source.** Phase 1 (pre-self-sustain, TVL range $500–$25K per `whitepaper §8.2`) bounty payouts come from **founder founding capital** — the same bucket funding the Q3 2026 external audit — not from treasury audit-reserve accrual. Phase 1 treasury audit-reserve inflow is ~$0.3–$15 USDCx/year at that TVL range (30% of the treasury bucket × 30% of realised yield), so a single CRITICAL payout would take over a century to accrue. Treasury audit reserve only takes over funding responsibility once TVL crosses self-sustain scale (approximately 25M+ USDCx TVL per `docs/economics.md §6.3`), at which point accumulated reserve can absorb payouts without founder subsidy. The 500-USDCx CRITICAL floor is set below market-rate ($50K–$500K CRITICAL payouts on Immunefi-tier bounty programs) to match Phase 1's sub-$25K TVL scale; post-audit + TVL growth scale the tiers toward market norms automatically (CRITICAL ceiling already at 10%-of-TVL or 10,000 USDCx cap, whichever is lower, which kicks in above $5K TVL).
+**What we commit to:**
 
-**Submission:** `optivaults@gmail.com` with PGP encryption (public key at optivaults.app/security).
+- **Private acknowledgement within 72 hours** of receiving a valid
+  disclosure at `optivaults@gmail.com` (PGP encryption strongly
+  preferred; public key at optivaults.app/security).
+- **Triage + initial remediation plan within 7 days.**
+- **90-day coordinated disclosure window** from triage, extendable by a
+  further 30 days if operator needs additional time to prepare a fix TX,
+  publish a governance-timelock-covered update, or coordinate with
+  external dependencies (Liqwid, Minswap V2, Circle/xReserve).
+- **Public disclosure** of the finding + fix once the window closes,
+  regardless of whether a formal fix has landed — reporters retain the
+  right to publish after 120 days so research cannot be indefinitely
+  sat-on.
+- **No legal threats** for good-faith disclosure. We will not pursue
+  action against researchers operating under this policy.
 
-**Coordinated disclosure:** 90-day window from triage, extendable by 30 days if operator needs to prepare a fix TX.
+**What we ask of reporters:**
+
+- Report privately first; do not publish before triage acknowledgement.
+- Test on Preprod or locally before testing on mainnet; do not actively
+  exploit the vulnerability on mainnet except to the minimum extent
+  required to demonstrate the finding.
+- Do not extract funds beyond what is strictly necessary to demonstrate
+  the vulnerability; any inadvertently-extracted funds should be
+  returned to the vault via a governance-coordinated TX.
+
+### 6.2 Ex Gratia Recognition Framework
+
+V1 does **not** promise a fixed payout for any finding. That said, we
+recognise that serious security research is valuable and meaningful
+recognition matters. On a **discretionary, ex gratia basis**, valid
+disclosures may receive:
+
+1. **Public acknowledgement** — credit in the V1 public audit report,
+   the repository's `SECURITY.md` disclosures section, and (with the
+   reporter's consent) a dedicated changelog entry on the next V1
+   release notes.
+2. **Credit in project documentation** — with the reporter's consent,
+   name and contact included in the V1 contributor list.
+3. **Ex gratia appreciation payment** — operator-discretionary,
+   funded from founder founding capital (not from treasury audit
+   reserve, which accrues too slowly at Phase 1 TVL to offer a
+   predictable source). Sizing is case-by-case, guided by: severity of
+   the finding, depositor-protection impact, the research quality of
+   the submission, and the prevailing ADA/USDCx exchange rate. Both
+   sides are clear this is a token of appreciation — it will **not**
+   match market-rate bounties for comparable findings on
+   commercially-scaled DeFi protocols.
+4. **Research collaboration** — where the reporter is interested, we
+   will co-author a write-up of the finding + fix as a public case
+   study. This is frequently the most valuable recognition a
+   non-commercial project can offer a security researcher.
+5. **Priority visibility** — reporters of prior valid findings get
+   first-look access to future internal-audit-round drafts + pre-mainnet
+   test deployments, if they wish.
+
+### 6.3 Future Structured Bug Bounty Program
+
+A structured bounty tier program is a **post-audit + post-scale**
+consideration, not a Phase 1 commitment. The preconditions we consider
+before introducing one are:
+
+- Successful completion of the Q3 2026 external audit.
+- TVL growth to the self-sustaining range (see `docs/economics.md`
+  §6.3, approximately $500K+ TVL) so that treasury audit-reserve
+  accrual can cover payouts without drawing on founder capital.
+- Governance m-of-n threshold adjusted per whitepaper §6.1 Phase 2+
+  roadmap (at least one signer outside the executing quorum), so the
+  bounty-payout authorization path has genuine dissent-veto.
+
+Until those conditions are met, V1's security posture rests on:
+multi-round internal audit review (`§4` Internal Audit Coverage Plan),
+independent external audit (`§5` External Audit), on-chain invariants
+(immutable fee cap, no admin-drain redeemer, self-serve withdraw
+paths), and the RDP + ex gratia framework above.
+
+If and when a structured bounty program is introduced, this section
+will be updated to document the scope, tier structure, and payout
+source — with a governance-ratified `UpdateTreasuryParams` change
+authorising the audit-reserve outflow that backs it.
 
 ---
 

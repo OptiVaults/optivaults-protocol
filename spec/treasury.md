@@ -205,7 +205,7 @@ At V1 mainnet deploy, TreasuryDatum is initialized with:
 |-------|--------------|-----------|
 | `audit_bps` | 3000 | 30% of inflow to audit reserve accumulates toward the ~USD 50K-150K target for the next third-party audit (approximately Q1 2028 at steady state) |
 | `ops_bps` | 4000 | 40% to infrastructure: VPS (dual-instance keeper), Blockfrost paid tier, monitoring stack, domain/CDN, frontend hosting |
-| `rd_bps` | 2000 | 20% to protocol development, bug bounty payouts, ecosystem grants to contributors |
+| `rd_bps` | 2000 | 20% to protocol development, future bounty program (post-audit + TVL-scale per `docs/audit-scope.md §6.3`), ecosystem grants to contributors |
 | `buffer_bps` | 1000 | 10% to unexpected costs, legal consultation, incident response |
 | `monthly_cap_audit` | 500_000_000 (500 USDCx) | Prevents any single month's spend from draining audit reserve |
 | `monthly_cap_ops` | 500_000_000 | Same-size cap across categories at launch for simplicity |

@@ -433,7 +433,7 @@ See `docs/economics.md` for detailed math and TVL-tier projections.
 
 Treasury accumulates 80% of performance fees in **USDCx** (V1 launch split; see §2.4 for the 3-way fee split phases). Category allocation at launch:
 
-- **Audit reserve: 30% of inflow** — funds future audits + bug bounties. Governance-hard-floored by two independent mechanisms:
+- **Audit reserve: 30% of inflow** — funds future audits + future security researcher programs (V1 launches with a Responsible Disclosure Policy + ex gratia recognition framework rather than a structured bounty — see `docs/audit-scope.md §6` and §6.3 for preconditions under which a structured bounty would be introduced). Governance-hard-floored by two independent mechanisms:
   - **Inflow-ratio floor**: `audit_bps ≥ 2000` (20% of every Compound's fee inflow) — enforced by `treasury.ak` on `UpdateParams`; governance cannot set the audit inflow ratio below 20%.
   - **Balance floor**: `audit_reserve_balance ≥ min_audit_reserve` — `min_audit_reserve` is an **immutable** datum field set at deploy (V1 launch value: 0, i.e., non-binding at start). Once a future `UpdateParams` raises the floor, it cannot be lowered. No governance action can spend below the current `min_audit_reserve`.
 - **Operations: 40%** — infrastructure (VPS, monitoring, Blockfrost keys), keeper redundancy.

@@ -235,7 +235,7 @@ V1 makes no representation about regulatory compliance. Users are responsible fo
 | USDCx depeg | Medium | High | Off-chain monitoring, operator halt procedure |
 | Minswap batcher outage | Medium | Low | Order Expire fallback refunds to user |
 | Founder wallet compromise | Low | Medium | Gov rotation + treasury separation mitigate concentration risk |
-| Plutus bug in V1 validators | Low | High | Internal audit (≥1 external round pre-launch), bug bounty, EmergencyWithdraw |
+| Plutus bug in V1 validators | Low | High | Internal audit (≥1 external round pre-launch), Responsible Disclosure Policy + ex gratia recognition framework (`docs/audit-scope.md §6`), EmergencyWithdraw |
 | Regulatory action (SEC / MiCA / FinCEN / OFAC / local) | Low-Medium | High (operator legal exposure) / Low (depositor principal — withdraw always open) | Public-goods positioning (non-commercial, non-solicitation, geographic framework) per whitepaper §12; operator may geoblock jurisdictions based on legal opinion |
 
 ---
