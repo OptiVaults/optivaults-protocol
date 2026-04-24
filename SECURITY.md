@@ -22,6 +22,10 @@ If you discover a security vulnerability in OptiVaults V1 smart contracts, deplo
 
 ## Scope
 
+**This repository's security scope is the protocol layer** — Aiken validators, deploy pipeline, protocol specification artefacts. Off-chain operator code (keeper runtime, API server, frontend, CLI tools) has its own separate repository [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference) with its own [`SECURITY.md`](https://github.com/OptiVaults/optivaults-reference/blob/v1/SECURITY.md).
+
+**When in doubt, default to this repo's disclosure channel.** Triage will route to `optivaults-reference` if the finding is operator-layer.
+
 ### In scope
 
 - **Aiken smart contracts** under `contracts/validators/`:

@@ -4,6 +4,15 @@
 
 本文件說明:怎麼建置開發環境、我們歡迎哪些類型的貢獻(以及哪些需要先討論),PR 的期待、測試與審計姿態,以及安全性通報流程。
 
+## 貢獻要開在哪個 repo?
+
+OptiVaults V1 拆成兩個 repo(見 `README-zh-TW.md §「兩層架構」`):
+
+- **本 repo(`optivaults-protocol`)**——**協議層**:Aiken validators、協議 spec、whitepaper、部署流程。**合約變更、spec 修正、白皮書編輯、部署腳本改善**,都走這個 repo。
+- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)**——**operator 參考實作**:TypeScript keeper、API server、frontend、CLI 工具。**Keeper runtime bug、frontend UX、API 改善、CLI 打磨**,走那個 repo。
+
+**不確定就開在這裡**——維護者會在 repo 歸屬錯誤時移動 PR。
+
 ---
 
 ## TL;DR——開 PR 前先看這幾點

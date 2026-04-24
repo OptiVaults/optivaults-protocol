@@ -4,6 +4,15 @@ Thanks for your interest in OptiVaults V1. V1 is published as a **Cardano DeFi p
 
 This doc covers: how to set up the dev environment, what kinds of contributions we want (and which ones need coordination first), PR expectations, testing + audit posture, and security disclosure.
 
+## Which repo should you contribute to?
+
+OptiVaults V1 is split across two repositories (see `README.md` §"Two-layer architecture"):
+
+- **This repo (`optivaults-protocol`)** — protocol layer: Aiken validators, protocol spec, whitepaper, deploy pipeline. Use this repo for contract changes, spec corrections, whitepaper edits, deploy script improvements.
+- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)** — operator reference implementation: TypeScript keeper, API server, frontend, CLI tools. Use that repo for keeper runtime bugs, frontend UX, API improvements, CLI polish.
+
+When in doubt, open the PR here — maintainers will move it if it's in the wrong repo.
+
 ---
 
 ## TL;DR — before you open a PR

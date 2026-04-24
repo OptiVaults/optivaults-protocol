@@ -15,6 +15,17 @@
 
 ---
 
+## 兩層架構
+
+OptiVaults V1 **刻意被拆成兩個 repo**,反映兩個**根本不同**的東西:
+
+- **`optivaults-protocol`**(本 repo)——**協議層**。Aiken validators、協議規格、白皮書、部署流程。**本層零費用**;任何團隊都可以 fork 並啟動自己的 vault,完全不用付錢。**純 Cardano DeFi commons 貢獻**。
+- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)**——**operator 參考實作**。TypeScript keeper、API server、frontend、CLI 工具。跑 `optivaults.app` 的 live vault 實例。由合約強制的 4.5% 績效費支撐(20% keeper / 80% treasury;**無創辦人 dividend、無投資人 return、無 token**)。Apache 2.0——歡迎 fork。
+
+**4.5% fee 只發生在 operator 層**。**協議本身免費**——你跑自己實例就不需要付。完整費用拆分見 `docs/economics-zh-TW.md`;跨兩層的信任模型見 `docs/security-model-zh-TW.md §2`。
+
+---
+
 ## 版本定義
 
 - **V1**——第一個公開上線版本。以獨立產品的方式設計、規格化與審計。公開存入者的入口版本。
@@ -205,5 +216,7 @@ OptiVaults V1 以 **Apache License 2.0** 釋出。授權範圍涵蓋整個 repo�
 ## 聯絡方式
 
 - 網站:[optivaults.app](https://optivaults.app)
-- Source(開源鏡射):[github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol)(分支 `v1`)
-- 安全通報:optivaults@gmail.com
+- 協議 repo(本 repo):[github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol)(分支 `v1`)
+- Operator 參考 repo:[github.com/OptiVaults/optivaults-reference](https://github.com/OptiVaults/optivaults-reference)(分支 `v1`)
+- 安全通報(協議層):optivaults@gmail.com——見 `SECURITY.md`
+- 安全通報(operator 層):見 [`optivaults-reference/SECURITY.md`](https://github.com/OptiVaults/optivaults-reference/blob/v1/SECURITY.md)

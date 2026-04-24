@@ -16,6 +16,17 @@ This directory contains the V1 design, specification, implementation, and migrat
 
 ---
 
+## Two-layer architecture
+
+OptiVaults V1 is intentionally split across **two repositories**, reflecting two fundamentally different things:
+
+- **`optivaults-protocol`** (this repo) — the **protocol layer**. Aiken validators, protocol specification, whitepaper, deploy pipeline. **Zero fee** at this layer; any team may fork and launch their own vault without paying anything. Pure Cardano DeFi commons contribution.
+- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)** — the **operator reference implementation**. TypeScript keeper, API server, frontend, CLI tools. Runs the `optivaults.app` live vault instance. Funded by the contract-enforced 4.5% performance fee (20% keeper / 80% treasury; no founder dividend, no investor return, no token). Apache 2.0 — forks welcome.
+
+The **4.5% fee happens only at the operator layer**. The protocol itself costs nothing to use if you run your own instance. See `docs/economics.md` for the full fee breakdown and `docs/security-model.md §2` for the trust model across the two layers.
+
+---
+
 ## Version definition
 
 - **V1** — First public production release. Designed, specified, and audited as an independent product. Entry point for public depositors.
@@ -202,5 +213,7 @@ The permissive license choice is deliberate: V1's success metric explicitly incl
 ## Contact
 
 - Website: [optivaults.app](https://optivaults.app)
-- Source (open-source mirror): [github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol) (branch `v1`)
-- Security: optivaults@gmail.com
+- Protocol repo (this repo): [github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol) (branch `v1`)
+- Operator reference repo: [github.com/OptiVaults/optivaults-reference](https://github.com/OptiVaults/optivaults-reference) (branch `v1`)
+- Security (protocol-layer): optivaults@gmail.com — see `SECURITY.md`
+- Security (operator-layer): see [`optivaults-reference/SECURITY.md`](https://github.com/OptiVaults/optivaults-reference/blob/v1/SECURITY.md)
