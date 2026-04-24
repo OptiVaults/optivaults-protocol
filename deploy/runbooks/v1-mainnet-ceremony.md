@@ -10,7 +10,7 @@
 
 Do NOT start this ceremony if any of these are false:
 
-- [ ] External audit completed (Q3 2026 target). All CRITICAL/HIGH findings remediated. Audit report published and reviewed by governance signers.
+- [ ] External audit completed (Q2-Q3 2027 target — see `audit-scope.md §5`). All CRITICAL/HIGH findings remediated. Audit report published and reviewed by governance signers.
 - [ ] `contracts/lib/vault/constants.ak::timelock_deregister_stake_ms` reverted to `14 * 86_400 * 1_000` (14 days). Preprod override removed. Hash diff vs. any Preprod build expected on multisig_gov only; but re-run `aiken build` and compare all 22 artefacts — anything unexpected aborts.
 - [ ] Minswap V2 adapter decoder byte-for-byte verified against real mainnet TXs per `spec/swap-adapter.md §9`.
 - [ ] Governance signers confirmed: 3 distinct real key holders, each with independent hardware wallet (per whitepaper §5.5). Threshold 3 (unanimity at launch). PKHs documented in `deploy/config/mainnet.json` and cross-verified by each signer.

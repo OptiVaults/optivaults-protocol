@@ -414,5 +414,5 @@ V1 mainnet 可能呈現與估計不同的部署時 ADA 需求——operator 應�
 - `docs/economics.md` — 費用結構、treasury 流量數學、可持續性門檻
 - `docs/security-model.md` — 完整威脅模型、信任邊界、殘餘風險揭露
 - `docs/migration.md` — 內部驗證期存入者的遷移計畫
-- `docs/audit-scope.md` — Pre-launch 審計計畫 + 2026 Q3 外部審計範圍
+- `docs/audit-scope.md` — Pre-launch 審計計畫 + Q2-Q3 2027 外部審計範圍
 - `whitepaper/whitepaper.md` — V1 公開白皮書(給非開發者的整體摘要)

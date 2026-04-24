@@ -32,7 +32,7 @@ The **4.5% fee happens only at the operator layer**. The protocol itself costs n
 - **V1** — First public production release. Designed, specified, and audited as an independent product. Entry point for public depositors.
 - **Prior versions (Internal verification phase)** — Internal verification phase. Sequence of architectural iterations that ran on Cardano mainnet under a pre-audit 100K USDCx cap to validate contract invariants under real market conditions. internal-verification phase is the final internal verification version and will be sunset upon V1 mainnet launch.
 
-V1 is not "internal verification with patches" — it is a standalone release with its own architecture, its own audit history (V1 pre-launch internal rounds + Q3 2026 third-party audit), and its own public launch criteria.
+V1 is not "internal verification with patches" — it is a standalone release with its own architecture, its own audit history (V1 pre-launch internal rounds + Q2-Q3 2027 third-party audit), and its own public launch criteria.
 
 ---
 
@@ -49,7 +49,7 @@ OptiVaults V1 is characterized by the following architectural decisions. Each is
 7. **User-set batch tip** — Order UTXO carries a user-specified maximum tip; keepers collect within that bound when processing batched orders.
 8. **Withdraw-Zero forwarding pattern** — single vault UTXO delegates to 10 staking validators (`vault_user`, `vault_keeper_hot`, `vault_batcher`, `vault_swap_ada`, `vault_protocol`, `vault_recall`, `vault_liqwid`, `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`) via `vault_proxy` for size compliance and clean role separation. Partitioning rationale (4 orthogonal seams: authorization-boundary, governance response-latency, bytecode-cost-center, size-fix) is documented in `spec/architecture.md §4.1`. Every staking credential (the 10 Withdraw-Zero dispatched validators + `keeper_stake_script` + `minswap_v2_adapter` SwapAdapter = 12 total) carries its own A2 `publish` handler, so all 12 stake-registration deposits are reclaimable at sunset via governance.
 9. **Compile-time trust anchors** — Vault Identity NFT, governance NFT policy, treasury script, and keeper stake script all baked into validator script hashes at deploy time, not datum fields.
-10. **Pre-audit TVL cap** — operator-enforced 100K USDCx ceiling until the Q3 2026 external audit completes; post-audit cap schedule disclosed with audit report.
+10. **Pre-audit TVL cap** — operator-enforced 100K USDCx ceiling until the Q2-Q3 2027 external audit completes; post-audit cap schedule disclosed with audit report.
 11. **Public-goods positioning** — V1 is framed as a non-commercial public-goods reference implementation. The 4.5% performance fee covers operations + audit reserve + long-term runway, not founder/investor revenue. Apache 2.0 license enables forks and specializations (different stablecoin mixes, risk postures, regional variants). V1 may be the terminal state, or the basis on which other Cardano DeFi teams build — both are acceptable outcomes. Depositors enter with a "contributing to a public good + early validator" mindset, not as purchasers of a commercial service. See whitepaper §12 Disclosure for full implications.
 
 ---
@@ -158,7 +158,7 @@ V1 is in **early implementation phase**:
 - ✅ Off-chain byte-for-byte decoder `deploy/tools/verify-minswap-v2-decode.ts` exposes the Minswap V2 adapter's decode logic for pre-mainnet decode verification against historical on-chain TXs without re-submitting.
 - ⏳ Keeper reference implementation (`keeper/`) — not started.
 - ⏳ Internal audit rounds (coverage areas A-F, see `docs/audit-scope.md`) — R72 (post-Phase-77d, 1 MEDIUM + 3 LOW fixed), R73 (`valid_allocs × MergeUtxo` donation gap, 1 MEDIUM fixed), and R74 (pre-mainnet Minswap V2 decoder `lp_asset` format mismatch, 1 HIGH fixed — see `SECURITY.md §"Recently fixed"`) complete; areas A-F walkthrough pending.
-- ⏳ External audit engagement — target Q3 2026, firm not yet selected.
+- ⏳ External audit engagement — target Q2-Q3 2027, firm not yet selected.
 
 ### Preprod deploy status
 

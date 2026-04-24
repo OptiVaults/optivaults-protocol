@@ -414,5 +414,5 @@ Several capabilities were considered for V1 and deliberately deferred:
 - `docs/economics.md` — fee structure, treasury flow math, sustainability thresholds
 - `docs/security-model.md` — full threat model, trust boundaries, residual-risk disclosures
 - `docs/migration.md` — transition plan for existing internal-verification phase depositors
-- `docs/audit-scope.md` — pre-launch audit plan + Q3 2026 external audit scope
+- `docs/audit-scope.md` — pre-launch audit plan + Q2-Q3 2027 external audit scope
 - `whitepaper/whitepaper.md` — V1 public whitepaper (summary of all of the above for non-developer audience)

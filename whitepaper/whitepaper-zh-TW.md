@@ -12,7 +12,7 @@ OptiVaults V1 是 Cardano 上的非託管**多穩定幣收益金庫，以 USDCx 
 
 **給存入者的重要揭露**：share price 反映的是金庫當下的多穩定幣混合曝險，**並不是純 USDCx 的請求權**。啟動時的目標配置為 45% DJED + 25% USDM + 30% USDCx 閒置緩衝（見 §5.2）；金庫當下持有哪一種穩定幣，存入者就承擔哪一種的脫鉤風險。
 
-V1 啟動時設有 **100,000 USDCx 硬上限**，直到第三方審計完成（預計 2026 Q3）為止。100K TVL 下協議每年的收入只有約 $270——遠不足以覆蓋營運成本。V1 此時處於**啟動期（bootstrapping phase）**：初期缺口由專案的啟動資金承擔，預期要等到 TVL 達到 $500K–$2.5M 的自給區間後才會解決。
+V1 啟動時設有 **100,000 USDCx 硬上限**,直到第三方審計完成(目標 **2027 Q2-Q3**,反映 Cardano Project Catalyst Round 時程不確定性——見 §8.1)為止。100K TVL 下協議每年的收入只有約 $270——遠不足以覆蓋營運成本。V1 此時處於**啟動期（bootstrapping phase）**：初期缺口由專案的啟動資金承擔，預期要等到 TVL 達到 $500K–$2.5M 的自給區間後才會解決。
 
 **V1 的定位:Cardano DeFi 的公共財參考實作(reference implementation)。** V1 是**非商業的公共財專案**,不是為了追求成長或回報的商業產品。4.5% 績效費用於覆蓋協議運營 + 審計儲備 + 長期 runway,**不是創辦人或投資人的收益**;Apache 2.0 授權讓其他 Cardano DeFi 團隊可以 fork 並特化(不同穩定幣組合 / 風險姿態 / 區域變體)。V1 可能是終點狀態,也可能成為其他團隊基於此改造的基礎——兩者都是可接受的結局。存入者應以「**貢獻公共財 + 當早期驗證者**」的心態進入,不是購買商業服務(完整含意與存入者 framing 見 §12 免責聲明)。
 
@@ -63,7 +63,7 @@ V1 不取代存入者對 USDCx 本身的盡調。若不信任 Circle 的 USDC �
 
 ### 1.3 目標使用者
 
-**OptiVaults V1 主要服務手中有小到中額 USDCx（約 $100–$10,000）的持有者**——想在 Cardano 上賺被動穩定幣收益、但不想親手經營 DeFi 的使用者。V1 的經濟模型、使用介面、安全設計都是為這群人量身打造。**時程提醒**：$100-$10,000 這個目標規模指的是 **post-audit 階段**（預計 2026 Q3+，外部審計通過、TVL 上限解除之後）。Pre-audit 期間受 operator-enforced 100K USDCx TVL cap 限制，建議首次部位明顯低於此目標範圍下限（例如 $200-$2K 試水）——完整 pre-audit context 見 §8.2。
+**OptiVaults V1 主要服務手中有小到中額 USDCx（約 $100–$10,000）的持有者**——想在 Cardano 上賺被動穩定幣收益、但不想親手經營 DeFi 的使用者。V1 的經濟模型、使用介面、安全設計都是為這群人量身打造。**時程提醒**:$100-$10,000 這個目標規模指的是 **post-audit 階段**(目前目標 **2027 Q2-Q3+**,外部審計通過、TVL 上限解除之後;funding stack 不確定性見 §8.1)。Pre-audit 期間受 operator-enforced 100K USDCx TVL cap 限制，建議首次部位明顯低於此目標範圍下限（例如 $200-$2K 試水）——完整 pre-audit context 見 §8.2。
 
 - **小額部位最容易被「進場 + 離場 gas」吃光。** 若一位只有 $200 USDCx 的使用者自己直接上 Liqwid：進場一次要做 swap USDCx → DJED + supply（約 2 筆 TX；若要同時分散到 DJED + USDM 則約 4 筆），將來離場還要再走一次 recall qToken + swap back。以目前 Cardano 網路費 + Minswap batcher 費估算，單方向大約 3–5 ADA，來回約 $2–4 USD——對 $200 部位就是本金的 1–2% 一次性摩擦，還沒開始賺收益。V1 把多市場配置集中在金庫層（一筆 Compound 就服務整個 TVL），每位存入者的進場只要一筆 CIP-30 交易、離場只要 burn 一次 vUSDCx，不必走 recall + swap back 的多步驟路徑。
 - **不必每天看盤。** V1 的 keeper 會監控 Liqwid 的 APY 變動，並在治理設定的範圍內自動進行再平衡。小額持有者不需要追蹤 DJED、USDM、USDCx 三個市場的即時供應利率。
@@ -408,7 +408,7 @@ V1 處於**啟動期（bootstrapping phase）**，直到 TVL 達到自給區間�
 
 公式：`自給 TVL ≈ 年營運成本 / (毛 APY × 績效費率 0.045)`。保守情境下，從外部審計通過到 TVL 爬坡達到自給門檻，可能需要 **3-5 年**（post-audit cap 放寬 + 多次行銷週期 + Cardano DeFi 整體 TVL 成長）——若啟動資金 runway 到期前仍未達到，§9.2 sunset protocol 啟動。18 個月 runway 在**基準情境**下足以涵蓋「開發 + 審計 + 6 個月 post-audit 爬坡」；若遭遇**保守情境**延展，runway 可能需要額外啟動資金挹注或加速 sunset 決策。這是存入者應該理解的結構性不確定性。
 
-**啟動資金可燒時長承諾。** 啟動資金規模足以支撐 **≥ 18 個月營運 runway**，計算方法依 `docs/economics.md §7` 的支出率方法論，涵蓋：(a) pre-audit 開發窗口、(b) 2026 Q3 外部審計預算、(c) 悲觀端營運成本下的 6 個月 post-audit TVL 爬坡期。資本由啟動實體在鏈外保管；`docs/economics.md §7` 裡有逐項的月支出拆解（基礎設施 + 審計儲備 + 外包 + 預備金），讀者可據此獨立驗證 18 個月的數字。**具體總金額不公開**（專案政策——創辦人自投資金屬於私人風險，不是信任錨），但 runway 計算可從公開的支出條目重現。
+**啟動資金可燒時長承諾。** 啟動資金規模足以支撐 **≥ 18 個月營運 runway**，計算方法依 `docs/economics.md §7` 的支出率方法論，涵蓋：(a) pre-audit 開發窗口、(b) 外部審計預算(目前目標 Q2-Q3 2027——見 §8.1)、(c) 悲觀端營運成本下的 6 個月 post-audit TVL 爬坡期。資本由啟動實體在鏈外保管；`docs/economics.md §7` 裡有逐項的月支出拆解（基礎設施 + 審計儲備 + 外包 + 預備金），讀者可據此獨立驗證 18 個月的數字。**具體總金額不公開**（專案政策——創辦人自投資金屬於私人風險，不是信任錨），但 runway 計算可從公開的支出條目重現。
 
 **Sunset 觸發條件與機制**（§9.2 + economics.md §7.2）：若外部審計完成後 **6 個月內 TVL 未達 $500K**，或 runway 任何時點降至 6 個月以下前向支出，有序 sunset 協議啟動：
 
@@ -585,7 +585,7 @@ V1 啟動時的審計狀態：
 
 - **繼承自內部驗證階段的多輪內部審查。** 這裡的「內部審計輪次」指：針對特定威脅模型，對每一個 validator 做一次對抗性讀碼，產出分級為 CRITICAL / HIGH / MEDIUM / LOW / INFO 的書面報告；每一輪只有在所有非 INFO 發現都已修復並加上回歸測試後才算結束。完整方法論見 `docs/audit-scope.md` §2。
 - **額外針對 V1 新增範圍的內部審計覆蓋**（treasury、keeper_stake_script、跨 validator 整合流程、部署流程、off-chain runtime）。這部分以領域（A–F）為單位組織，不再採用序號式輪次，詳見 `docs/audit-scope.md` §4。
-- **第三方審計仍在規劃**（預計 2026 Q3），作為解除 TVL 上限的前置門檻。
+- **第三方審計仍在規劃**(目標 Q2-Q3 2027——funding-stack 揭露見 §8.1),作為解除 TVL 上限的前置門檻。
 
 **迭代修補方法論的一個實例——A2 設計缺口關閉。** 內部審查發現 V1 每個 staking validator 一開始都只寫了 `withdraw(...)` + `else(_) { fail }` 的 catch-all。Cardano ledger 驗證 stake credential `Deregister` 證書時走 Publish purpose，剛好打到 `else` → 任何 deregister 都會被拒 → ceremony PHASE 4a 投入的每個 staking validator 2 ADA 註冊押金都會被永久鎖住。修復版本（「A2」）在 staking validator 加上治理閘門的 `publish` 處理器，重用已經頻繁使用的 `is_gov_authorized(ActDeregisterStake, payload_hash_deregister_stake(own_hash))` helper。覆蓋範圍現在涵蓋 V1 全部 **12 個 staking credential**：vault_user / vault_keeper_hot / vault_batcher / vault_swap_ada / vault_protocol / vault_recall / vault_liqwid / vault_gov_policy / vault_gov_emergency / vault_admin_deploy / keeper_stake_script / minswap_v2_adapter。讓每個 credential 有 bytecode headroom 容納 `publish` handler 的 validator partitioning 記在 `spec/architecture.md §4.1`。設計決策紀錄在 `spec/governance.md §4.13` + `spec/keeper-auth.md §9`。這個迭代展示了 V1 的開發模式：發現 → 規格 → 修復 → 回歸測試 → 出貨 → 文件化。Preprod ceremony 的 ActDeregisterStake 執行流程完成後，存入者可以在鏈上驗證 A2 修復。
 
@@ -679,12 +679,12 @@ Keeper 是一個信任委託，鏈上邊界整理如下：
 
     | 項目 | Code 落地 | Unit tested | Preprod E2E | 外部審計 |
     |------|:---------:|:-----------:|:-----------:|:--------:|
-    | P1 vault_admin 拆分 | ✓ | ✓ | ✓ | Q3 2026 |
-    | P2 UpdateSlippagePolicy + datum 欄位 | ✓ | ✓ | ✓ | Q3 2026 |
-    | P3 Tier 1 dual-feed oracle | ✓ | ✓ | partial — registry validator 已部署；`asset_oracles` 啟動時為空（治理 post-mainnet 植入） | Q3 2026 |
-    | P4 Minswap V2 decoder + peg-floor | ✓ | ✓ | **outstanding** — decoder 需對真實鏈上 `SwapExactIn` + `SwapMultiRouting` TX 做 byte-for-byte 驗證（`spec/swap-adapter.md §9`） | Q3 2026 |
-    | P5 SwapAda dual-feed 升級 | ✓ | ✓ | partial — vault_swap_ada 已部署；`asset_oracles[ADA]` 啟動時為空（SwapAda 暫 inactive 直到治理植入） | Q3 2026 |
-    | A2 deregister `publish` 在 12 個 staking credentials | ✓ | ✓ | partial — 部分 staking credential 已驗證；12-credential 完整 Preprod 重新驗證主網前需完成 | Q3 2026 |
+    | P1 vault_admin 拆分 | ✓ | ✓ | ✓ | Q2-Q3 2027 |
+    | P2 UpdateSlippagePolicy + datum 欄位 | ✓ | ✓ | ✓ | Q2-Q3 2027 |
+    | P3 Tier 1 dual-feed oracle | ✓ | ✓ | partial — registry validator 已部署；`asset_oracles` 啟動時為空（治理 post-mainnet 植入） | Q2-Q3 2027 |
+    | P4 Minswap V2 decoder + peg-floor | ✓ | ✓ | **outstanding** — decoder 需對真實鏈上 `SwapExactIn` + `SwapMultiRouting` TX 做 byte-for-byte 驗證（`spec/swap-adapter.md §9`） | Q2-Q3 2027 |
+    | P5 SwapAda dual-feed 升級 | ✓ | ✓ | partial — vault_swap_ada 已部署；`asset_oracles[ADA]` 啟動時為空（SwapAda 暫 inactive 直到治理植入） | Q2-Q3 2027 |
+    | A2 deregister `publish` 在 12 個 staking credentials | ✓ | ✓ | partial — 部分 staking credential 已驗證；12-credential 完整 Preprod 重新驗證主網前需完成 | Q2-Q3 2027 |
 
     「Code 落地」+ 104 個 unit + property 測試通過（599 個隨機化 checks per `aiken check`）並不取代 Preprod E2E 或外部審計。全部 22 個 artefacts（17 個 logic validator + 4 個 NFT mint policy + 1 個 DEX adapter）仍低於 16 KB Plutus V3 上限；最緊的 headroom 是 `vault_liqwid` 的 2,992 B free。（`docs/audit-scope.md §3` 用另一個 test-count metric「30 properties × 100 iterations = 3,000 fuzz runs per build」，那是只計算 `aiken/fuzz` 隨機 iteration 上限；本處的 599 是 `aiken check` summary 對整套測試的計數。完整對齊說明見 `audit-scope.md §3`。）
 
@@ -830,7 +830,7 @@ V1 的金庫 UTXO 只持有必要的 ADA：符合 min-UTXO 規範，以及支付
 - [ ] 審計發現修復
 - [ ] 部署儀式 Preprod 演練
 
-**外部審計委託（預計 2026 Q3）。** 本白皮書撰寫時審計機構尚未選定或簽約；委託以「V1 Aiken 實作功能完整且內部審查通過」為前置條件。候選機構將自具有 Cardano Plutus V3 + Aiken 先前經驗的審計方短名單中選出——這是一個相對狹窄的集合（發表時點包含 Anastasia Labs、MLabs、Certik-Cardano、TxPipe 以及少數獨立 Aiken 審查員）。簽約機構與範圍將於審計啟動前至少 2 週公開公布。
+**外部審計委託(目標 Q2-Q3 2027)。** 本白皮書撰寫時審計機構尚未選定或簽約；委託以「V1 Aiken 實作功能完整且內部審查通過」為前置條件。候選機構將自具有 Cardano Plutus V3 + Aiken 先前經驗的審計方短名單中選出——這是一個相對狹窄的集合（發表時點包含 Anastasia Labs、MLabs、Certik-Cardano、TxPipe 以及少數獨立 Aiken 審查員）。簽約機構與範圍將於審計啟動前至少 2 週公開公布。
 
 **審計發現處置。** 若外部審計出現 CRITICAL findings、需合約重新設計的項目、或系統性設計缺陷，mainnet 啟動會延期，直到修復 + 重新審計確認通過。若審計發現當前架構無法修復的系統性缺陷，V1 啟動會取消、架構重設會公開發布，且 V1 **沒有外部貢獻者出資／代幣預售／SAFE / SAFT 義務**需要清算——未支用的啟動資本留在啟動實體手中，供修訂後設計使用。
 
@@ -838,12 +838,12 @@ V1 的金庫 UTXO 只持有必要的 ADA：符合 min-UTXO 規範，以及支付
 
 **審計資金策略（公共財路徑下的 sustainability）。** V1 的公共財定位讓我們可以同時動用多個 non-dilutive funding source 降低 audit 成本負擔:
 
-- **(a) Cardano Project Catalyst grant**:V1 的「Cardano DeFi public-goods reference implementation」定位完全 fit Catalyst 的 DeFi / Infrastructure / Open Source 主題,預期可取得 **$30K-$50K** 資助（Round 15+ submission 2026 Q2-Q3）;
+- **(a) Cardano Project Catalyst grant**:V1 的「Cardano DeFi public-goods reference implementation」定位完全 fit Catalyst 的 DeFi / Infrastructure / Open Source 主題,若有合適 Round 開,預期可取得 **$30K-$50K** 資助。**撰寫時的狀態:Cardano Project Catalyst 處於暫停 / 重組狀態,下一個 Round 何時恢復尚無明確時程。** V1 把 (a) 列為候選資金來源、等 Catalyst 恢復,但**不依賴它**;審計時程(目標 Q2-Q3 2027)即是為了讓 Catalyst 在此區間恢復、或讓 funding 完全由 (b)+(c)+(d) 來源覆蓋,兩種路徑都留得到時間。
 - **(b) Audit firm 的 public-goods pricing**:Apache 2.0 + 非商業定位可能取得 **30-50% 折扣**,從全價 $100K-$150K 降到約 $50K-$90K;
-- **(c) Scope reduction via extensive internal audit**:累積的多輪內部審計歷史作為 preparatory material 讓外部審計範圍可聚焦在 critical paths（2-3 個 most critical validators + 跨 validator 整合流程）,而非全部 17 個 logic validator + 1 個 adapter 全範圍,再降約 **$15K-$25K**;
-- **(d) 創辦人自籌補完 (Founder self-fund)**:扣除以上 mitigations 後,預期創辦人個人實際承擔 **$20K-$40K**(而非原估 $50K-$150K 全額)。
+- **(c) Scope reduction via extensive internal audit**:累積的多輪內部審計歷史作為 preparatory material 讓外部審計範圍可聚焦在 critical paths(2-3 個 most critical validators + 跨 validator 整合流程),而非全部 17 個 logic validator + 1 個 adapter 全範圍,再降約 **$15K-$25K**;
+- **(d) 創辦人自籌補完 (Founder self-fund)**:扣除以上 mitigations 後,若 (a) 達成則預期創辦人個人實際承擔 **$20K-$40K**;若 (a) 在審計啟動前未達成,則上限拉高至 **$50K-$90K**。
 
-**若 Catalyst 未獲資助的 contingency。** Catalyst 是競爭性 grant round，award 不保證。若 (a) 未達成，(b)+(c)+(d) 仍可覆蓋 $60-90K 審計成本：公共財折扣 negotiable toward ~40-50%、scope reduction 估計可再擠出 $5-10K、founder self-fund 上限拉高至 $50-70K。此情境下創辦人個人 out-of-pocket 上限約 **$70K**；audit 時程可能延後 4-8 週（等下一輪 Catalyst 或 fallback funding path 確認）但 audit 本身不取消。
+**審計時程反映 funding-stack 不確定性。** Q2-Q3 2027 目標明確比原本 Q3 2026 計畫晚,刻意預留時間以容納 (i) Catalyst Round 恢復的概率、(ii) Cardano Foundation / Intersect / Aiken Foundation 等 alternative grant 的接洽、(iii) 若 (a)/(b) 結果保守時,founder runway 累積的時間。V1 在整個過渡期間都維持 pre-audit 姿態(100K USDCx hard cap)——見 §4(TVL 上限)與 §8.2(Phase 1 framing)。在任何 plausible 資金情境下,**審計本身不取消;只是起跑日期推遲**。
 
 各 funding source 進度會在 `docs/economics.md §5.2` 持續更新。這個 stack 讓 V1 可以在不進入 VC / 代幣募資 / 不稀釋 Apache 2.0 公共財立場的前提下完成外部審計。
 

@@ -122,7 +122,7 @@ V1 **不是保本產品**——合約設計上沒有主動虧損機制（沒有�
 
 **從使用者角度看**：最壞情況是有人利用 validator 漏洞從 vault 抽走資金。你的 vUSDCx 會按比例貶值，若完全抽乾則歸零。
 
-**我們的防範**：啟動前已完成多輪內部審計；外部審計目標 Q3 2026；100K USDCx 上限限制審計前期最大曝險；若漏洞被發現但尚未被利用殆盡，治理可透過 `EmergencyWithdraw` 凍結並啟動復原。
+**我們的防範**:啟動前已完成多輪內部審計;外部審計目標 **Q2-Q3 2027**(反映 Catalyst Round 時程不確定性,見白皮書 §8.1);100K USDCx 上限限制審計前期最大曝險;若漏洞被發現但尚未被利用殆盡，治理可透過 `EmergencyWithdraw` 凍結並啟動復原。
 
 **你能做的**：存入金額控制在承受得起全額損失的範圍。啟動階段我們**明確建議 Phase 1 單一錢包存 $200-$2,000**——不是因為越小越安全(事實上也的確是),而是因為審計前期的風險等級就是這個量級。
 
@@ -185,7 +185,7 @@ V1 **不是保本產品**——合約設計上沒有主動虧損機制（沒有�
    - 不會（堅持自我託管）→ V1 就是為你設計的。**繼續。**
 
 4. **預期存入 $100-$10K、想要完全不用自己操作的被動曝險？**
-   - 是 → V1 可能是合理選擇的 **post-audit 目標使用者**（預計 2026 Q3 外部審計通過、TVL 上限解除之後）。Pre-audit 期間受 operator-enforced 100K USDCx TVL cap 限制，但**合約是 permissionless，沒有 invitation gate**——任何理解並接受 pre-audit 風險（未知 CRITICAL bug 可能、TVL 不會快速成長、founder bandwidth 有限）的 depositor 都可依自己判斷進入。進入前建議：先讀白皮書 §5 Risks。沒有「正確」的首次存入金額——目前 Phase 1 depositor 用過從 $50 到 $2K 不等的金額。**若你不確定，$100-$200 是學習機制的合理首次存入區間**；完成至少一次完整 deposit + withdraw cycle、確認流程可正常 end-to-end 後再考慮放大。原則是萬一 CRITICAL bug 出現你能承擔全額損失。Pre-audit 不適合追求最大化 yield 或規模化入場的 depositor——這群建議等 post-audit cap 解除，或直接選 Direct Liqwid DJED supply。
+   - 是 → V1 可能是合理選擇的 **post-audit 目標使用者**(目前目標 **Q2-Q3 2027** 外部審計通過、TVL 上限解除之後;funding-stack 不確定性見白皮書 §8.1)。Pre-audit 期間受 operator-enforced 100K USDCx TVL cap 限制，但**合約是 permissionless，沒有 invitation gate**——任何理解並接受 pre-audit 風險（未知 CRITICAL bug 可能、TVL 不會快速成長、founder bandwidth 有限）的 depositor 都可依自己判斷進入。進入前建議：先讀白皮書 §5 Risks。沒有「正確」的首次存入金額——目前 Phase 1 depositor 用過從 $50 到 $2K 不等的金額。**若你不確定，$100-$200 是學習機制的合理首次存入區間**；完成至少一次完整 deposit + withdraw cycle、確認流程可正常 end-to-end 後再考慮放大。原則是萬一 CRITICAL bug 出現你能承擔全額損失。Pre-audit 不適合追求最大化 yield 或規模化入場的 depositor——這群建議等 post-audit cap 解除，或直接選 Direct Liqwid DJED supply。
    - 存入 < $100 → 技術上可行，但 0.5 ADA 網路費在極小額下相當於 0.25% 入場摩擦，自己評估是否接受。
    - 存入 > $10K → 請讀白皮書 §4.4 的損益平衡敏感度表。較大金額下，純看淨收益的話，Direct Liqwid 通常勝出。
 
@@ -194,7 +194,7 @@ V1 **不是保本產品**——合約設計上沒有主動虧損機制（沒有�
 ## 8. FAQ
 
 **Q：有做過審計嗎？**
-A：內部已完成多輪 validator 原始碼對抗性檢視。外部第三方審計預計 Q3 2026 進行。V1 在外部審計完成前維持 100K USDCx 上限。審計方法論見白皮書 §5.1。
+A:內部已完成多輪 validator 原始碼對抗性檢視。外部第三方審計目前目標 **Q2-Q3 2027**(反映 Cardano Project Catalyst Round 時程不確定性,見白皮書 §8.1)。V1 在外部審計完成前維持 100K USDCx 上限。審計方法論見白皮書 §5.1。
 
 **Q：我怎麼知道你們不會挪用我的資金？**
 A:你不必相信我們的話——程式碼公開,你自己就能讀。每一個 redeemer 都在鏈上強制執行。`idle_buffer` 只能送到下列三種目的地之一:
@@ -232,7 +232,7 @@ A：Discord 邀請連結在 optivaults.app 首頁。安全相關問題：`optiva
 
 ## 9. 總結
 
-OptiVaults V1 是 Cardano 上尚未完成第三方審計、非託管的穩定幣 vault。**Phase 1（現在 → 2026 Q3 外部審計完成）**：operator-enforced 100K USDCx TVL cap，預期 TVL 區間 $500-$25K，成功標準是 Phase 1 準則（無 CRITICAL exploit + 自動化系統正常運作 + 社群信任建立 + 順利交接給審計方），**不是**填滿 cap。**Phase 2（外部審計後，目標 2026 Q3）**：依審計結果調整或解除 cap，目標使用者擴展至 $100-$10K hands-off depositor，治理朝 Phase 2+ 簽名者輪替推進。V1 在兩個階段都是為特定類型使用者設計：持有 USDCx、不用 CEX、偏好不自己手動管理 Liqwid、願意承擔智能合約風險來換取被動持有的混合穩定幣收益。若這描述就是你的情況，**從小額開始**，並讀[白皮書](../whitepaper/whitepaper-zh-TW.md)。若不是，完全沒問題——我們希望你找到真正符合自己需求的產品，不論是直接 Liqwid、CEX earn、或繼續自己保管 USDCx。
+OptiVaults V1 是 Cardano 上尚未完成第三方審計、非託管的穩定幣 vault。**Phase 1(現在 → 外部審計完成,目前目標 Q2-Q3 2027)**:operator-enforced 100K USDCx TVL cap,預期 TVL 區間 $500-$25K,成功標準是 Phase 1 準則(無 CRITICAL exploit + 自動化系統正常運作 + 社群信任建立 + 順利交接給審計方),**不是**填滿 cap。Phase 1 持續期間相對於原本 Q3 2026 審計目標延長,反映 Catalyst Round 時程不確定性(白皮書 §8.1)。**Phase 2(外部審計後,目標 Q2-Q3 2027 + N 個月乾淨運作)**:依審計結果調整或解除 cap,目標使用者擴展至 $100-$10K hands-off depositor,治理朝 Phase 2+ 簽名者輪替推進。V1 在兩個階段都是為特定類型使用者設計：持有 USDCx、不用 CEX、偏好不自己手動管理 Liqwid、願意承擔智能合約風險來換取被動持有的混合穩定幣收益。若這描述就是你的情況，**從小額開始**，並讀[白皮書](../whitepaper/whitepaper-zh-TW.md)。若不是，完全沒問題——我們希望你找到真正符合自己需求的產品，不論是直接 Liqwid、CEX earn、或繼續自己保管 USDCx。
 
 **我們為什麼做這個。** 創辦人是 Cardano 的自我託管使用者：2025 年起持有 ADA 並委託 stake pool 做原生質押、同時持有小額 BTC；參與過 Midnight 的 NIGHT redeem；2026 年起在 Minswap V2 的 ADA/NIGHT pool 提供流動性；目前也持有 USDCx（Circle 於 2026 年 2 月透過 xReserve 在 Cardano 發行）。V1 的起點是一個很具體的個人問題——USDCx 到手之後現實的選項有四條：
 
@@ -252,7 +252,7 @@ Cardano 上當時沒有「存 USDCx 進去、讓它自動在 DJED + USDM 複利�
 **營運實況（與 depositor 決策直接相關，不藏起來）。**
 
 - **V1 的成功門檻是 $500K-$1M TVL，不是 $20M。** 4.5% 績效費 × 該 TVL × ~6% blended yield 每年產生 ~$135-270 keeper-share 收入，足以讓 keeper 覆蓋自身基礎建設成本。這是 **tier (a)/(b) self-sustain** 目標。坊間常被引用的「$20M TVL」是另一個 **tier (c) audit-reserve self-funding** 目標（協議能從 treasury 80% 份額自行支付未來外部審計週期），那是 Phase 3+ 的 stretch goal，不是 V1 的前提條件。完整三層 self-sustain breakdown 見白皮書 §4.3。
-- **審計資金有 contingency。** 主要來源是 Catalyst grant（$30-50K）+ 公共財折扣的審計報價（從 $50-150K 商業區間打 30-50% 折扣）+ 創辦人 out-of-pocket（上限 $20-40K）。若 Catalyst grant 失敗，剩下的來源仍可覆蓋審計成本，創辦人 out-of-pocket 上限提升至約 ~$70K（容許單一資金來源失敗）。詳細 contingency 數學見白皮書 §8.1。
+- **審計資金 stack 並明確揭露 Catalyst 暫停狀態。** 主要 stack 是 (a) Cardano Project Catalyst grant($30-50K)——**但 Catalyst 撰寫時處於暫停 / 重組狀態,下一個 Round 何時恢復尚無明確時程**;(b) 審計事務所公共財費率(從 $50-150K 商業區間折 30-50%);(c) heritage 內部審計帶來的 scope reduction(省 $15-25K);(d) 創辦人自付。**審計時程設為 Q2-Q3 2027**,刻意預留時間以容納 Catalyst 恢復概率 + Cardano Foundation / Intersect / Aiken Foundation 等 alternative grant 接洽 + founder runway 累積。若 Catalyst 未達成,創辦人自付上限從 $20-40K 升至 $50-90K。完整 funding stack 揭露見白皮書 §8.1。
 - **2 位獨立 SPO 治理簽名者是 Cardano 社群服務角色，不是有薪職位。** 他們會收到一個 soul-bound 認證 NFT，並有選項在 Phase 2+ 取得 5-10% gov pool 份額（gated on $500K TVL milestone）——這兩者都是**「V1 成功後的 upside」而非主要動機**。挑選標準：≥ 2 年 mainnet SPO 營運、公開鏈上身份、與創辦人無事前商業關係。完整內容見白皮書 §5.5。
 
 **聯絡方式**：

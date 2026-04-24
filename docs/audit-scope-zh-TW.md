@@ -157,7 +157,7 @@ V1 的部署 ceremony 多了 treasury UTXO init + keeper_stake_script UTXO init�
 
 ## 5. 外部審計
 
-**目標:2026 Q3。**
+**目標:Q2-Q3 2027**(反映 funding-stack 不確定性——Cardano Project Catalyst 處於暫停 / 重組狀態;funding 姿態見 §8.5)。
 
 候選事務所(評估中):Runtime Verification、CertiK、Tweag、MLabs、Anastasia Labs。
 
@@ -219,7 +219,7 @@ V1 對任何 finding **不**承諾固定金額。儘管如此,嚴肅的安全研
 
 結構化 bounty tier 計畫是 **post-audit + post-scale** 的考量,不是 Phase 1 的承諾。啟用前的前提條件:
 
-- 2026 Q3 外部審計順利完成。
+- 外部審計順利完成(目標 Q2-Q3 2027——見 §5)。
 - TVL 成長到自給區間(見 `docs/economics.md §6.3`,約 $500K+ TVL),讓 treasury audit-reserve 的累積足以承擔 bounty、不用再動到創辦人資金。
 - 治理 m-of-n 門檻依白皮書 §6.1 Phase 2+ 路線圖調整(至少 1 位簽名者在執行 quorum 之外),讓 bounty 支付的授權路徑有真正的 dissent-veto。
 
@@ -258,10 +258,10 @@ V1 對任何 finding **不**承諾固定金額。儘管如此,嚴肅的安全研
 
 V1 定位為 Cardano DeFi **非商業公共財**參考實作。審計接洽資金靠一個非稀釋性堆疊組成:
 
-- **(a) Cardano Project Catalyst 撥款**:預期 $30K-$50K(2026 Q2-Q3 Round 15+ 提案)
-- **(b) 審計事務所公共財優惠費率**:從 $100K-$150K 全價折 30-50%(接洽中)
+- **(a) Cardano Project Catalyst 撥款**:若有合適 Round 開,預期可取得 $30K-$50K。**撰寫時的狀態:Cardano Project Catalyst 處於暫停 / 重組狀態,下一個 Round 何時恢復尚無明確時程。** V1 把 (a) 列為候選資金來源、等 Catalyst 恢復,但**不依賴**;Q2-Q3 2027 審計時程(§5)即是為了讓 Catalyst 在此區間恢復、或讓 funding 完全由 (b)+(c)+(d) 覆蓋兩種路徑都留得到時間。
+- **(b) 審計事務所公共財優惠費率**:從 $100K-$150K 全價折 30-50%(接洽中)。也計畫接洽 Cardano Foundation、Intersect、Aiken Foundation 等 alternative grant 來源。
 - **(c) 大量 heritage 內部審計史帶來的範圍縮減**(見 §1):讓外部審計聚焦在關鍵路徑、而不是完整 17 logic validator + 1 DEX adapter 的範圍(共 22 個 artefact——數字見 §6),可省 $15K-$25K
-- **(d) 創辦人自付殘額**:mitigations 後剩 $20K-$40K 自掏腰包
+- **(d) 創辦人自付殘額**:(a) 達成則 $20K-$40K 自付;**(a) 未達成則上限拉高至 $50K-$90K**
 
 這個定位對評估合作的審計事務所可能有參考價值:
 

@@ -158,7 +158,7 @@ V1 的內部審計採**涵蓋區方法論**(A–F 區,見 `docs/audit-scope.md �
 
 ### 外部審計
 
-- **目標**:2026 Q3。
+- **目標**:Q2-Q3 2027。
 - **候選事務所**(截至 2025-2026 具備 Plutus V3 + Aiken 經驗的窄名單):Anastasia Labs / MLabs / Certik-Cardano / TxPipe + 獨立 Aiken reviewer。最終選定與範圍會在合作啟動前至少 2 週公開公告。
 - **合作啟動前的姿態**:operator 自律的 100K USDCx TVL 上限(見白皮書 §8.2)。
 
@@ -186,7 +186,7 @@ _目前沒有任何 LOW 以上嚴重性的開放審計發現。最近關閉的�
 
 **Hash 漂移。** `minswap_v2_adapter`、`vault_protocol`、`vault_gov_emergency`、`vault_admin_deploy`,以及參數化後的 `vault_proxy` 形式全部會變。任何鏈下 TX builder 要送出 adapter redeemer 時,必須填 `hop_chain`。
 
-標記為 2026 Q3 外部審計驗證時覆查。
+標記為 Q2-Q3 2027 外部審計驗證時覆查。
 
 ### R73 F-1 — `vault_recall.MergeUtxo` admissibility 缺口(MEDIUM,已修補)
 
@@ -198,7 +198,7 @@ _目前沒有任何 LOW 以上嚴重性的開放審計發現。最近關閉的�
 
 `lib/vault/tests/r73_test.ak` 六個 regression test 覆蓋:合法捐贈(通過)、超額捐贈(拒絕)、同時抬高 LHS 與 RHS 的穩定幣捐贈(通過)、等號邊界(通過)、Liqwid principal 納入 RHS(通過)、`alloc_sum` 抬高 LHS 並超額配置(拒絕)。
 
-標記為 2026 Q3 外部審計驗證時覆查。
+標記為 Q2-Q3 2027 外部審計驗證時覆查。
 
 ---
 

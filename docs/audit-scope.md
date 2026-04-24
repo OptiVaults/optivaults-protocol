@@ -157,7 +157,7 @@ V1 adds treasury UTXO init + keeper_stake_script UTXO init to deploy ceremony. D
 
 ## 5. External Audit
 
-**Target: Q3 2026.**
+**Target: Q2-Q3 2027** (reflecting funding-stack uncertainty — Cardano Project Catalyst is in a paused / restructuring state; see §8.5 for the funding posture).
 
 Candidate firms (to be evaluated): Runtime Verification, CertiK, Tweag, MLabs, Anastasia Labs.
 
@@ -267,7 +267,7 @@ A structured bounty tier program is a **post-audit + post-scale**
 consideration, not a Phase 1 commitment. The preconditions we consider
 before introducing one are:
 
-- Successful completion of the Q3 2026 external audit.
+- Successful completion of the external audit (target Q2-Q3 2027 — see §5).
 - TVL growth to the self-sustaining range (see `docs/economics.md`
   §6.3, approximately $500K+ TVL) so that treasury audit-reserve
   accrual can cover payouts without drawing on founder capital.
@@ -317,10 +317,10 @@ This creates a tamper-evident public record: every audit is part of the on-chain
 
 V1 is positioned as a non-commercial Cardano DeFi public-goods reference implementation. Audit engagement is funded via a non-dilutive stack:
 
-- **(a) Cardano Project Catalyst grant**: expected $30K-$50K (Round 15+ submission 2026 Q2-Q3)
-- **(b) Audit-firm public-goods rate**: 30-50% discount on $100K-$150K full price (outreach pending)
+- **(a) Cardano Project Catalyst grant**: would expect $30K-$50K if a suitable Round opens. **Status as of writing: Cardano Project Catalyst is paused / restructuring with no confirmed timeline for Round resumption.** V1 retains (a) as a candidate funding source pending resumption but does not depend on it; the Q2-Q3 2027 audit timeline (§5) is set to allow either Catalyst re-opening within the window or full coverage from (b)+(c)+(d).
+- **(b) Audit-firm public-goods rate**: 30-50% discount on $100K-$150K full price (outreach pending). Alternative-grant outreach to Cardano Foundation, Intersect, and Aiken Foundation also planned.
 - **(c) Scope reduction via extensive internal audit history** (heritage work in §1): lets external audit focus on critical paths rather than full 17-logic-validator + 1-DEX-adapter scope (22 artefacts total — see §6 for full count), saving $15K-$25K
-- **(d) Founder self-fund remainder**: $20K-$40K out-of-pocket after mitigations
+- **(d) Founder self-fund remainder**: $20K-$40K out-of-pocket if (a) materialises; **scaling to $50K-$90K if (a) does not materialise before audit kickoff**
 
 This positioning may be relevant for audit firms evaluating engagement:
 

@@ -88,7 +88,7 @@ The following are **out of scope:**
 | **Total** | **5,267+** | **All pass** |
 
 - Comprehensive automated test coverage
-- 71 internal audit rounds (R1-R71), 268+ fixes, findings addressed, **Q3 2026 third-party audit pending**
+- 71 internal audit rounds (R1-R71), 268+ fixes, findings addressed, **Q2-Q3 2027 third-party audit pending**
 - Preprod E2E: V10-R71 full stack verified -- 19/19 on-chain (7 V10-specific + 6 Vault core + 6 Complete flow; DeployToProtocol bounded ADA spend + UseLiqwid routing + KeeperToggleMarket + FastUpdateMarkets + Buffer-funded Compound share-price accrual)
 - 170+ tests covering MergeUtxo, multi-token Recall, EmergencyWithdraw token protection, None datum branch, boundary cases, vulnerability attacks
 - Buffer-funded Compound, burn_token validation, loss compound, relaxed MergeUtxo bounds
@@ -153,7 +153,7 @@ Full audit details in `docs/audit-report.md`.
 - Comprehensive automated test suite
 - 1,600 Aiken unit + 2,500 property-based fuzz + 607 keeper + 113 API + 428 frontend + 19 Preprod E2E = 5,267+ regression checks
 - 71 audit rounds (R1-R71), 268+ fixes
-- Internal findings addressed; **Q3 2026 third-party audit pending** (pre-audit 100K USDCx TVL cap enforced until external review completes)
+- Internal findings addressed; **Q2-Q3 2027 third-party audit pending** (pre-audit 100K USDCx TVL cap enforced until external review completes)
 - Community audit: contributions welcome
 
 ## Design Decisions (Documented)

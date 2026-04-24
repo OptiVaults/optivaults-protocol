@@ -127,16 +127,16 @@ Reading: **audit reserve self-funds the next full audit at approximately 25–50
 
 ### 5.2.1 Audit funding stack under public-goods path (V1 pre-audit)
 
-V1's public-goods positioning (see whitepaper §8.1 + Executive Summary) enables a stack of non-dilutive funding sources to cover the Q3 2026 external audit without VC / token / SAFE / SAFT exposure:
+V1's public-goods positioning (see whitepaper §8.1 + Executive Summary) enables a stack of non-dilutive funding sources to cover the external audit (Q2-Q3 2027 target — see `audit-scope.md §5`) without VC / token / SAFE / SAFT exposure:
 
 | Source | Expected amount | Status | Reference |
 |--------|-----------------|--------|-----------|
-| (a) Cardano Project Catalyst grant | $30K-$50K | Round 15+ submission (2026 Q2-Q3) | Whitepaper §8.1 |
+| (a) Cardano Project Catalyst grant | $30K-$50K | **Catalyst paused / restructuring as of writing — no confirmed Round timeline.** V1 retains (a) as candidate pending resumption but does not depend on it. | Whitepaper §8.1 |
 | (b) Audit-firm public-goods rate | 30-50% discount on $100K-$150K full price | Outreach pending | Whitepaper §8.1 |
 | (c) Scope reduction via extensive internal audit history | -$15K-$25K from full scope | Heritage audit work | `audit-scope.md §1` |
-| (d) Founder self-fund remainder | $20K-$40K | Founding-capital allocation | Whitepaper §4.1 |
+| (d) Founder self-fund remainder | $20K-$40K if (a) lands; **$50K-$90K if (a) does not materialise before audit kickoff** | Founding-capital allocation | Whitepaper §4.1 |
 
-Total expected founder out-of-pocket after stack: **$20K-$40K**, vs $50K-$150K if fully self-funded. This stack lets V1 complete external audit without VC / token fundraising / diluting Apache 2.0 public-goods posture. Status updates for each source published via GitHub issue labeled `audit-funding-status` as they progress.
+Audit timeline (Q2-Q3 2027 target — see `audit-scope.md §5`) is set explicitly later than the original Q3 2026 plan to accommodate (i) Catalyst Round resumption probability, (ii) Cardano Foundation / Intersect / Aiken Foundation alternative grant outreach, and (iii) founder runway accumulation if (a)/(b) outcomes are conservative. Total expected founder out-of-pocket after stack: **$20K-$40K** in the (a)-lands scenario, scaling up to **$50K-$90K** in the (a)-does-not-land scenario. This stack lets V1 complete external audit without VC / token fundraising / diluting Apache 2.0 public-goods posture. Status updates for each source published via GitHub issue labeled `audit-funding-status` as they progress.
 
 ### 5.3 Keeper share viability
 
@@ -216,7 +216,7 @@ At the pre-audit 100K TVL cap, OptiVaults' own revenue does not cover its operat
 
 ### 7.1 Continuity posture
 
-V1's operational posture: **"continuation of operations through the Q3 2026 audit window and the post-audit TVL ramp-up period, up to the limits of available founding capital"** — **not** a contractually-enforceable long-term guarantee.
+V1's operational posture: **"continuation of operations through the Q2-Q3 2027 audit window (see `audit-scope.md §5`) and the post-audit TVL ramp-up period, up to the limits of available founding capital"** — **not** a contractually-enforceable long-term guarantee.
 
 A prudent planning horizon for prospective depositors is therefore: "assume the product continues operating normally through the audit + a 6–12 month post-audit ramp period; re-evaluate at each milestone."
 
@@ -350,7 +350,7 @@ The R&D category (20% of treasury inflow) funds:
 
 ## 8. Post-audit cap schedule
 
-Post-Q3 2026 audit, the 100K USDCx TVL cap is expected to be relaxed in stages. The exact schedule will be published in the audit report and is not committed here in advance; the current intention is a staged ramp that correlates audit findings remediation with each cap-raise milestone. A representative illustrative schedule:
+Post-audit (Q2-Q3 2027 target — see `audit-scope.md §5`), the 100K USDCx TVL cap is expected to be relaxed in stages. The exact schedule will be published in the audit report and is not committed here in advance; the current intention is a staged ramp that correlates audit findings remediation with each cap-raise milestone. A representative illustrative schedule:
 
 | Stage | Trigger | TVL cap |
 |-------|---------|---------|

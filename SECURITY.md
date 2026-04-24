@@ -158,7 +158,7 @@ Internal adversarial audit rounds executed against V1 contract code (additional 
 
 ### External audit
 
-- **Target**: Q3 2026.
+- **Target**: Q2-Q3 2027.
 - **Candidate firms** (narrow list of teams with Plutus V3 + Aiken experience as of 2025-2026 publication): Anastasia Labs / MLabs / Certik-Cardano / TxPipe + independent Aiken reviewers. Final firm selection + scope will be publicly announced at least 2 weeks before engagement start.
 - **Pre-engagement posture**: operator-enforced TVL cap of 100K USDCx (see whitepaper §8.2).
 
@@ -186,7 +186,7 @@ _No currently open audit findings above LOW severity. See "Recently fixed" below
 
 **Hash drift.** `minswap_v2_adapter`, `vault_protocol`, `vault_gov_emergency`, `vault_admin_deploy`, and the parameterised `vault_proxy` form all change. Any off-chain TX builder emitting the adapter redeemer must populate `hop_chain`.
 
-Flagged for Q3 2026 external audit verification.
+Flagged for Q2-Q3 2027 external audit verification.
 
 ### R73 F-1 — `vault_recall.MergeUtxo` admissibility gap (MEDIUM, FIXED)
 
@@ -198,7 +198,7 @@ Flagged for Q3 2026 external audit verification.
 
 Six regression tests in `lib/vault/tests/r73_test.ak` cover: legitimate donation (pass), over-donation (reject), stable-token donation bumping NDV on both sides (pass), exact-boundary equality (pass), Liqwid principal contribution to RHS (pass), `alloc_sum` contribution to LHS with over-allocation (reject).
 
-Flagged for Q3 2026 external audit verification.
+Flagged for Q2-Q3 2027 external audit verification.
 
 ---
 
