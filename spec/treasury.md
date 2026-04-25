@@ -6,7 +6,7 @@
 
 ## 1. Purpose
 
-The treasury validator holds the protocol's share of the performance fee harvested on every Compound operation. At V1 launch, this is 80% of the performance fee (keeper 20% / gov 0% / treasury 80%); Phase 2+ activates the governance pool via `UpdateFeeSplit` and treasury's share drops to 75% (Phase 2) or 70% (Phase 3). See `spec/vault-datum.md` §2.2 for the fee-split hard caps and `spec/governance.md` §4.3 for the UpdateFeeSplit action.
+The treasury validator holds the protocol's share of the performance fee harvested on every Compound operation. At V1 launch, this is 60% of the performance fee (keeper 40% / gov 0% / treasury 60% — keeper share at the validator hard cap to support open-source third-party keeper viability); Phase 2+ activates the governance pool via `UpdateFeeSplit` and treasury's share drops to 55% (Phase 2) or 50% (Phase 3, validator hard floor). See `spec/vault-datum.md` §2.2 for the fee-split hard caps and `spec/governance.md` §4.3 for the UpdateFeeSplit action.
 
 Funds are segregated into four category buckets with distinct use cases, ratio-governed inflow, and per-category spend rules. The treasury is the on-chain accountability mechanism — any depositor or third party can inspect the treasury UTXO, verify inflows against Compound transactions, and audit spend actions against the governance log.
 
@@ -40,10 +40,10 @@ type TreasuryDatum {
   buffer_balance: Int,
 
   // --- Inflow split ratios (basis points; sum must equal 10000) ---
-  audit_bps: Int,        // Launch default: 3000 (30%)
-  ops_bps: Int,          // Launch default: 4000 (40%)
-  rd_bps: Int,           // Launch default: 2000 (20%)
-  buffer_bps: Int,       // Launch default: 1000 (10%)
+  audit_bps: Int,        // Launch default: 4000 (40%) — bumped from 30% so audit-reserve accumulation rate stays at 24% of total fee under the 60% treasury share (60% × 40% = 24%, same as the prior 80% × 30%)
+  ops_bps: Int,          // Launch default: 2500 (25%) — reduced from 40% because keeper now gets 40% direct share, no need to double-fund per-keeper infra via ops bucket
+  rd_bps: Int,           // Launch default: 2500 (25%) — bumped from 20% to maintain absolute R&D budget under smaller treasury share
+  buffer_bps: Int,       // Launch default: 1000 (10%) — unchanged
 
   // --- Spend cooldowns & limits (per-category) ---
   last_spend_time_audit: Int,        // POSIX ms — audit-reserve 24h cooldown anchor
@@ -74,7 +74,7 @@ type TreasuryDatum {
 
 ### 3.1 `Receive` — passive inflow from Compound
 
-Triggered when a Compound transaction pays the 80% protocol-fee share to the treasury UTXO. The treasury validator validates that the new balances update correctly according to the split ratios.
+Triggered when a Compound transaction pays the 60% protocol-fee share to the treasury UTXO at V1 launch (or a smaller share post Phase 2+ activation of the governance pool). The treasury validator validates that the new balances update correctly according to the split ratios.
 
 ```aiken
 Receive { incoming_amount: Int }
@@ -203,9 +203,9 @@ At V1 mainnet deploy, TreasuryDatum is initialized with:
 
 | Field | Launch value | Rationale |
 |-------|--------------|-----------|
-| `audit_bps` | 3000 | 30% of inflow to audit reserve accumulates toward the ~USD 50K-150K target for the next third-party audit (approximately Q1 2028 at steady state) |
-| `ops_bps` | 4000 | 40% to infrastructure: VPS (dual-instance keeper), Blockfrost paid tier, monitoring stack, domain/CDN, frontend hosting |
-| `rd_bps` | 2000 | 20% to protocol development, future bounty program (post-audit + TVL-scale per `docs/audit-scope.md §6.3`), ecosystem grants to contributors |
+| `audit_bps` | 4000 | 40% of inflow to audit reserve accumulates toward the ~USD 50K-150K target for the next third-party audit (24% of total fee under the V1 launch fee split — same accumulation rate as the historical 80%×30% allocation) |
+| `ops_bps` | 2500 | 25% to platform-layer infrastructure: VPS (dual-instance keeper), Blockfrost paid tier, monitoring stack, domain/CDN, frontend hosting. Reduced from 40% because the new 40% keeper share absorbs per-keeper infra cost directly via Compound output |
+| `rd_bps` | 2500 | 25% to protocol development, future bounty program (post-audit + TVL-scale per `docs/audit-scope.md §6.3`), ecosystem grants to contributors |
 | `buffer_bps` | 1000 | 10% to unexpected costs, legal consultation, incident response |
 | `monthly_cap_audit` | 500_000_000 (500 USDCx) | Prevents any single month's spend from draining audit reserve |
 | `monthly_cap_ops` | 500_000_000 | Same-size cap across categories at launch for simplicity |
@@ -222,26 +222,27 @@ At V1 mainnet deploy, TreasuryDatum is initialized with:
 At the pre-audit 100K USDCx TVL cap, assuming 6% gross APY:
 
 - Performance fee revenue per year: `100K * 6% * 4.5% = 270 USDCx`
-- Treasury inflow per year (80% share): `216 USDCx`
-- Category annual inflow at launch ratios:
-  - Audit reserve: `216 * 30% = 65 USDCx`
-  - Operations: `216 * 40% = 86 USDCx`
-  - R&D: `216 * 20% = 43 USDCx`
-  - Buffer: `216 * 10% = 22 USDCx`
+- Treasury inflow per year (60% share at V1 launch): `162 USDCx`
+- Category annual inflow at launch ratios (40/25/25/10):
+  - Audit reserve: `162 * 40% = 65 USDCx`
+  - Operations: `162 * 25% = 41 USDCx`
+  - R&D: `162 * 25% = 41 USDCx`
+  - Buffer: `162 * 10% = 16 USDCx`
 
 These numbers are not sufficient to fully fund OptiVaults' operating costs at the pre-audit cap — covering hosted infrastructure alone requires approximately 600–1,200 USDCx per year. V1 launches in a **bootstrapping phase** where protocol revenue does not fully cover operating costs until TVL reaches the self-sustaining range (approximately 500K–2.5M USDCx for baseline operations). Initial shortfalls are absorbed by the project's founding capital and are expected to resolve organically as TVL grows. Treasury transparency in V1 is about **making this gap visible and auditable**, not about claiming the pre-audit operation is already self-sufficient.
 
 At approximately USD 1M TVL, the same math produces:
 
-- Annual inflow: `2,160 USDCx`
-- Audit reserve: `648/yr` → fills a USD 50K audit reserve in ~5 years at this TVL level, or ~6 months at USD 10M TVL
-- Operations: `864/yr` — covers basic VPS + Blockfrost but not much more
-- R&D + Buffer: `648/yr` combined — modest grant/bounty budget
+- Annual inflow (60% treasury share): `1,620 USDCx`
+- Audit reserve: `648/yr` (24% of total fee = same accumulation rate as the historical allocation) → fills a USD 50K audit reserve in ~77 years at this TVL level, or ~8 years at USD 10M TVL
+- Operations: `405/yr` — covers low-end VPS + Blockfrost (per-keeper infra now funded directly via the 40% keeper direct share, not from this bucket)
+- R&D: `405/yr` — modest grant/bounty budget; 1-2 small bounties per year
+- Buffer: `162/yr`
 
 At USD 10M TVL:
 
-- Annual inflow: `21,600 USDCx`
-- Treasury becomes self-sustaining and begins generating surplus over the baseline operating cost
+- Annual inflow: `16,200 USDCx`
+- Treasury becomes self-sustaining and begins generating surplus over the baseline operating cost. Audit reserve at $6,480/yr fills a $50K audit cushion in ~8 years; tier (c) full audit-cycle self-funding requires $25M+ TVL.
 
 The TVL scale at which each category achieves its intended purpose is tracked transparently; the V1 whitepaper §9.2 and `docs/economics.md` discuss the path from subsidy-supported launch to treasury-self-sustaining operation.
 
@@ -251,7 +252,7 @@ The TVL scale at which each category achieves its intended purpose is tracked tr
 
 A depositor reading this specification can rely on the following properties being contract-enforced:
 
-1. **Inflow ratios are fixed on receive**: when a Compound pays the 80% protocol share to the treasury, the split across four categories follows exactly the ratios in the current TreasuryDatum. No keeper or governance action can redirect a specific Compound's inflow to a different category.
+1. **Inflow ratios are fixed on receive**: when a Compound pays the 60% protocol share to the treasury at V1 launch (or 55%/50% post Phase 2+ governance activation), the split across four categories follows exactly the ratios in the current TreasuryDatum. No keeper or governance action can redirect a specific Compound's inflow to a different category.
 2. **Spend requires governance**: no category balance can decrease except via a `Spend` redeemer backed by a MultisigGov ExecuteAction with 7-day timelock and 1-of-n cancel veto.
 3. **Audit reserve floor is immutable**: `min_audit_reserve` cannot be decreased by any governance action.
 4. **Monthly caps limit single-action drains**: even if governance is compromised and queues a malicious `Spend`, the per-category monthly cap bounds the single-transaction damage.

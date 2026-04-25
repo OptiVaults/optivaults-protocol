@@ -98,7 +98,7 @@ Common mischaracterization to flag: **"any 1-of-n signer can execute arbitrary a
 
 **Remaining risk:** keeper could do `VaultSwap` against Minswap V2 with attacker-controlled swap target that is within `protocol_hashes` whitelist. Defense: `protocol_hashes` whitelist is tight (Minswap V2 order script + stake, Liqwid action addresses). Expanding it requires `UpdateRegistry` with 14-day timelock.
 
-**Keeper-commission slashing:** V1 defers formal slashing. At V1 launch, keeper compromise is bounded by the above contract checks + the economic reality that a compromised keeper gains at most the performance-fee stream (4.5% of yield × 20% keeper share ≈ 0.9% of gross yield, ~$45/year at 100K TVL). Rational-attacker profit ceiling is below the cost of compromise for anyone outside the founder's threat model.
+**Keeper-commission slashing:** V1 defers formal slashing. At V1 launch, keeper compromise is bounded by the above contract checks + the economic reality that a compromised keeper gains at most the performance-fee stream (4.5% of yield × 40% keeper share ≈ 1.8% of gross yield, ~$108/year at 100K TVL). Rational-attacker profit ceiling is still below the cost of compromise for anyone outside the founder's threat model — the 40% share at V1 launch (set at validator hard cap to support open-source third-party keeper viability) doubles the bounded loss vs the prior 20%, but the order of magnitude remains "founder threat-model only" at Phase 1 TVL.
 
 ### 3.5 Treasury Drain via Compromised Governance
 
@@ -118,12 +118,13 @@ Common mischaracterization to flag: **"any 1-of-n signer can execute arbitrary a
 
 **V1 behavior:**
 - `RecallFromLiqwid` (keeper path): requires `underlying_received >= supplied_value`. If Liqwid returns less, TX fails. Keeper cannot automate the loss.
-- `EmergencyWithdraw` (governance path): accepts `loss_amount >= 0`, explicitly writing the loss to `non_deposit_value`. Requires m-of-n signatures + 0-day timelock (emergency).
-- Depositors see the loss proportionally via share-price decrease at next Compound.
+- `RecallFromLiqwid` (governance fallback path, after 7-day keeper inactivity): allows `underlying_received < supplied_value` — physically Recalls whatever underlying is recoverable and writes off the actually-realized shortfall (`supplied_value − underlying_received`) into `total_deposited`. This is the canonical loss-write-off path under Phase 1 governance safety (Layer 1 — see §5.4). EmergencyWithdraw alone cannot write off positions — it can only flip the `frozen` flag.
+- Depositors see the loss proportionally via share-price decrease after the gov-fallback Recall completes.
 
 **Escape hatches:**
 - `KeeperToggleMarket` — keeper can disable a market unilaterally (1-way, `active: true → false`).
-- `EmergencyWithdraw` — governance absorbs loss and re-opens normal flow.
+- `EmergencyWithdraw` — governance freezes the vault to halt further Compound / Supply / Deploy operations while the Recall path runs (Phase 1 Layer 1: freeze-only, see §5.4).
+- `RecallFromLiqwid` gov-fallback path — physically Recalls underlying + writes off realized loss only.
 
 ### 3.7 USDCx Depeg
 
@@ -213,6 +214,74 @@ Note on keeper identity: V1 does NOT anchor a specific `keeper_pkh` at compile t
 - Orderly wind-down protocol (whitepaper §9.2)
 - Third-party audit gate before cap removal
 
+### 5.4 Phase 1 governance safety — three-layer founder-only-acceptable design (2026-04-25)
+
+Independent of signer-slate composition (3-of-3 with SPOs vs single-actor founder fallback), V1 ships three **validator-level** safety layers that bound depositor loss in the worst single-actor failure scenarios. The design goal is to make **founder-only Phase 1 governance an acceptable launch-time fallback** — SPO recruitment becomes a credibility upside, not a launch blocker.
+
+#### Layer 1 — `EmergencyWithdraw` is freeze-only
+
+`vault_gov_emergency.EmergencyWithdraw` cannot reduce `total_deposited`, cannot remove or modify `liqwid_positions`, cannot accept `loss_amount > 0`. Its sole effect is flipping the `frozen` flag (0 ↔ 1). Real loss accounting is constrained to `vault_liqwid.RecallFromLiqwid`'s gov-fallback path, which physically Recalls underlying USDCx and writes off only the actually-realized shortfall (`supplied_value − underlying_received`). The qToken-orphan vector — where a compromised governance key drops `share_price` to zero by writing off positions from datum without the corresponding fund movement — is closed at validator level (`validate_emergency_freeze_only` in `lib/vault/validation.ak`).
+
+#### Layer 2 — `DeployToProtocol` USDCx-exception under freeze
+
+When `frozen == 1` and the redeemer's `deploy_token != deposit_token`, `vault_protocol.DeployToProtocol` allows the swap-out. The keeper can drain NDV stable tokens (DJED, USDM) back to USDCx via the registry-whitelisted SwapAdapter so user `Withdraw` can pay out the full proportional share even during emergency freeze. Destination is pinned to the vault's own address by the SwapAdapter validator, so an attacker controlling the keeper key cannot redirect output; the worst they can force is the Tier 2 peg-floor-bounded slippage (≤ 5-7%), and the resulting USDCx still lands in the vault for users to withdraw. Without this exception, a freeze permanently strands the NDV portion until the 21-day `AdminDeployNonDeposit` governance fallback executes — Layer 2 closes that long window. Spec: `validate_deploy_frozen_gate` in `lib/vault/validation.ak`.
+
+#### Layer 3 — `CommunitySunset` dead-man-switch
+
+When the vault has been operationally inactive for ≥ 90 days (`max(last_compound_time, last_realloc_time) + 90 days ≤ now`), any vUSDCx holder can invoke the permissionless `CommunitySunset` redeemer in `vault_user`. This atomically sets `frozen = 1` and `community_sunset_triggered = 1` (one-way irreversible). Once triggered:
+
+- `vault_liqwid.RecallFromLiqwid` accepts any signer (no keeper or governance signature required).
+- `vault_protocol.DeployToProtocol` Layer 2 path accepts any signer (same).
+
+The 90-day threshold corresponds to ≈ 18 missed zero-yield heartbeats (5-day cadence), proving the keeper is fully dead. The sunset path **only opens recovery** — it cannot mutate `total_deposited`, `total_shares`, `idle_buffer`, `liqwid_positions`, or any policy / immutable field. SwapAdapter destination + peg-floor + slippage bounds still apply during sunset, so attackers cannot use the open recovery paths to drain value.
+
+#### Scenario walkthroughs
+
+The three layers are designed to bound depositor loss across the realistic single-actor governance failure scenarios. Each scenario describes attacker capability, validator response, depositor outcome, and time horizon.
+
+**Scenario A — Founder honest, vault running normally**
+- No anomaly detected. Compound + Recall + Supply + Withdraw run on routine cadence.
+- Depositor outcome: full yield accrued, withdraw at any time settles instantly to USDCx.
+- Time horizon: indefinite.
+
+**Scenario B — Real Liqwid bad debt event (no key compromise)**
+- Liqwid market suffers protocol-level loss (qToken rate drops below supplied basis).
+- Operator response: governance queues `EmergencyWithdraw(loss_amount=0, freeze=1)`. Frozen = 1 propagates immediately (0d timelock; multisig still required).
+- Depositor `Withdraw` continues to function (Layer 1 didn't change this). Idle-buffer portion is paid out at the unchanged `share_price`.
+- Liqwid portion: keeper drives `RecallFromLiqwid` (still allowed under freeze) → underlying recovered into vault NDV. The shortfall (`supplied_value − underlying_received`) is written off at this point, and `share_price` adjusts proportionally. Then keeper drives `DeployToProtocol` Layer 2 swap → USDCx lands in `idle_buffer` → depositors can withdraw the recovered portion.
+- Time horizon: hours-to-days from incident detection to full settlement.
+
+**Scenario C — Founder key compromise, attacker grief-freeze attempt**
+- Attacker uses stolen governance key to fire `EmergencyWithdraw`, attempting to grief by writing off the Liqwid portion via datum (the pre-Layer-1 attack chain).
+- Validator response: Layer 1 rejects any non-zero `loss_amount` and any `liqwid_positions` mutation. The attacker can only set `frozen = 1` — pure freeze with no value impact.
+- Depositor outcome: `Withdraw` continues to function, paying out the proportional `idle_buffer` slice immediately. For the Liqwid portion, the keeper (which may or may not be the same compromised actor) can still drive `RecallFromLiqwid` + `DeployToProtocol` Layer 2 swap to convert NDV back to USDCx — the resulting USDCx lands in vault and pays out depositors. Even if the attacker also controls the keeper key, the SwapAdapter validator enforces destination = vault address, so attacker cannot exfiltrate; the worst attacker can force is max-slippage drain of NDV (≤ 7% per swap, peg-floor bounded).
+- Time horizon: depositor full recovery within hours-to-days. Maximum loss: ≤ 7% of NDV per cycle until NDV exhausts.
+
+**Scenario D — Founder key compromise, attacker chains UpdateRegistry + AdminDeployNonDeposit**
+- Attacker queues `UpdateRegistry` to add a malicious SwapAdapter (14-day timelock).
+- Depositors observe the queued action via the 1-hour broadcast obligation, withdraw within the 14-day window. After 14 days, `AdminDeployNonDeposit` requires an additional 7-day keeper-inactive window — total exposure window ≥ 21 days for the attacker to extract via routing through the malicious adapter.
+- Depositor outcome: any attentive depositor exits within 14 days and is unaffected. Inattentive depositors lose at most the per-swap slippage cap (~7%) per cycle.
+- Time horizon: 14-21 days for depositor self-exit window.
+
+**Scenario E — Founder incapacitated, no SPO co-signers, ≥ 90 days no activity**
+- Founder is unreachable / deceased / loses key. Keeper stops running. No governance action queued in 90+ days.
+- Depositor response: any vUSDCx holder invokes `CommunitySunset`. Frozen + sunset_triggered set. Then any holder fires `RecallFromLiqwid` per market → underlying recovered. Then any holder fires `DeployToProtocol` Layer 2 swap → USDCx lands in vault. Then each holder fires `Withdraw` → recovers proportional USDCx.
+- Depositor outcome: full proportional USDCx recovered. Out-of-scope losses: ~870 ADA reference-script lockup (founder's deploy wallet), ~24 ADA stake-credential deposits (gov-only A2 path) — these accept residual loss as the cost of single-actor governance.
+- Time horizon: hours-to-days for community-driven recovery once 90-day threshold is met. The 90-day threshold itself is the trigger condition, so total wait from incident to recovery initiation is bounded by the operational-inactivity detection window.
+
+**Scenario F — Founder key compromise + attacker also controls keeper + 90 days pass**
+- Attacker has all keys but cannot extract value (Layers 1+2+3 + hard caps cover all paths). Eventually the attacker's grief slows to a stop or depositors invoke CommunitySunset.
+- Depositor outcome: full proportional USDCx recovered via Scenario E path.
+- Time horizon: same as Scenario E.
+
+#### Out-of-scope under sunset
+
+CommunitySunset does NOT recover:
+- ~870 ADA in reference-script UTXOs at the deploy wallet (founder's funds, recoverable only with founder's deploy key).
+- ~24 ADA in stake-credential deposits (A2 ActDeregisterStake requires gov-multisig signatures).
+
+These are operator/founder-side losses, not depositor losses, and accept their own residual exposure as part of the single-actor governance cost. Future founder-side mitigations (multi-sig deploy wallet, dead-man-release on stake deposits) are out-of-scope for V1 launch.
+
 ---
 
 ## 6. Out-of-Scope
@@ -240,7 +309,7 @@ V1 makes no representation about regulatory compliance. Users are responsible fo
 | Liqwid bad debt | Medium | Medium | EmergencyWithdraw escape hatch, KeeperToggleMarket 1-way pause |
 | USDCx depeg | Medium | High | Off-chain monitoring, operator halt procedure |
 | Minswap batcher outage | Medium | Low | Order Expire fallback refunds to user |
-| Founder wallet compromise | Low | Medium | Gov rotation + treasury separation mitigate concentration risk |
+| Founder wallet compromise | Low | Bounded by Layer 1+2+3 (§5.4): no datum-only write-off, swap-out destination pinned to vault, max ~7%/swap NDV slippage drain. Depositor full recovery via 14-day timelock window OR 90-day CommunitySunset path | Three-layer governance safety + hard caps + 14-day timelock window + 90d community-sunset fallback |
 | Plutus bug in V1 validators | Low | High | Internal audit (≥1 external round pre-launch), Responsible Disclosure Policy + ex gratia recognition framework (`docs/audit-scope.md §6`), EmergencyWithdraw |
 | Regulatory action (SEC / MiCA / FinCEN / OFAC / local) | Low-Medium | High (operator legal exposure) / Low (depositor principal — withdraw always open) | Public-goods positioning (non-commercial, non-solicitation, geographic framework) per whitepaper §12; operator may geoblock jurisdictions based on legal opinion |
 

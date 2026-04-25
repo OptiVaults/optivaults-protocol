@@ -68,7 +68,7 @@ Scope:
 **`vault_user.ak` + `vault_keeper_hot.ak` + `vault_batcher.ak` + `vault_swap_ada.ak`:**
 - Compile-time parameters: `keeper_stake_hash` (auth via `keeper_stake_script` zero-withdraw — rotation without redeploy) on `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada`; `vault_keeper_hot` and `vault_swap_ada` additionally take `treasury_hash` (USDCx fees + ADA-swap proceeds route to a script address, not a wallet PKH). `vault_user` is purely permissionless (no `keeper_stake_hash` required).
 - Authorization model: `vault_user` holds Deposit + Withdraw (permissionless, user signature). `vault_keeper_hot` holds Compound + RebalanceBuffer (keeper-auth). `vault_batcher` holds BatchProcess (keeper-auth, multi-order vUSDCx mint/burn orchestration). `vault_swap_ada` holds SwapAda (keeper-auth, ADA→USDCx swap with dual-feed oracle reader, see `spec/ada-swap.md`).
-- Compound redeemer (on `vault_keeper_hot`) splits fee **3-way** between keeper / gov pool / treasury per `keeper_fee_bps` + `gov_fee_bps` (launch 2000 / 0 / 8000; caps enforced by UpdateFeeSplit — see `spec/vault-datum.md` §2.2).
+- Compound redeemer (on `vault_keeper_hot`) splits fee **3-way** between keeper / gov pool / treasury per `keeper_fee_bps` + `gov_fee_bps` (launch 4000 / 0 / 6000; caps enforced by UpdateFeeSplit — see `spec/vault-datum.md` §2.2).
 - Verify fee split correctness (no skim in rounding).
 - Verify treasury output datum is preserved correctly on Compound (cross-validator to `treasury.Receive`).
 - Verify gov-pool physical USDCx flow matches `gov_share` (cross-validator binding with `multisig_gov.ReceiveCompoundShare`).
@@ -127,7 +127,7 @@ Existing `property_fuzz_test.ak` + `property_fuzz_extended_test.ak` cover 25 pro
 
 Total fuzz runs expand from 2,500 → 3,000 per build.
 
-**Cross-reference (test-count metrics).** This file's "30 properties × 100 iterations = 3,000 fuzz runs" is **one specific metric** about property-based fuzz coverage. The whitepaper §5.4 figure of "104 unit + property tests / 599 randomized checks per `aiken check` run" refers to the **full Aiken test suite** (54 validation + 4 deregister + 8 split + 7 oracle + 12 swap + 8 property × per-iteration deterministic + 11 r72 = 104 test functions; the "599 checks" is what `aiken check` summary line emits, counting deterministic case + each `aiken/fuzz` property invocation as 1 check). The two metrics are not contradictory — they describe different layers (this doc focuses on `aiken/fuzz` randomized iterations specifically; the whitepaper aggregates). The 3,000 fuzz-runs figure here counts the maximum iterations possible if every property runs to its 100-iteration cap; in practice early-exit on first failure means some properties may report fewer.
+**Cross-reference (test-count metrics).** This file's "30 properties × 100 iterations = 3,000 fuzz runs" is **one specific metric** about property-based fuzz coverage. The whitepaper §5.4 figure of "144 unit + property tests / 639 randomized checks per `aiken check` run" refers to the **full Aiken test suite** (the "639 checks" is what `aiken check` summary line emits, counting deterministic case + each `aiken/fuzz` property invocation as 1 check). The two metrics are not contradictory — they describe different layers (this doc focuses on `aiken/fuzz` randomized iterations specifically; the whitepaper aggregates). The 3,000 fuzz-runs figure here counts the maximum iterations possible if every property runs to its 100-iteration cap; in practice early-exit on first failure means some properties may report fewer.
 
 ---
 
@@ -144,7 +144,7 @@ Focus: `treasury.ak` entire validator, `TreasurySpend` + `UpdateTreasuryParams` 
 Focus: `keeper_stake_script.ak` entire validator, `UpdateKeeperAuth` via `multisig_gov`, weekly rotation mechanism, bond lifecycle. Exit: 0 CRIT / 0 HIGH / 0 MEDIUM findings.
 
 **Coverage area C — V1 Integration Flows**
-Focus: cross-validator flows for Compound (3 fee outputs: keeper + gov pool + treasury), `UpdateKeeperAuth` triggering keeper_auth state changes, `TreasurySpend` under m-of-n, `DistributeSignerCompensation` + `ReceiveGovForfeit` cross-validator binding. Exit: 0 CRIT / 0 HIGH / 0 MEDIUM findings.
+Focus: cross-validator flows for Compound (3 fee outputs: keeper + gov pool + treasury), `UpdateKeeperAuth` triggering keeper_auth state changes, `TreasurySpend` under m-of-n, `DistributeSignerCompensation` + `ReceiveGovForfeit` cross-validator binding, **three-layer governance safety design** (Layer 1 `vault_gov_emergency.EmergencyWithdraw` freeze-only / Layer 2 `vault_protocol.DeployToProtocol` USDCx swap-out under `frozen = 1` / Layer 3 `vault_user.CommunitySunset` 90-day permissionless dead-man-switch — see `spec/governance.md §4.4` + `docs/security-model.md §5.4`). Exit: 0 CRIT / 0 HIGH / 0 MEDIUM findings.
 
 **Coverage area D — V1 Regression**
 Re-run all heritage regression tests against V1 validators. Flag any cascade impact from new compile-time parameters. Exit: all prior tests still pass after V1 refactor.

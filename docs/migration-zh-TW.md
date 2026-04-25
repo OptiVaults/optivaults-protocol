@@ -16,7 +16,7 @@ V1 引入了若干結構性變更,**無法**以 datum 升級表達:
 - **前代 datum 欄位被移除**——先前的內部驗證版本直接把 `keeper_pkh`(授權 PKH)與 `fee_collector`(USDCx 收費錢包)放在 `VaultDatum` 裡。V1 把兩者都換掉:
   - `keeper_pkh` → `vault_user` / `vault_keeper_hot` / `vault_protocol` / `vault_recall` / `vault_liqwid` 上的 `keeper_stake_hash` 編譯時錨點;實際授權 PKH 集合放在 stake-script 自己的 datum(由治理透過 `UpdateKeeperAuth` 可變,輪替時不用重部署 vault)。
   - `fee_collector` → `vault_keeper_hot`(Phase-77 後 Compound 的新家)上的 `treasury_hash` 編譯時錨點;Compound 的 treasury 份額路由到 script 地址,不是錢包 PKH。
-- **費用拆分改變**(過去 100% 到單一錢包 → 3-way 拆分:20% keeper / 啟動時 0% gov pool / 80% treasury),這要求新的 treasury UTxO 與 multisig_gov UTxO 在 Compound 時必須已經存在。
+- **費用拆分改變**(過去 100% 到單一錢包 → 3-way 拆分:40% keeper / 啟動時 0% gov pool / 60% treasury——keeper 份額在 validator 硬上限以支持開源第三方 keeper 經濟可行性),這要求新的 treasury UTxO 與 multisig_gov UTxO 在 Compound 時必須已經存在。
 - **幾乎每個 validator 上都有新的編譯時參數**——每個 validator hash 都變了。
 
 因為 validator hash 變了、script 地址變了,現有 UTxO 不可能被新 validator 消費。唯一安全路徑是:
@@ -39,6 +39,14 @@ V1 引入了若干結構性變更,**無法**以 datum 升級表達:
 **Phase C — 舊 vault 殘餘**
 
 舊 vault 中剩下的任何 UTxO 會繼續累積被動 Liqwid 收益,直到該存入者提領。Operator 承諾 Phase B 之後至少 12 個月內繼續對舊 vault 的 keeper 覆蓋。
+
+**遷移後存入者得到的 V1 額外保護(資訊性)。** 從內部驗證 vault 遷移到 V1 後,以下三層舊 vault 沒有的結構性保護自動生效:
+
+1. **Layer 1 — EmergencyWithdraw 改為 freeze-only**:V1 治理無法透過 EmergencyWithdraw 直接把損失寫進 `total_deposited`。所有損失帳務都得走 `vault_liqwid.RecallFromLiqwid`(治理 fallback 路徑)的實體 Recall,所以治理金鑰被入侵也無法只動 datum 把 share price 寫掉。
+2. **Layer 2 — Frozen 狀態下的 USDCx swap-out**:在 `frozen = 1` 下,keeper(或治理 fallback)仍能透過 SwapAdapter 白名單把 NDV stable(DJED / USDM)swap 回 USDCx,讓存入者在緊急 freeze 期間仍能提領 1:1 的 USDCx,不必收到混合資產。
+3. **Layer 3 — CommunitySunset 90 天 dead-man-switch**:`vault_user.CommunitySunset` 是 permissionless redeemer,任何 vUSDCx 持有者都可在 vault 連續 90 天無動靜時觸發。它原子性地設 `frozen = 1` + 開放 `RecallFromLiqwid` 與 `DeployToProtocol` 給任意 caller,讓任何存入者都能在沒有 operator 或治理配合的情況下推動完整的 Recall → swap → Withdraw 鏈。
+
+這三層在單一簽名者治理失能的情境下,結構性界定存入者的損失上限,移除舊內部驗證 vault 所帶的「keeper 失能後 90 天尾端風險」。完整設計與 6 個情境威脅演練見 `docs/security-model.md §5.4`。
 
 ---
 

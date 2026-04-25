@@ -47,11 +47,12 @@ use vault/helpers.{
   verify_output_value_min, verify_receiver_output, verify_token_preserved,
 }
 use vault/types.{
-  ActDeregisterStake, Deposit, VaultRedeemer, Withdraw,
+  ActDeregisterStake, CommunitySunset, Deposit, VaultRedeemer, Withdraw,
 }
 use vault/validation.{
   calculate_shares_to_mint, calculate_withdraw_amount, check_immutable_fields,
-  has_no_order_inputs as val_has_no_order_inputs, validate_deposit,
+  has_no_order_inputs as val_has_no_order_inputs, validate_community_sunset_transition,
+  validate_community_sunset_trigger_time, validate_deposit,
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -325,6 +326,7 @@ validator vault_user(
             new_datum.liqwid_positions == old_datum.liqwid_positions,
             new_datum.non_deposit_value == old_datum.non_deposit_value,
             new_datum.frozen == old_datum.frozen,
+            new_datum.community_sunset_triggered == old_datum.community_sunset_triggered,
             new_datum.last_realloc_time == old_datum.last_realloc_time,
             new_datum.last_fee_update_time == old_datum.last_fee_update_time,
             new_datum.last_ada_swap_time == old_datum.last_ada_swap_time,
@@ -338,6 +340,95 @@ validator vault_user(
             new_datum.min_swap_peg_bps == old_datum.min_swap_peg_bps,
             val_has_no_order_inputs(tx.inputs, old_datum.order_script_hash),
           }
+        }
+      }
+
+      // ══════════════════════════════════════════════════════
+      // CommunitySunset — permissionless dead-man-switch
+      // (Phase 1 governance safety, Layer 3, 2026-04-25)
+      //
+      // Any vUSDCx holder may invoke this redeemer when the vault has
+      // been operationally inactive for ≥ 90 days. The threshold is
+      // measured against `max(last_compound_time, last_realloc_time)`
+      // — both are updated by the keeper (real-yield Compound + 5d
+      // zero-yield heartbeat respectively), so 90 days of stagnation
+      // means the keeper is entirely dead. Triggering sets:
+      //
+      //   - frozen = 1  (atomically halt productive ops)
+      //   - community_sunset_triggered = 1  (one-way irreversible flag)
+      //
+      // Once set, the flag opens permissionless recovery paths in
+      // vault_recall.RecallFromLiqwid + vault_protocol.DeployToProtocol
+      // Layer 2 (skipping the keeper-active / keeper-signature gate
+      // that those redeemers normally require). Any vUSDCx holder can
+      // then drive Recall → swap → Withdraw to recover their full
+      // proportional USDCx share, without any keeper or governance
+      // intervention.
+      //
+      // Caller verification: the TX must consume an input carrying ≥ 1
+      // vUSDCx. Spam-griefing is bounded — sunset is one-way, can only
+      // fire once, and only when the 90-day stagnation precondition is
+      // met (which itself requires the system to already be dead).
+      // ══════════════════════════════════════════════════════
+      CommunitySunset -> {
+        expect vault_input_count == 1
+        let (cont_output, new_datum) =
+          get_continuing_datum(tx.outputs, proxy_hash, own_input.output)
+
+        // Caller must hold ≥ 1 vUSDCx in some TX input. Anyone with a
+        // legitimate stake in the vault can fire; full external attackers
+        // would need to acquire vUSDCx first (which costs them money) and
+        // can only fire once anyway.
+        let caller_has_vusdcx =
+          list.any(
+            tx.inputs,
+            fn(input) {
+              quantity_of(input.output.value, old_datum.vusdcx_policy, "") > 0
+            },
+          )
+
+        // 90-day inactivity threshold — see
+        // validate_community_sunset_trigger_time docs.
+        let inactivity_satisfied =
+          when tx.validity_range.lower_bound.bound_type is {
+            Finite(now) ->
+              validate_community_sunset_trigger_time(
+                old_datum.last_compound_time,
+                old_datum.last_realloc_time,
+                now,
+              )
+            _ -> False
+          }
+
+        // Datum transition: flip frozen + sunset_triggered, preserve
+        // everything else.
+        let valid_transition =
+          validate_community_sunset_transition(old_datum, new_datum)
+
+        // Token preservation: cont_output must carry the same Vault
+        // NFT + same value as the old vault UTXO (no fund movement).
+        let valid_value_preserved =
+          verify_other_tokens_preserved(
+            own_input.output,
+            cont_output,
+            #"",
+            #"",
+            #"",
+            #"",
+          )
+
+        // Defense-in-depth: no order inputs, no mint, lovelace floor.
+        let no_mint = get_mint_quantity(tx, old_datum.vusdcx_policy) == 0
+        let no_order_inputs =
+          val_has_no_order_inputs(tx.inputs, old_datum.order_script_hash)
+
+        and {
+          caller_has_vusdcx,
+          inactivity_satisfied,
+          valid_transition,
+          valid_value_preserved,
+          no_mint,
+          no_order_inputs,
         }
       }
 

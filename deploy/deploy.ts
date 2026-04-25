@@ -93,6 +93,7 @@ import {
 } from "@lucid-evolution/lucid";
 import { loadConfig, type DeployConfig, type NetworkName } from "./lib/config.js";
 import { loadState, saveState, resetState, type CeremonyState } from "./lib/state.js";
+import { acquireLock, releaseLock } from "./lib/deployLock.js";
 import { compile as compileHashes } from "./compile.js";
 import {
   buildScriptsBundle,
@@ -435,6 +436,13 @@ async function main() {
   log("INFO", `Release tag: ${args.releaseTag}`);
   log("INFO", `Dry run:     ${args.dryRun}`);
 
+  // Process lock — refuses to start if another deploy.ts is alive on
+  // the same (network, releaseTag). Without this, concurrent runs
+  // race on PHASE 0 NFT bootstrap UTxO selection (orphan ref-script
+  // ADA, lost mint TX hashes) and PHASE 3+ state-file overwrites.
+  // Auto-clears stale locks left by crashed prior runs.
+  if (!args.dryRun) acquireLock(args.network, args.releaseTag);
+
   if (args.reset) {
     resetState(args.network, args.releaseTag);
   }
@@ -565,6 +573,7 @@ async function main() {
   log("INFO", `State file: deploy/state/${args.network.toLowerCase()}-${args.releaseTag}.json`);
   log("INFO", `Vault addr: ${state.stateUtxos.vault?.address}`);
   log("INFO", `Registry addr: ${state.stateUtxos.registry?.address}`);
+  releaseLock();
 }
 
 main().catch((err) => {
@@ -572,5 +581,6 @@ main().catch((err) => {
   if ((err as Error).stack) {
     console.error((err as Error).stack);
   }
+  releaseLock();
   process.exit(1);
 });

@@ -99,7 +99,7 @@ V1 把權責拆在六個不同的密鑰控制身份。依政策,**沒有任何�
 
 **剩下的風險**:keeper 可以對 Minswap V2 做 `VaultSwap`,swap target 是 attacker 控制但仍在 `protocol_hashes` 白名單內的地址。防禦:`protocol_hashes` 白名單很緊(Minswap V2 order script + stake、Liqwid action address)。擴張白名單要走 `UpdateRegistry`(14 天 timelock)。
 
-**Keeper-commission 沒收(slashing)**:V1 暫緩正式 slashing。V1 啟動時,keeper 被入侵的傷害由以上合約檢查界定 + 經濟現實:被入侵的 keeper 最多拿到 performance-fee 流(收益的 4.5% × keeper 20% 份額 ≈ gross yield 的 0.9%,100K TVL 下約 $45/年)。理性攻擊者的利潤上限低於入侵成本——對創辦人威脅模型之外的人都不划算。
+**Keeper-commission 沒收(slashing)**:V1 暫緩正式 slashing。V1 啟動時,keeper 被入侵的傷害由以上合約檢查界定 + 經濟現實:被入侵的 keeper 最多拿到 performance-fee 流(收益的 4.5% × keeper 40% 份額 ≈ gross yield 的 1.8%,100K TVL 下約 $108/年)。理性攻擊者的利潤上限**仍**低於入侵成本——V1 啟動的 40% 份額(在 validator 硬上限,以支持開源第三方 keeper 經濟可行性)讓 bounded loss 比舊 20% 翻倍,但 Phase 1 TVL 下數量級仍維持「僅創辦人威脅模型」。
 
 ### 3.5 治理被入侵造成 Treasury 抽乾
 
@@ -119,12 +119,13 @@ V1 把權責拆在六個不同的密鑰控制身份。依政策,**沒有任何�
 
 **V1 行為**:
 - `RecallFromLiqwid`(keeper 路徑):要求 `underlying_received >= supplied_value`。若 Liqwid 還得少,TX fail。Keeper 無法把損失自動化。
-- `EmergencyWithdraw`(治理路徑):接受 `loss_amount >= 0`,明確把損失寫到 `non_deposit_value`。需要 m-of-n 簽名 + 0 天 timelock(緊急)。
-- 存入者在下一次 Compound 時,透過 share price 下降按比例看到損失。
+- `RecallFromLiqwid`(治理 fallback 路徑,keeper 停擺 7 天後):允許 `underlying_received < supplied_value`——物理 Recall 可回收的 underlying,並把實際實現的短缺(`supplied_value − underlying_received`)寫進 `total_deposited`。這是 Phase 1 治理安全(Layer 1,見 §5.4)下的標準損失寫入路徑。EmergencyWithdraw 自己**不能**寫掉部位——它只能切換 `frozen` flag。
+- 存入者在治理 fallback Recall 完成後,透過 share price 下降按比例看到損失。
 
 **逃生閥**:
 - `KeeperToggleMarket`——keeper 單方可以停用一個市場(單向,`active: true → false`)。
-- `EmergencyWithdraw`——治理吸收損失、重新打開正常流程。
+- `EmergencyWithdraw`——治理凍結金庫以阻止後續 Compound / Supply / Deploy 操作,讓 Recall 路徑進行(Phase 1 Layer 1:freeze-only,見 §5.4)。
+- `RecallFromLiqwid` 治理 fallback 路徑——物理 Recall underlying + 只寫入實際實現的損失。
 
 ### 3.7 USDCx 脫鉤
 
@@ -214,6 +215,74 @@ Validator hash + 基礎身份。任何一個變動都會強制新部署(新地�
 - 有序停運協議(白皮書 §9.2)
 - 放寬上限的閘門是第三方審計
 
+### 5.4 Phase 1 治理安全 — 三層 founder-only-acceptable 設計(2026-04-25)
+
+不論簽名者組成為何(3-of-3 with SPOs vs 單一簽名者 founder fallback),V1 上線時就帶有三個 **validator 層**的安全防護,在最壞單一簽名者失能情境下界定存入者損失。設計目標是讓 **founder-only Phase 1 治理成為合理的上線 fallback**——SPO 招募變成可信度加分項,而不是上線阻礙。
+
+#### Layer 1 — `EmergencyWithdraw` 改為 freeze-only
+
+`vault_gov_emergency.EmergencyWithdraw` 不能減少 `total_deposited`、不能移除或修改 `liqwid_positions`、不能接受 `loss_amount > 0`。它唯一能做的就是切換 `frozen` flag(0 ↔ 1)。實際損失帳務被限制在 `vault_liqwid.RecallFromLiqwid` 的治理 fallback 路徑——透過實體 Recall underlying USDCx 並只寫入實際實現的損失(`supplied_value − underlying_received`)。qToken 變孤兒攻擊面——被入侵的治理金鑰可以用「只動 datum 寫掉部位」讓 `share_price` 歸零——在 validator 層被根除(`validate_emergency_freeze_only` 在 `lib/vault/validation.ak`)。
+
+#### Layer 2 — `DeployToProtocol` 在 freeze 下對 USDCx 例外
+
+當 `frozen == 1` 且 redeemer 的 `deploy_token != deposit_token`,`vault_protocol.DeployToProtocol` 允許 swap-out。Keeper 可透過 registry 白名單的 SwapAdapter 把 NDV stable token(DJED、USDM)換回 USDCx,使 user `Withdraw` 在緊急 freeze 期間仍能完整支付按比例的份額。SwapAdapter validator 強制目的地 = vault 自己的地址,所以即使攻擊者掌握 keeper key 也無法把 output 改路;最壞情況只能逼出 Tier 2 peg-floor 邊界內的 slippage(≤ 5-7%),且 USDCx 仍然落到 vault 給 user 提領。沒有這層例外,freeze 一啟動 NDV 部分就會卡到 21 天後的 `AdminDeployNonDeposit` 治理 fallback 才能脫困——Layer 2 把這 21 天窗口縮短。Spec:`validate_deploy_frozen_gate` 在 `lib/vault/validation.ak`。
+
+#### Layer 3 — `CommunitySunset` dead-man-switch
+
+當 vault 連續 90 天無操作(`max(last_compound_time, last_realloc_time) + 90 天 ≤ now`),任何 vUSDCx 持有者都可呼叫 `vault_user` 中的 `CommunitySunset` permissionless redeemer。它原子性地把 `frozen` 設為 1、`community_sunset_triggered` 設為 1(單向不可逆)。一旦觸發:
+
+- `vault_liqwid.RecallFromLiqwid` 接受任何簽名者(不需要 keeper 或治理簽名)。
+- `vault_protocol.DeployToProtocol` Layer 2 路徑也接受任何簽名者(同上)。
+
+90 天門檻相當於漏跑 ≈ 18 次 zero-yield heartbeat(每 5 天一次),等同於 keeper 完全死掉。Sunset 路徑**只開回收**——它不能修改 `total_deposited`、`total_shares`、`idle_buffer`、`liqwid_positions`,或任何 policy / immutable 欄位。Sunset 期間 SwapAdapter 的目的地、peg-floor、slippage 限制仍然生效,攻擊者無法利用開放的回收路徑抽走價值。
+
+#### 情境演練
+
+三層設計的目的就是在實際單一簽名者治理失能情境下界定存入者損失。每個情境描述攻擊者能做什麼、validator 怎麼回應、存入者最終結果、時間範圍。
+
+**情境 A — Founder 誠實,vault 正常運作**
+- 沒有偵測到異常。Compound + Recall + Supply + Withdraw 照常規節奏跑。
+- 存入者結果:yield 完整累積,任何時候 Withdraw 立即結算 USDCx。
+- 時間範圍:無限期。
+
+**情境 B — Liqwid 真的出壞帳(沒有 key 失陷)**
+- Liqwid 市場發生協議級損失(qToken rate 跌破 supplied basis)。
+- 運營反應:治理 queue `EmergencyWithdraw(loss_amount=0, freeze=1)`。Frozen = 1 立即生效(0d timelock;multisig 還是要簽)。
+- 存入者 `Withdraw` 繼續可用(Layer 1 沒改這個)。Idle-buffer 部分按未變的 `share_price` 立即支付。
+- Liqwid 部分:keeper 驅動 `RecallFromLiqwid`(freeze 下仍允許)→ underlying 收回 vault NDV。短缺(`supplied_value − underlying_received`)在這時被寫入,`share_price` 按比例調整。然後 keeper 驅動 `DeployToProtocol` Layer 2 swap → USDCx 落到 `idle_buffer` → 存入者可提領回收的部分。
+- 時間範圍:從事件偵測到完整結算 hours-to-days。
+
+**情境 C — Founder key 被盜,攻擊者嘗試 grief-freeze**
+- 攻擊者用偷來的治理 key 觸發 `EmergencyWithdraw`,試圖透過 datum 把 Liqwid 部分寫掉(pre-Layer-1 攻擊鏈)。
+- Validator 反應:Layer 1 拒絕任何非零 `loss_amount` 與任何 `liqwid_positions` 變動。攻擊者只能設 `frozen = 1`——純 freeze 沒有價值影響。
+- 存入者結果:`Withdraw` 繼續可用,立刻按比例支付 `idle_buffer`。Liqwid 部分,keeper(可能是同一個被入侵的對象,也可能不是)仍可驅動 `RecallFromLiqwid` + `DeployToProtocol` Layer 2 swap 把 NDV 換回 USDCx——產生的 USDCx 落到 vault 支付存入者。即使攻擊者也控制 keeper key,SwapAdapter validator 強制目的地 = vault address,攻擊者拿不走;最壞只能逼出每次 swap 最大 slippage drain NDV(每次 ≤ 7%,peg-floor 邊界)。
+- 時間範圍:存入者 hours-to-days 內完整回收。最大損失:NDV 耗盡前每 cycle ≤ 7%。
+
+**情境 D — Founder key 被盜,攻擊者連鎖 UpdateRegistry + AdminDeployNonDeposit**
+- 攻擊者 queue `UpdateRegistry` 加入惡意 SwapAdapter(14 天 timelock)。
+- 存入者透過 1 小時廣播義務看到 queued action,在 14 天窗口內 self-Withdraw 退場。14 天後 `AdminDeployNonDeposit` 還需要額外 7 天 keeper-inactive 窗口——攻擊者透過惡意 adapter 提取的總曝險窗口 ≥ 21 天。
+- 存入者結果:任何留心的存入者在 14 天內退場、不受影響。漠不關心的存入者每 cycle 損失最多 ~7%(per-swap slippage cap)。
+- 時間範圍:14-21 天 self-exit window。
+
+**情境 E — Founder 失能、沒 SPO 共簽者、≥ 90 天無動靜**
+- 創辦人聯絡不上 / 過世 / 失去 key。Keeper 停跑。90+ 天沒有任何治理動作 queue。
+- 存入者反應:任何 vUSDCx 持有者呼叫 `CommunitySunset`。Frozen + sunset_triggered 設定。然後任何持有者 fire `RecallFromLiqwid` per market → underlying 收回。然後任何持有者 fire `DeployToProtocol` Layer 2 swap → USDCx 落到 vault。然後每位持有者 fire `Withdraw` → 拿回按比例的 USDCx。
+- 存入者結果:完整按比例回收 USDCx。範圍外損失:~870 ADA reference-script 鎖定(創辦人部署錢包)、~24 ADA stake-credential 押金(治理 A2 路徑)——這兩部分作為單一簽名者治理的殘留成本被接受。
+- 時間範圍:90 天門檻達到後,社群驅動回收 hours-to-days。90 天門檻本身就是觸發條件,從事件到回收啟動的總時間取決於運營失能偵測窗口。
+
+**情境 F — Founder key 被盜 + 攻擊者也控制 keeper + 90 天過去**
+- 攻擊者掌握所有 key 但拿不到任何價值(Layer 1+2+3 + 硬上限覆蓋所有路徑)。最終攻擊者 grief 慢慢停下,或存入者觸發 CommunitySunset。
+- 存入者結果:透過 Scenario E 路徑完整按比例回收 USDCx。
+- 時間範圍:同 Scenario E。
+
+#### Sunset 範圍外
+
+CommunitySunset **不**回收:
+- 部署用的 ~870 ADA reference-script UTXO(創辦人部署錢包,只能用創辦人部署 key 回收)。
+- ~24 ADA 的 stake-credential 押金(A2 ActDeregisterStake 需要治理 multisig)。
+
+這是 operator/founder 端的損失,不是存入者損失,作為單一簽名者治理的殘留成本被接受。未來 founder 端的緩解措施(multi-sig 部署錢包、stake 押金的 dead-man-release)在 V1 上線範圍外。
+
 ---
 
 ## 6. 不在範圍內
@@ -241,7 +310,7 @@ V1 不做任何法規合規方面的承諾。使用者對自己司法管轄區�
 | Liqwid 壞帳 | 中 | 中 | EmergencyWithdraw 逃生閥、KeeperToggleMarket 單向暫停 |
 | USDCx 脫鉤 | 中 | 高 | 鏈下監控、operator 停機程序 |
 | Minswap batcher 停擺 | 中 | 低 | Order Expire fallback 退錢給使用者 |
-| 創辦人錢包被入侵 | 低 | 中 | 治理輪替 + treasury 分離緩解集中度風險 |
+| 創辦人錢包被入侵 | 低 | 受 Layer 1+2+3 (§5.4) 限制:不能只動 datum 寫掉部位、swap 目的地鎖定 vault、最多 ~7%/swap NDV slippage drain。存入者完整回收靠 14 天 timelock 窗口或 90 天 CommunitySunset 路徑 | 三層治理安全 + 硬上限 + 14 天 timelock 窗口 + 90 天社群止血 fallback |
 | V1 validator 的 Plutus bug | 低 | 高 | 內部審計(上線前 ≥1 輪外部)、責任揭露政策 + 酬庸式肯定框架(`docs/audit-scope.md §6`)、EmergencyWithdraw |
 | 監管動作(SEC / MiCA / FinCEN / OFAC / 在地) | 低-中 | 高(operator 法律曝險) / 低(存入者本金——Withdraw 永遠開放) | 依白皮書 §12 採公共財定位(非商業、non-solicitation、地理架構);operator 可以依法律意見對特定司法管轄區 geoblock |
 

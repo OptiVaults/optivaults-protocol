@@ -258,7 +258,7 @@ Cardano 上當時沒有「存 USDCx 進去、讓它自動在 DJED + USDM 複利�
 
 **營運實況（與 depositor 決策直接相關，不藏起來）。**
 
-- **V1 的成功門檻是 $500K-$1M TVL，不是 $20M。** 4.5% 績效費 × 該 TVL × ~6% blended yield 每年產生 ~$135-270 keeper-share 收入，足以讓 keeper 覆蓋自身基礎建設成本。這是 **tier (a)/(b) self-sustain** 目標。坊間常被引用的「$20M TVL」是另一個 **tier (c) audit-reserve self-funding** 目標（協議能從 treasury 80% 份額自行支付未來外部審計週期），那是 Phase 3+ 的 stretch goal，不是 V1 的前提條件。完整三層 self-sustain breakdown 見白皮書 §4.3。
+- **V1 的成功門檻是 $500K-$1M TVL，不是 $20M。** 4.5% 績效費 × 該 TVL × ~6% blended yield 在 V1 啟動 40% keeper 份額下每年產生 ~$270-540 keeper-share 收入，足以讓 keeper 覆蓋自身基礎建設成本。這是 **tier (a)/(b) self-sustain** 目標。坊間常被引用的「$20M TVL」是另一個 **tier (c) audit-reserve self-funding** 目標（協議能從 V1 啟動的 treasury 60% 份額自行支付未來外部審計週期），那是 Phase 3+ 的 stretch goal，不是 V1 的前提條件。完整三層 self-sustain breakdown 見白皮書 §4.3。
 - **審計資金 stack 並明確揭露 Catalyst 暫停狀態。** 主要 stack 是 (a) Cardano Project Catalyst grant($30-50K)——**但 Catalyst 撰寫時處於暫停 / 重組狀態,下一個 Round 何時恢復尚無明確時程**;(b) 審計事務所公共財費率(從 $50-150K 商業區間折 30-50%);(c) heritage 內部審計帶來的 scope reduction(省 $15-25K);(d) 創辦人自付。**審計時程設為 Q2-Q3 2027**,刻意預留時間以容納 Catalyst 恢復概率 + Cardano Foundation / Intersect / Aiken Foundation 等 alternative grant 接洽 + founder runway 累積。若 Catalyst 未達成,創辦人自付上限從 $20-40K 升至 $50-90K。完整 funding stack 揭露見白皮書 §8.1。
 - **2 位獨立 SPO 治理簽名者是 Cardano 社群服務角色，不是有薪職位。** 他們會收到一個 soul-bound 認證 NFT，並有選項在 Phase 2+ 取得 5-10% gov pool 份額（gated on $500K TVL milestone）——這兩者都是**「V1 成功後的 upside」而非主要動機**。挑選標準：≥ 2 年 mainnet SPO 營運、公開鏈上身份、與創辦人無事前商業關係。完整內容見白皮書 §5.5。
 

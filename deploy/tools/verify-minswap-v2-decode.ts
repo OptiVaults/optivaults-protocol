@@ -1,42 +1,27 @@
 /**
- * verify-minswap-v2-decode.ts — byte-for-byte verifier for the Minswap V2
- * adapter's datum decoder.
+ * verify-minswap-v2-decode.ts — byte-for-byte verifier for the pre-R74
+ * Minswap V2 adapter's datum decoder.
  *
- * Fetches a Minswap V2 order TX by hash (Preprod or Mainnet), extracts
- * the inline datum at the specified output index, and parses it using
- * the exact same structure rules as
- * `contracts/validators/minswap_v2_adapter.ak::extract_minswap_v2_order`.
- * Prints the decoded `(min_receive, target_asset_policy, target_asset_name)`
- * triplet — which is what `SwapAdapterRedeemer` must commit to.
+ * ⚠️ SUPERSEDED BY R74 F-1 FIX (2026-04-24).
  *
- * Use this to satisfy spec/swap-adapter.md §9 items 1-2:
- *   - "Submit real Minswap V2 SwapExactIn order on Preprod → extract_
- *      minswap_v2_order correctly decodes minimum_receive + target asset."
- *   - "Submit real Minswap V2 SwapMultiRouting order on Preprod → correct
- *      decode of last-hop target asset."
+ * The adapter used to claim `lp_asset` is a 2-asset pair and derive the
+ * target asset from it. This was wrong — Minswap V2's `lp_asset` is a
+ * single LP-token identifier, not a pair. The R74 fix replaces target
+ * derivation with `hop_chain` commitment + on-chain LP-name re-hash via
+ * `compute_lp_asset_name` (see `contracts/validators/minswap_v2_adapter.ak`
+ * and the project SECURITY.md "Known open findings" section).
  *
- * Without submitting TXs, this tool lets the operator verify the decoder
- * against ANY historical Minswap V2 order on the target network — including
- * order TXs found via Blockfrost search or historical mainnet archives.
+ * This file is retained for historical reference of the pre-R74 assumption.
+ * It will FAIL on every real Minswap V2 order because the pair-extraction
+ * assumption is false on-chain — that failure is itself evidence the R74
+ * fix is needed.
  *
- * Usage:
- *   tsx deploy/tools/verify-minswap-v2-decode.ts \
- *     --network Preprod \
- *     --txHash <minswap v2 order tx hash> \
- *     --outputIndex 0
+ * The current replacement — which verifies the NEW adapter logic against
+ * real mainnet datums — is:
  *
- *   # Optional: cross-check against expected values
- *   tsx deploy/tools/verify-minswap-v2-decode.ts \
- *     --network Mainnet \
- *     --txHash <tx> \
- *     --outputIndex 0 \
- *     --expectedMinReceive 100000000 \
- *     --expectedTargetPolicy 8db269...a4 \
- *     --expectedTargetName 44414c44
+ *     v1/tests/preprod/60-minswap-decoder-verify.ts
  *
- * Exit code:
- *   0 — decode succeeded (and expected values match, if supplied)
- *   1 — decode failed or mismatch
+ * Run that instead.
  */
 import * as dotenv from "dotenv";
 dotenv.config({ path: "keeper/.env" });

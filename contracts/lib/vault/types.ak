@@ -39,7 +39,7 @@ pub type LiqwidPosition {
 ///   - Accounting state (10): mutated by user/keeper redeemers
 ///   - Policy parameters (8): mutable by governance redeemers within caps
 ///   - Identity (9): immutable after deploy (`vault_version` + 8 anchors)
-///   - Operational flag (1): `frozen`
+///   - Operational flags (2): `frozen`, `community_sunset_triggered`
 ///
 /// V1 §5.4 Phase 2 (2026-04-21): added `max_slippage_bps` +
 /// `min_swap_peg_bps` to the Policy group (6 → 8 fields) for on-chain
@@ -86,8 +86,24 @@ pub type VaultDatum {
   registry_hash: ByteArray,
   registry_auth_policy: ByteArray,
 
-  // — Operational (1) —
+  // — Operational (2) —
   frozen: Int,
+  /// Phase 1 governance safety — Layer 3 (2026-04-25): Dead-man-switch flag.
+  /// Set 0 → 1 by `CommunitySunset` redeemer (vault_user.ak) when the vault
+  /// has been operationally inactive for ≥ 90 days
+  /// (`max(last_compound_time, last_realloc_time) + 90d <= now`). Once set
+  /// it is preserved by every other redeemer (one-way irreversible flag).
+  ///
+  /// Effect: enables permissionless invocation of recovery-path redeemers
+  /// for any vUSDCx holder:
+  ///   - `vault_recall.RecallFromLiqwid` skips the keeper-active +
+  ///     7d-keeper-inactive gate
+  ///   - `vault_protocol.DeployToProtocol` Layer 2 path skips the keeper
+  ///     signature requirement (swap NDV → USDCx for user withdraw)
+  ///
+  /// Lets the depositor base recover their full proportional USDCx share
+  /// even when the founder + governance are completely failed.
+  community_sunset_triggered: Int,
 }
 
 /// Vault redeemers (vault_core / vault_protocol / vault_liqwid all forward
@@ -104,6 +120,15 @@ pub type VaultRedeemer {
     total_mint: Int,
     total_burn: Int,
   }
+  /// Phase 1 governance safety — Layer 3 (2026-04-25): Dead-man-switch.
+  /// Permissionless redeemer callable by any vUSDCx holder when the vault
+  /// has been inactive for ≥ 90 days (no Compound or zero-yield heartbeat).
+  /// Sets `frozen=1` and `community_sunset_triggered=1`, opening
+  /// permissionless paths in `vault_recall.RecallFromLiqwid` +
+  /// `vault_protocol.DeployToProtocol` Layer 2 so depositors can recover
+  /// their full proportional USDCx share without any keeper or
+  /// governance intervention. See spec/governance.md §X CommunitySunset.
+  CommunitySunset
 
   // ── Keeper hot-path (vault_keeper_hot) ──
   Compound {

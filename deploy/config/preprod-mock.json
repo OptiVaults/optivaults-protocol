@@ -19,7 +19,7 @@
     "earlyWithdrawFeeBps": 0,
     "minHoldSeconds": 60,
     "bufferTargetBps": 3500,
-    "keeperFeeBps": 2000,
+    "keeperFeeBps": 4000,
     "govFeeBps": 0,
     "maxSlippageBps": 200,
     "minSwapPegBps": 9900,

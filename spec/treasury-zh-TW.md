@@ -6,7 +6,7 @@
 
 ## 1. 目的
 
-Treasury validator 持有每次 Compound 從收益中抽取的協議績效費。V1 啟動時是績效費的 80%(keeper 20% / gov 0% / treasury 80%);Phase 2+ 透過 `UpdateFeeSplit` 啟用治理池,treasury 份額降到 75%(Phase 2)或 70%(Phase 3)。費用拆分的硬上限見 `spec/vault-datum.md §2.2`;UpdateFeeSplit 動作見 `spec/governance.md §4.3`。
+Treasury validator 持有每次 Compound 從收益中抽取的協議績效費。V1 啟動時是績效費的 60%(keeper 40% / gov 0% / treasury 60%——keeper 份額在 validator 硬上限以支持開源第三方 keeper 經濟可行性);Phase 2+ 透過 `UpdateFeeSplit` 啟用治理池,treasury 份額降到 55%(Phase 2)或 50%(Phase 3,validator 硬下限)。費用拆分的硬上限見 `spec/vault-datum.md §2.2`;UpdateFeeSplit 動作見 `spec/governance.md §4.3`。
 
 資金分成**四個類別桶**,各自有不同用途、依比例的 inflow、以及各桶特有的支出規則。Treasury 是**鏈上課責機制**——任何存入者或第三方都能檢視 treasury UTxO、對照 Compound TX 驗證 inflow、並對照治理紀錄審視 spend 動作。
 
@@ -40,10 +40,10 @@ type TreasuryDatum {
   buffer_balance: Int,
 
   // --- Inflow 拆分比例(bps;四者加總必須 == 10000) ---
-  audit_bps: Int,        // 啟動預設:3000(30%)
-  ops_bps: Int,          // 啟動預設:4000(40%)
-  rd_bps: Int,           // 啟動預設:2000(20%)
-  buffer_bps: Int,       // 啟動預設:1000(10%)
+  audit_bps: Int,        // 啟動預設:4000(40%)——從 30% 上調,讓 audit reserve 累積速度在較小的 treasury 60% 份額下,仍維持為總 fee 的 24%(60%×40%=24%,與舊 80%×30% 相同)
+  ops_bps: Int,          // 啟動預設:2500(25%)——從 40% 下調,因為 keeper 現在直接拿 40% 份額,平台層 infra 不必透過 ops bucket 重複補貼 per-keeper 成本
+  rd_bps: Int,           // 啟動預設:2500(25%)——從 20% 上調,維持絕對 R&D 預算
+  buffer_bps: Int,       // 啟動預設:1000(10%)——不變
 
   // --- 支出 cooldown 與上限(分類別) ---
   last_spend_time_audit: Int,        // POSIX ms——audit-reserve 24h cooldown 錨點
@@ -74,7 +74,7 @@ type TreasuryDatum {
 
 ### 3.1 `Receive`——來自 Compound 的被動 inflow
 
-當 Compound TX 把 80% 的協議費份額付到 treasury UTxO 時觸發。Treasury validator 驗證新的 balance 是否依 split ratios 正確更新。
+當 Compound TX 把 V1 啟動的 60% 協議費份額(或 Phase 2+ 啟用治理池後更小的份額)付到 treasury UTxO 時觸發。Treasury validator 驗證新的 balance 是否依 split ratios 正確更新。
 
 ```aiken
 Receive { incoming_amount: Int }
@@ -203,9 +203,9 @@ V1 mainnet 部署時,TreasuryDatum 初始化為:
 
 | 欄位 | 啟動值 | 理由 |
 |------|------|------|
-| `audit_bps` | 3000 | 30% 的 inflow 進 audit reserve,逐步累積達到下一次第三方審計約 USD 50K-150K 目標(穩態下約 Q1 2028) |
-| `ops_bps` | 4000 | 40% 給基礎設施:VPS(雙實例 keeper)、Blockfrost 付費版、監控 stack、網域/CDN、frontend 代管 |
-| `rd_bps` | 2000 | 20% 給協議開發、未來的 bounty 計畫(post-audit + TVL-scale,依 `docs/audit-scope.md §6.3`)、貢獻者生態補助 |
+| `audit_bps` | 4000 | 40% 的 inflow 進 audit reserve,逐步累積達到下一次第三方審計約 USD 50K-150K 目標(V1 啟動 fee split 下總 fee 的 24%——與舊 80%×30% 同樣的累積速度) |
+| `ops_bps` | 2500 | 25% 給平台層基礎設施:VPS(雙實例 keeper)、Blockfrost 付費版、監控 stack、網域/CDN、frontend 代管。從 40% 下調,因新的 40% keeper 直接份額已透過 Compound output 吸收 per-keeper infra 成本 |
+| `rd_bps` | 2500 | 25% 給協議開發、未來的 bounty 計畫(post-audit + TVL-scale,依 `docs/audit-scope.md §6.3`)、貢獻者生態補助 |
 | `buffer_bps` | 1000 | 10% 給預期外支出、法律諮詢、事件應變 |
 | `monthly_cap_audit` | 500_000_000(500 USDCx) | 防單月支出榨乾 audit reserve |
 | `monthly_cap_ops` | 500_000_000 | 啟動時各類別 cap 大小一致,單純 |
@@ -222,26 +222,27 @@ V1 mainnet 部署時,TreasuryDatum 初始化為:
 在 pre-audit 100K USDCx TVL 上限,假設 6% gross APY:
 
 - 每年績效費收入:`100K × 6% × 4.5% = 270 USDCx`
-- Treasury 年 inflow(80% 份額):`216 USDCx`
-- 啟動比例下的類別年 inflow:
-  - Audit reserve:`216 × 30% = 65 USDCx`
-  - Operations:`216 × 40% = 86 USDCx`
-  - R&D:`216 × 20% = 43 USDCx`
-  - Buffer:`216 × 10% = 22 USDCx`
+- Treasury 年 inflow(V1 啟動 60% 份額):`162 USDCx`
+- 啟動比例下的類別年 inflow(40/25/25/10):
+  - Audit reserve:`162 × 40% = 65 USDCx`
+  - Operations:`162 × 25% = 41 USDCx`
+  - R&D:`162 × 25% = 41 USDCx`
+  - Buffer:`162 × 10% = 16 USDCx`
 
 這些數字在 pre-audit 上限下**不足**以完全覆蓋 OptiVaults 的運營成本——光是代管基礎設施每年就要 600–1,200 USDCx。V1 進入**啟動期**——協議收入不完全覆蓋運營成本,直到 TVL 到達自給區間(基線運營約 500K–2.5M USDCx)。初期缺口由專案啟動資金承擔,預期隨 TVL 成長自然解決。V1 的 treasury 透明度,是**把這個缺口呈現為可見、可審視的狀態**,不是宣稱 pre-audit 運營已經自給自足。
 
 在約 USD 1M TVL 下,同樣的數學:
 
-- 年 inflow:`2,160 USDCx`
-- Audit reserve:`648/年` → 這個 TVL 下,累到 50K 約 5 年;USD 10M TVL 下約 6 個月
-- Operations:`864/年`——基本 VPS + Blockfrost,沒多少其他空間
-- R&D + Buffer:合計 `648/年`——適度的 grant / bounty 預算
+- 年 inflow(60% treasury 份額):`1,620 USDCx`
+- Audit reserve:`648/年`(總 fee 的 24% = 與舊配置同樣累積速度)→ 這個 TVL 下,累到 50K 約 77 年;USD 10M TVL 下約 8 年
+- Operations:`405/年`——低端 VPS + Blockfrost(per-keeper infra 現在透過 40% keeper 直接份額補,不再從這個 bucket)
+- R&D:`405/年`——適度的 grant / bounty 預算,每年 1-2 個小 bounty
+- Buffer:`162/年`
 
 在 USD 10M TVL:
 
-- 年 inflow:`21,600 USDCx`
-- Treasury **進入自給狀態**,並開始在基線運營成本之上產生盈餘
+- 年 inflow:`16,200 USDCx`
+- Treasury **進入自給狀態**,並開始在基線運營成本之上產生盈餘。Audit reserve $6,480/年 累 $50K cushion 約 8 年;tier (c) 完整 audit cycle 自給需 TVL $25M+。
 
 各類別何時達成目標用途的 TVL 規模,皆透明追蹤;V1 白皮書 §9.2 與 `docs/economics.md` 討論從補貼支撐啟動到 treasury 自給的路徑。
 
@@ -251,7 +252,7 @@ V1 mainnet 部署時,TreasuryDatum 初始化為:
 
 讀完本 spec,存入者可以依賴以下**合約強制**性質:
 
-1. **Inflow 比例在 receive 時固定**:當 Compound 把 80% 份額付進 treasury 時,跨四個類別的拆分**完全**依當下 TreasuryDatum 的比例。Keeper 或治理都**不能**把某筆 Compound 的 inflow 改導別的類別。
+1. **Inflow 比例在 receive 時固定**:當 Compound 把 V1 啟動的 60% 份額(或 Phase 2+ 啟用治理池後的 55%/50%)付進 treasury 時,跨四個類別的拆分**完全**依當下 TreasuryDatum 的比例。Keeper 或治理都**不能**把某筆 Compound 的 inflow 改導別的類別。
 2. **Spend 需要治理**:除了透過 `Spend` redeemer + MultisigGov ExecuteAction + 7 天 timelock + 1-of-n cancel 否決,否則**任何類別餘額都不會下降**。
 3. **Audit reserve 下限不可變**:`min_audit_reserve` 任何治理動作都不能降。
 4. **月度上限限制單次抽光**:即使治理被入侵、queue 出惡意 `Spend`,每類別月上限界定了單筆 TX 的傷害。

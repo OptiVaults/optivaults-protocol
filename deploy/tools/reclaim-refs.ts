@@ -120,9 +120,9 @@ function resolveStatePath(network: Net, releaseTag: string): string {
   if (process.env.V1_DEPLOY_STATE_PATH) return process.env.V1_DEPLOY_STATE_PATH;
   const lc = network.toLowerCase();
   const candidates = [
-    `deploy/state/${lc}-${releaseTag}.json`,        // run from repo root
-    `../deploy/state/${lc}-${releaseTag}.json`,     // run from deploy/
-    `../../deploy/state/${lc}-${releaseTag}.json`,  // run from deploy/tools/
+    `deploy/state/${lc}-${releaseTag}.json`,         // run from repo root
+    `v1/deploy/state/${lc}-${releaseTag}.json`,      // run from monorepo root
+    `../deploy/state/${lc}-${releaseTag}.json`,      // run from deploy/
   ];
   for (const c of candidates) if (fs.existsSync(c)) return c;
   throw new Error(

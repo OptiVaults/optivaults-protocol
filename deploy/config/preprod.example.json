@@ -32,25 +32,25 @@
     "earlyWithdrawFeeBps": 10,
     "minHoldSeconds": 60,
     "bufferTargetBps": 3500,
-    "keeperFeeBps": 2000,
+    "keeperFeeBps": 4000,
     "govFeeBps": 0,
     "maxSlippageBps": 200,
     "minSwapPegBps": 9900,
     "vaultVersion": 1,
     "seedLovelace": 15000000,
-    "comment": "15 ADA operational buffer for DEX orders + min-UTXO. Launch performance_fee_bps=450 (4.5% hard cap), gov_fee_bps=0 (Phase 1, disabled)."
+    "comment": "15 ADA operational buffer for DEX orders + min-UTXO. Launch performance_fee_bps=450 (4.5% hard cap), keeper_fee_bps=4000 (40% — at validator hard cap to support open-source third-party keeper viability), gov_fee_bps=0 (Phase 1, disabled). Treasury share = 60% derived."
   },
   "treasuryInitialParams": {
-    "auditBps": 3000,
-    "opsBps": 4000,
-    "rdBps": 2000,
+    "auditBps": 4000,
+    "opsBps": 2500,
+    "rdBps": 2500,
     "bufferBps": 1000,
     "monthlyCapAudit": 500000000,
     "monthlyCapOps": 500000000,
     "monthlyCapRd": 500000000,
     "monthlyCapBuffer": 500000000,
     "minAuditReserve": 0,
-    "comment": "30/40/20/10 launch split. min_audit_reserve=0 at launch (non-binding); future UpdateParams can raise but never lower. Monthly caps all 500 USDCx for simplicity \u2014 governance-adjustable via UpdateTreasuryParams."
+    "comment": "40/25/25/10 launch split. Audit bumped to 40% (vs older 30%) so audit reserve accumulation rate stays at 24% of total fee under the new 40% keeper share (60% treasury \u00d7 40% audit = 24%, matches the prior 80% \u00d7 30% = 24%). min_audit_reserve=0 at launch (non-binding); future UpdateParams can raise but never lower. Monthly caps all 500 USDCx for simplicity \u2014 governance-adjustable via UpdateTreasuryParams."
   },
   "keeperAuthInitialParams": {
     "registrationMode": "GovernanceOnly",

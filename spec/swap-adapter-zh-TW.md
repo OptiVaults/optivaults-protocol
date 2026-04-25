@@ -67,7 +67,7 @@ pub type SwapAdapterRedeemer {
 - `min_receive`——adapter 承諾的 `minimum_receive` 欄位(來自 order datum);vault_protocol 對此套 peg-floor。
 - `hop_chain`——swap 會經過的資產序列:`[asset_in, mid_1, ..., target_out]`。Single-hop SwapExactIn 帶 2 項(`[in, out]`);N-hop SwapMultiRouting 帶 N+1 項,每個 pool 邊界一項。每一項是 `(policy_id, asset_name)`;ADA 為 `(#"", #"")`。目標資產(swap 產出的 token)是 `hop_chain[last]`;`vault_protocol` 透過 `last_hop_target` helper 將其暴露給 `asset_oracles` 的 Tier 1 查詢使用。
 
-**為什麼用 hop_chain 而不用 target_asset(R74 F-1 修補)**:Minswap V2 order datum 中的 `lp_asset` 是**單一 LP-token 識別碼**(`[LP_policy, LP_name]`),**不是**雙資產 pair。光從 order datum 無法推出目標資產。Adapter 逐 hop 比對每個鏈上的 LP name,以 byte-for-byte 對應 `compute_lp_asset_name(chain[i], chain[i+1])` 的結果——把 routing 拓撲與端點資產都綁到承諾的 chain 上。被入侵的 keeper 因此不可能把資金路由到任意未白名單的 pool,因為 LP name 會對不上。完整 finding + fix 理由見 `v1/private/audits/r74-minswap-lp-formula-fix.md`。
+**為什麼用 hop_chain 而不用 target_asset**:Minswap V2 order datum 中的 `lp_asset` 是**單一 LP-token 識別碼**(`[LP_policy, LP_name]`),**不是**雙資產 pair。光從 order datum 無法推出目標資產。Adapter 逐 hop 比對每個鏈上的 LP name,以 byte-for-byte 對應 `compute_lp_asset_name(chain[i], chain[i+1])` 的結果——把 routing 拓撲與端點資產都綁到承諾的 chain 上。被入侵的 keeper 因此不可能把資金路由到任意未白名單的 pool,因為 LP name 會對不上。完整內部審計歷程記錄於本專案 SECURITY.md 的 "Known open findings" 段落。
 
 ## 4. Adapter 合約
 

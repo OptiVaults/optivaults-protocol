@@ -38,7 +38,7 @@ A single UTXO at the `vault_proxy` script address, marked by the one-shot **Vaul
 - All idle USDCx not deployed to yield sources (the "buffer")
 - All non-deposit stablecoin positions (DJED / USDM) currently held at the vault address between swap and Liqwid supply
 - qToken receipts for Liqwid positions
-- Accounting datum (`VaultDatum`, 26 fields — see `spec/vault-datum.md`)
+- Accounting datum (`VaultDatum`, 29 fields — see `spec/vault-datum.md`)
 - A small ADA balance sufficient to cover minimum-UTXO requirements and fund DEX orders
 
 The Vault NFT provides a compile-time trust anchor: the `vault_proxy`, `vusdcx`, and `order` validators all bake the Vault NFT minting policy into their script hashes. A UTXO at the `vault_proxy` address without the Vault NFT is not a valid vault and cannot be mistaken for one by any validator.
@@ -119,7 +119,7 @@ V1 ships with **17 logic validators + 4 NFT mint policies + 1 DEX adapter (`mins
 | # | Validator | Role | Authorization model |
 |---|-----------|------|---------------------|
 | 1 | `vault_proxy` | Thin spending validator holding vault UTXO; forwards logic to staking validators via zero-withdraw | Compile-time parameterised by (user, keeper_hot, swap_ada, protocol, recall, liqwid, gov_policy, gov_emergency, admin_deploy, batcher stake_hashes + vault_nft_policy) — 11 params, 10 routes |
-| 2 | `vault_user` | Staking validator: Deposit, Withdraw, BatchProcess — user path + vUSDCx mint/burn orchestration | Compile-time parameterised by (keeper_stake_hash, governance_nft_policy, governance_nft_name); Deposit/Withdraw permissionless, BatchProcess keeper-auth via keeper_stake_script zero-withdraw; `publish` handler gated by ActDeregisterStake (A2) |
+| 2 | `vault_user` | Staking validator: Deposit, Withdraw, CommunitySunset — permissionless user path (BatchProcess moved to `vault_batcher` in Phase 77d split). CommunitySunset is the Phase 1 dead-man-switch; see `governance.md` §4.4.1. | Compile-time parameterised by (governance_nft_policy, governance_nft_name) — `keeper_stake_hash` no longer needed since all three redeemers are permissionless. CommunitySunset triggerable by any vUSDCx holder when `max(last_compound_time, last_realloc_time) + 90d ≤ now`. `publish` handler gated by ActDeregisterStake (A2). |
 | 3 | `vault_keeper_hot` | Staking validator: Compound, RebalanceBuffer, SwapAda — keeper hot path | Compile-time parameterised by (keeper_stake_hash, treasury_hash, governance_nft_policy, governance_nft_name); all three redeemers keeper-auth via keeper_stake_script zero-withdraw; `publish` handler gated by ActDeregisterStake (A2) |
 | 4 | `vault_protocol` | Staking validator: DeployToProtocol (DEX, via SwapAdapter dispatch) | Compile-time parameterised by (keeper_stake_hash, governance_nft_policy, governance_nft_name); keeper-auth only; `verify_swap_via_adapter` (from `lib/vault/swap_adapter.ak`) consolidates adapter invocation + Tier 2 peg-floor + optional Tier 1 oracle bound; `publish` handler gated by ActDeregisterStake (A2) |
 | 5 | `vault_recall` | Staking validator: RecallFromProtocol, MergeUtxo | Compile-time parameterised by (keeper_stake_hash, governance_nft_policy, governance_nft_name); keeper-with-fallback (governance after 7d keeper-inactive); `publish` handler gated by ActDeregisterStake (A2) |
@@ -223,13 +223,13 @@ Orders in the batch are priced against the **pre-batch snapshot** (`total_deposi
 
 ### 5.9 Keeper: Compound
 
-Keeper triggers yield harvest: the vault's current `idle_buffer + non_deposit_value - total_deposited` evaluates to the on-chain yield, of which 4.5% (or less, governance-set) is extracted as performance fee, split 20% to the executing keeper and 80% to the treasury.
+Keeper triggers yield harvest: the vault's current `idle_buffer + non_deposit_value - total_deposited` evaluates to the on-chain yield, of which 4.5% (or less, governance-set) is extracted as performance fee, split 40% to the executing keeper and 60% to the treasury at V1 launch (keeper share at validator hard cap to support open-source third-party keeper viability).
 
 - **Spends**: vault UTXO; treasury UTXO; keeper_stake_script zero-withdraw
 - **Outputs**:
   - New vault UTXO (total_deposited += net_yield, idle_buffer reflects redistribution)
   - New treasury UTXO (protocol_share split into four category buckets per current ratios)
-  - USDCx transfer to keeper's address (20% of perf_fee)
+  - USDCx transfer to keeper's address (40% of perf_fee)
 - **Authorization**: keeper stake script withdrawal
 - **Cooldown**: minimum 1 hour between compounds; validity range must be ≤ 1 hour wide to prevent timestamp-manipulation attacks
 - **Zero-yield mode**: if `on_chain_yield == 0`, Compound runs as allocation-only update (no perf_fee, no keeper share, no treasury inflow); used to progress `last_compound_time` when no real yield is available
@@ -331,7 +331,7 @@ V1 depends on three external Cardano-native protocols. None is contractually com
 
 The vault UTXO carries ADA for two concurrent purposes:
 
-1. **Min-UTXO** (Cardano protocol requirement): the UTXO must hold enough lovelace to cover its own serialised output size + number of tokens. The 28-field VaultDatum (post §5.4 P2 + Phase 77 family extractions) serialises to approximately 400–600 bytes depending on `strategy_allocations` + `liqwid_positions` list lengths and current numeric values; combined with 2 tokens (Vault NFT + USDCx), min-UTXO sits in the 2.5–3.5 ADA range. Operators should treat this as approximate — measured exactly per deployment via Cardano protocol parameters.
+1. **Min-UTXO** (Cardano protocol requirement): the UTXO must hold enough lovelace to cover its own serialised output size + number of tokens. The 29-field VaultDatum (post §5.4 P2 + Phase 77 family extractions + Phase 1 governance safety dead-man-switch) serialises to approximately 400–600 bytes depending on `strategy_allocations` + `liqwid_positions` list lengths and current numeric values; combined with 2 tokens (Vault NFT + USDCx), min-UTXO sits in the 2.5–3.5 ADA range. Operators should treat this as approximate — measured exactly per deployment via Cardano protocol parameters.
 2. **DEX-order operational buffer**: `DeployToProtocol` submits a Minswap V2 order carrying ~4 ADA (batcher fee + order min-UTXO). That ADA comes out of the vault's own lovelace balance. Each order eats ~4 ADA from the vault; on fill, Minswap's batcher consumes ~2 ADA as fee and the vault receives ~2 ADA back net, so each swap cycle has a net **~2 ADA loss** from vault lovelace to Minswap infrastructure.
 
 ### 7.5.1 Contract-enforced bounds (`max_deploy_ada`, `min_vault_ada`)

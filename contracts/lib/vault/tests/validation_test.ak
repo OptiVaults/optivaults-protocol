@@ -269,28 +269,31 @@ test update_fee_above_min_hold_cap_rejects() {
 // ─────────────────────────────────────────────────────────────────────
 
 test fee_split_phase1_launch() {
-  // keeper 20% / gov 0% / treasury 80%
+  // keeper 40% / gov 0% / treasury 60% — V1 launch default
   let old = baseline_datum()
-  let new = VaultDatum { ..old, keeper_fee_bps: 2000, gov_fee_bps: 0 }
-  validate_update_fee_split(old, new, 2000, 0)
+  let new = VaultDatum { ..old, keeper_fee_bps: 4000, gov_fee_bps: 0 }
+  validate_update_fee_split(old, new, 4000, 0)
 }
 
 test fee_split_phase2_5_pct_gov() {
+  // keeper 40% / gov 5% / treasury 55%
   let old = baseline_datum()
-  let new = VaultDatum { ..old, keeper_fee_bps: 2000, gov_fee_bps: 500 }
-  validate_update_fee_split(old, new, 2000, 500)
+  let new = VaultDatum { ..old, keeper_fee_bps: 4000, gov_fee_bps: 500 }
+  validate_update_fee_split(old, new, 4000, 500)
 }
 
 test fee_split_phase3_10_pct_gov() {
+  // keeper 40% / gov 10% / treasury 50% — at the validator hard floor
   let old = baseline_datum()
-  let new = VaultDatum { ..old, keeper_fee_bps: 2000, gov_fee_bps: 1000 }
-  validate_update_fee_split(old, new, 2000, 1000)
+  let new = VaultDatum { ..old, keeper_fee_bps: 4000, gov_fee_bps: 1000 }
+  validate_update_fee_split(old, new, 4000, 1000)
 }
 
 test fee_split_above_keeper_cap_rejects() {
+  // 4001 > max_keeper_fee_bps (4000)
   let old = baseline_datum()
-  let new = VaultDatum { ..old, keeper_fee_bps: 2501, gov_fee_bps: 0 }
-  !validate_update_fee_split(old, new, 2501, 0)
+  let new = VaultDatum { ..old, keeper_fee_bps: 4001, gov_fee_bps: 0 }
+  !validate_update_fee_split(old, new, 4001, 0)
 }
 
 test fee_split_above_gov_cap_rejects() {
@@ -300,10 +303,10 @@ test fee_split_above_gov_cap_rejects() {
 }
 
 test fee_split_treasury_floor_violated_rejects() {
-  // keeper 2500 + gov 600 = 3100 > 3000 cap → treasury floor 70% violated
+  // keeper 4500 + gov 600 = 5100 > 5000 cap → treasury floor 50% violated
   let old = baseline_datum()
-  let new = VaultDatum { ..old, keeper_fee_bps: 2500, gov_fee_bps: 600 }
-  !validate_update_fee_split(old, new, 2500, 600)
+  let new = VaultDatum { ..old, keeper_fee_bps: 4500, gov_fee_bps: 600 }
+  !validate_update_fee_split(old, new, 4500, 600)
 }
 
 // ─────────────────────────────────────────────────────────────────────

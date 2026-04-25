@@ -148,7 +148,7 @@ payload_hash = blake2b_256(cbor.serialise(payload))
 | UpdateStrategy | `(new_allocations, new_buffer_target_bps)` |
 | UpdateFee | `(new_performance_fee_bps, new_early_withdraw_fee_bps, new_min_hold_seconds)` |
 | UpdateFeeSplit | `(new_keeper_fee_bps, new_gov_fee_bps)` |
-| EmergencyWithdraw | `(loss_amount, freeze_flag)` |
+| EmergencyWithdraw | `(loss_amount, freeze_flag)` — 註:`loss_amount` 在 `vault_gov_emergency` 被 Phase 1 治理安全設計 Layer 1 強制為 0(freeze-only)。欄位保留在 payload-hash 中是為了 action_id 推導的向後相容性。見 `governance.md` §4.4。 |
 | AdminDeployNonDeposit | `(deploy_amount, deploy_token_policy, deploy_token_name)`——`new_allocations` + `dest_output_idx` 是運營選擇、不預先承諾 |
 | UpdateRegistry | `<new_registry_datum>`(整個 RegistryDatum 值作為 payload) |
 | FastUpdateMarkets | `<new_registry_datum>`(整個 RegistryDatum 值) |

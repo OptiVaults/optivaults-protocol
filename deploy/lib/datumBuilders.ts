@@ -205,38 +205,72 @@ export function buildGovDatum(cfg: DeployConfig, nowMs: number): string {
 }
 
 /**
- * VaultDatum — 28 fields. See types.ak (post-§5.4 P2) + spec/vault-datum.md.
+ * VaultDatum — 29 fields. See types.ak (post-Layer-3) + spec/vault-datum.md.
  *
  * At init time all accounting starts at zero; the 9 immutable identity
  * fields are set from the compiled ceremony hashes + policy params.
  * `last_compound_time` is set to the deploy time so the zero-yield
  * cooldown and keeper-inactivity window have a sane baseline.
  *
- * §5.4 P2 (2026-04-21) upgrade — 26 → 28 fields:
- *   - idx 16: `max_slippage_bps` (Tier 1 oracle fair-price bound cap).
- *   - idx 17: `min_swap_peg_bps` (Tier 2 peg-floor bound, window 9300-9950).
- * Pre-P2 deployments wrote only 6 policy fields (10..15) + identity
- * starting at idx 16. Post-P2 deployments write 8 policy fields
- * (10..17) + identity starting at idx 18. `buildRegistryDatum`'s 9-field
- * layout (§5.4 P3 + §B@launch=1) must ship together with this — both
- * are required for any validator call to deserialize cleanly.
+ * §5.4 P2 (2026-04-21) — 26 → 28 fields:
+ *   - idx 16: `max_slippage_bps`, idx 17: `min_swap_peg_bps`.
+ *
+ * Phase 1 governance safety Layer 3 (2026-04-25) — 28 → 29 fields:
+ *   - idx 28: `community_sunset_triggered` (Preprod L3 dead-man-switch).
+ *   Always 0 at init; flipped to 1 only by `vault_user.CommunitySunset`
+ *   after ≥ 90 days of operational inactivity.
+ *
+ * `buildRegistryDatum`'s 9-field layout (§5.4 P3 + §B@launch=1) must
+ * ship together with this — both are required for any validator call
+ * to deserialize cleanly.
  */
 export function buildVaultDatum(
   cfg: DeployConfig,
   hashes: CeremonyHashes,
   nowMs: number,
+  /**
+   * Optional backdate offsets in MILLISECONDS — Preprod-ONLY E2E
+   * convenience. Set when a fresh ceremony needs to land in a state
+   * where time-gated redeemers can fire immediately, instead of waiting
+   * the real cooldown window.
+   *
+   * MAINNET CALLERS MUST PASS `{}` (or omit). The contract has no
+   * gate that would catch backdated mainnet deployments — the only
+   * defense is operator discipline. The mainnet ceremony script in
+   * `deploy/scripts/init-vault-state-mainnet.ts` should refuse this
+   * argument outright.
+   *
+   * Fields (all default 0 = no backdate):
+   *   - `feeMs` — subtracted from `last_fee_update_time` (idx 6). Used
+   *     to bypass the 7d `fee_update_cooldown_ms` for Phase H-UpdateFee
+   *     E2E.
+   *   - `compoundMs` — subtracted from BOTH `last_compound_time` (idx 4)
+   *     AND `last_realloc_time` (idx 5). Used for Phase L3 CommunitySunset
+   *     E2E (90-day threshold). See `tests/preprod/TIME-MACHINE.md`.
+   *   - `adaSwapMs` — subtracted from `last_ada_swap_time` (idx 7). Used
+   *     to bypass the SwapAda 1h cooldown.
+   *
+   * Backdating `compoundMs > 91 * 86_400_000` makes the vault appear
+   * to have had no keeper activity for 91+ days, which (a) lets any
+   * vUSDCx holder fire `CommunitySunset` immediately, and (b) lets
+   * any wallet bypass the keeper signature in
+   * `vault_recall.RecallFromLiqwid` + `vault_user.Withdraw` early-fee
+   * waiver. Use only on Preprod.
+   */
+  backdate: BackdateOptions = {},
 ): string {
   const v = cfg.vaultInitialParams;
+  const compoundBaseMs = nowMs - (backdate.compoundMs ?? 0);
   const data = new Constr(0, [
     // — Accounting (10) —
     0n,                          // 0: total_deposited
     0n,                          // 1: total_shares
     0n,                          // 2: idle_buffer
     0n,                          // 3: non_deposit_value
-    BigInt(nowMs),               // 4: last_compound_time
-    BigInt(nowMs),               // 5: last_realloc_time
-    BigInt(nowMs),               // 6: last_fee_update_time
-    BigInt(nowMs),               // 7: last_ada_swap_time
+    BigInt(compoundBaseMs),      // 4: last_compound_time (Preprod-backdate-aware)
+    BigInt(compoundBaseMs),      // 5: last_realloc_time (kept synced with #4)
+    BigInt(nowMs - (backdate.feeMs ?? 0)),     // 6: last_fee_update_time
+    BigInt(nowMs - (backdate.adaSwapMs ?? 0)), // 7: last_ada_swap_time
     [],                          // 8: strategy_allocations
     [],                          // 9: liqwid_positions
 
@@ -261,8 +295,27 @@ export function buildVaultDatum(
     hashes.registryHash,         // 25: registry_hash
     hashes.registryAuthPolicy,   // 26: registry_auth_policy
 
-    // — Operational (1) —
+    // — Operational (2) —
     0n,                          // 27: frozen
+    0n,                          // 28: community_sunset_triggered (Layer 3)
   ]);
   return Data.to(data as unknown as Data);
+}
+
+/**
+ * Backdate options for `buildVaultDatum`. Preprod-only convenience —
+ * each field subtracts its value (in milliseconds) from the
+ * corresponding `nowMs`-derived datum field at vault init.
+ *
+ * Mainnet ceremony scripts should construct without this object so
+ * defaults of 0 apply throughout.
+ */
+export interface BackdateOptions {
+  /** Subtracted from `last_fee_update_time` (idx 6). */
+  feeMs?: number;
+  /** Subtracted from BOTH `last_compound_time` (idx 4) and
+   *  `last_realloc_time` (idx 5). */
+  compoundMs?: number;
+  /** Subtracted from `last_ada_swap_time` (idx 7). */
+  adaSwapMs?: number;
 }

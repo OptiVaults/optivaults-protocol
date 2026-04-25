@@ -25,7 +25,7 @@ type VaultDatum {
   early_withdraw_fee_bps: Int,    // Early withdrawal fee bps
   min_hold_seconds: Int,          // Compound 後到 Direct Withdraw 間的最短持有時間
   buffer_target_bps: Int,         // 目標 buffer 比例(3500 = 35%)
-  keeper_fee_bps: Int,            // Keeper 的績效費分成,[0, 2500]
+  keeper_fee_bps: Int,            // Keeper 的績效費分成,[0, 4000]
   gov_fee_bps: Int,               // 治理簽名者池分成,[0, 1000]
                                    // Treasury 分成為推導值:10000 - keeper_fee_bps - gov_fee_bps
 
@@ -41,13 +41,14 @@ type VaultDatum {
   registry_auth_policy: ByteArray,  // Registry auth NFT policy
 
   // --- 運營旗標 ---
-  frozen: Int,                    // 0 = 正常、1 = 緊急凍結
+  frozen: Int,                          // 0 = 正常、1 = 緊急凍結
+  community_sunset_triggered: Int,      // 0 = 正常、1 = dead-man-switch 已觸發(Phase 1,見 governance.md §4.4.1)
 }
 ```
 
-**總欄位數**:26(新增 `last_ada_swap_time` 給 SwapAda redeemer——見 `spec/ada-swap.md`)。**不可變**(部署後永不變):**9**(8 個身份錨點 + `vault_version`)。**治理可變**(在邊界內可被治理動作調整):**6**(`performance_fee_bps`、`early_withdraw_fee_bps`、`min_hold_seconds`、`buffer_target_bps`、`keeper_fee_bps`、`gov_fee_bps`;`strategy_allocations` 另外是治理可設定的,屬獨立 action)。**運營可變**(每次 keeper / user 動作可變):10 個會計欄位(`total_deposited`、`total_shares`、`idle_buffer`、`non_deposit_value`、4 個時間錨點、`strategy_allocations`、`liqwid_positions`)以及 `frozen` 旗標。
+**總欄位數**:29(= 原本 26 + `last_ada_swap_time` 給 SwapAda + `max_slippage_bps` + `min_swap_peg_bps` 給 §5.4 P2 + `community_sunset_triggered` 給 Phase 1 dead-man-switch,見 `spec/governance.md` §4.4.1)。**不可變**(部署後永不變):**9**(8 個身份錨點 + `vault_version`)。**治理可變**(在邊界內可被治理動作調整):**8**(`performance_fee_bps`、`early_withdraw_fee_bps`、`min_hold_seconds`、`buffer_target_bps`、`keeper_fee_bps`、`gov_fee_bps`、`max_slippage_bps`、`min_swap_peg_bps`;`strategy_allocations` 另外是治理可設定的,屬獨立 action)。**運營可變**(每次 keeper / user 動作可變):10 個會計欄位(`total_deposited`、`total_shares`、`idle_buffer`、`non_deposit_value`、4 個時間錨點、`strategy_allocations`、`liqwid_positions`)以及 2 個運營旗標(`frozen`、`community_sunset_triggered`)。
 
-數字對帳:9 不可變 + 6 政策 + 10 會計 + 1 運營 = 26 ✓。本 spec 較早草稿誤植為「13 個不可變」——那是把 9 個真正不可變的欄位 + 4 個在內部驗證期 compile-time-anchor 重構中**從 datum 搬到 `vault_proxy` / `vusdcx` / `order` 編譯時參數**的舊欄位也計算進去。實際存在 datum 內的不可變欄位是 9。
+數字對帳:9 不可變 + 8 政策 + 10 會計 + 2 運營 = 29 ✓。
 
 V1 有**兩個**身份錨點刻意**不**放進 datum:
 
@@ -83,26 +84,26 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 | `early_withdraw_fee_bps` | Int | 10(0.1%) | [0, 100] | `UpdateFee` 治理動作 |
 | `min_hold_seconds` | Int | 60 | [0, 21600](6 小時)——從較早的 24 小時上限依白皮書 review 收緊(理由見白皮書 §2.4 + §6.3) | `UpdateFee` 治理動作 |
 | `buffer_target_bps` | Int | 3500(35%) | [0, 10000]——建議目標,不嚴格強制 | `UpdateStrategy` 治理動作(與配置變更一起執行) |
-| `keeper_fee_bps` | Int | 2000(20%) | [0, 2500]——25% 硬上限;與 `gov_fee_bps` 合計 ≤ 3000(30%) | `UpdateFeeSplit` 治理動作(21 天 timelock) |
+| `keeper_fee_bps` | Int | 4000(40%) | [0, 4000]——40% 硬上限;與 `gov_fee_bps` 合計 ≤ 5000(50%) | `UpdateFeeSplit` 治理動作(21 天 timelock) |
 | `gov_fee_bps` | Int | 0(啟動時停用) | [0, 1000]——10% 硬上限 | `UpdateFeeSplit` 治理動作(21 天 timelock) |
 
 `performance_fee_bps` 4.5% 硬上限是合約層不變量,在 UpdateFee redeemer 強制——**治理在任何 redeemer 路徑下都無法**把費率推過 4.5%。這與「4.5% 是目前值」是兩回事:欄位在 [0, 450] 內可變,但不能超過 450 bps。
 
 3-way 績效費拆分(keeper / 治理池 / treasury)在 Compound 時強制。Treasury 份額**不存 datum**——以 `10000 - keeper_fee_bps - gov_fee_bps` 推導。`vault_gov_policy.ak` 的 UpdateFeeSplit redeemer 透過共用的 `validate_update_fee_split` helper 強制以下硬性不變量:
 
-- `0 <= keeper_fee_bps <= 2500`(keeper ≤ 25%)
+- `0 <= keeper_fee_bps <= 4000`(keeper ≤ 40%)
 - `0 <= gov_fee_bps <= 1000`(gov pool ≤ 10%)
-- `keeper_fee_bps + gov_fee_bps <= 3000`(treasury 下限 ≥ 70%)
+- `keeper_fee_bps + gov_fee_bps <= 5000`(treasury 下限 ≥ 50%)
 
 分階段啟動路線(治理可在上限內調整、每次變更套 21 天 timelock):
 
 | 階段 | keeper_fee_bps | gov_fee_bps | Treasury | 啟用條件 |
 |------|----------------|-------------|----------|---------|
-| V1 啟動 | 2000(20%) | 0(0%) | 80% | 部署預設;gov pool 停用;啟動簽名者無支付 |
-| Phase 2 | 2000 | 500(5%) | 75% | 需要:(a) TVL ≥ 500K USDCx **且** (b) 治理已透過 `RotateSigners` 加入至少一位外部(與創辦人無關聯)簽名者。治理再以 `UpdateFeeSplit` 啟用——無自動晉升。 |
-| Phase 3 | 2000 | 1000(10%) | 70% | 需要:(a) TVL ≥ 2M USDCx **且** (b) 治理已透過 `RotateSigners` 納入至少一位社群選出的簽名者。治理再以 `UpdateFeeSplit` 啟用。 |
+| V1 啟動 | 4000(40%) | 0(0%) | 60% | 部署預設;keeper 份額在 validator 硬上限,以支持開源第三方 keeper 經濟可行性;gov pool 停用;啟動簽名者無支付 |
+| Phase 2 | 4000 | 500(5%) | 55% | 需要:(a) TVL ≥ 500K USDCx **且** (b) 治理已透過 `RotateSigners` 加入至少一位外部(與創辦人無關聯)簽名者。治理再以 `UpdateFeeSplit` 啟用——無自動晉升。 |
+| Phase 3 | 4000 | 1000(10%) | 50% | 需要:(a) TVL ≥ 2M USDCx **且** (b) 治理已透過 `RotateSigners` 納入至少一位社群選出的簽名者。治理再以 `UpdateFeeSplit` 啟用。Treasury 在 50%——validator 硬下限。 |
 
-**啟用並非自動**。每個階段轉換都需要明確的治理 `UpdateFeeSplit` 動作(帶各自的 21 天 timelock)。TVL + 簽名者集合前置條件是治理在 queue 前**鏈下**做的政策閘門,合約**不強制**。Validator 只強制硬上限(`keeper_fee_bps ≤ 2500`、`gov_fee_bps ≤ 1000`、`sum ≤ 3000`)。一個在 TVL 100K 時 queue 把 gov_fee_bps 推到 500(違反 Phase 2 TVL 閘門作為政策)的治理,**只要**硬上限有滿足,**鏈上仍會成功**——是鏈下的敘事紀律讓分階段模型有意義。
+**啟用並非自動**。每個階段轉換都需要明確的治理 `UpdateFeeSplit` 動作(帶各自的 21 天 timelock)。TVL + 簽名者集合前置條件是治理在 queue 前**鏈下**做的政策閘門,合約**不強制**。Validator 只強制硬上限(`keeper_fee_bps ≤ 4000`、`gov_fee_bps ≤ 1000`、`sum ≤ 5000`)。一個在 TVL 100K 時 queue 把 gov_fee_bps 推到 500(違反 Phase 2 TVL 閘門作為政策)的治理,**只要**硬上限有滿足,**鏈上仍會成功**——是鏈下的敘事紀律讓分階段模型有意義。
 
 每次 fee-split 變更都是獨立的 `UpdateFeeSplit` 治理動作,帶完整 21 天 timelock + 1-of-n cancel 否決。變更從**下次** Compound 之後才適用——已累積的 gov pool 資金保留先前的處理方式,直到分配。
 
@@ -122,7 +123,8 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 
 | 欄位 | 值 | `= 1` 時的效果 |
 |------|------|---------------|
-| `frozen` | 0(正常)/ 1(凍結) | 擋掉 Compound、BatchProcess、RebalanceBuffer、DeployToProtocol、SupplyToLiqwid、SwapAda。**不**擋 Withdraw、RecallFromLiqwid、RecallFromProtocol、MergeUtxo、AdminDeployNonDeposit、EmergencyWithdraw(資金回收與治理閘控的清理路徑仍開放)。透過 `EmergencyWithdraw` 治理動作設為 1。 |
+| `frozen` | 0(正常)/ 1(凍結) | 擋掉 Compound、Deposit、BatchProcess、RebalanceBuffer、SupplyToLiqwid、SwapAda。也擋 `DeployToProtocol` 的 Supply 路徑(`deploy_token == deposit_token`),但 swap-out 路徑(`deploy_token != deposit_token`)在 freeze 下仍開放(Layer 2——見 `governance.md` §4.4 + `docs/security-model.md` §5.4)。**不**擋 Withdraw、RecallFromLiqwid、RecallFromProtocol、MergeUtxo、AdminDeployNonDeposit、EmergencyWithdraw(資金回收與治理閘控的清理路徑仍開放)。透過 `EmergencyWithdraw` 治理動作或 `CommunitySunset`(Phase 1 dead-man-switch)設為 1。 |
+| `community_sunset_triggered` | 0(正常)/ 1(sunset 已觸發) | 單向 0 → 1 旗標。由 `CommunitySunset`(`vault_user`,permissionless,需 ≥ 1 vUSDCx + 90 天無動靜前置條件——見 `governance.md` §4.4.1)設定。一旦設定,在 `vault_liqwid.RecallFromLiqwid` + `vault_protocol.DeployToProtocol` Layer 2 開放 permissionless 路徑(任何簽名者,不需要 keeper / 治理授權)。其他 redeemer 都要保留;不能由任何路徑重置回 0。 |
 
 ---
 

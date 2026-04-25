@@ -69,6 +69,55 @@ async function awaitTxAndSettle(
   await new Promise((r) => setTimeout(r, awaitSeconds * 1000));
 }
 
+/**
+ * Auto-recover lost mint TX hashes from on-chain history.
+ *
+ * Run at the start of PHASE 2 to rehydrate `state.mints[*].txHash` if
+ * a prior process died between `submit()` and `saveState()`. The
+ * authoritative signal is Blockfrost's `assets/{policyId+assetName}/history`
+ * endpoint — if a one-shot NFT mint TX exists for the offline-derived
+ * compile-time policy hash, that TX is recorded into state. This
+ * eliminates the manual Python state-patches that were required during
+ * Preprod p5 ceremony recovery.
+ *
+ * Safe to call repeatedly — entries with non-empty txHash are skipped.
+ */
+async function recoverLostMintTxHashes(
+  lucid: LucidEvolution,
+  state: CeremonyState,
+): Promise<void> {
+  const policyOf = (utxoRef: { txHash: string; outputIndex: number } | undefined) => utxoRef ?? null;
+  for (const k of ["vaultNft", "governanceNft", "registryAuthNft"] as const) {
+    const m = state.mints[k];
+    if (!m || m.txHash) continue;
+    if (!m.policyId) continue; // PHASE 1 hasn't computed compile-time hash yet
+    if (!policyOf(m.utxoRef)) continue;
+    try {
+      // Lucid Evolution doesn't expose a direct asset-history API, so
+      // we use the underlying Blockfrost client through the provider.
+      const provider: any = (lucid as any).provider;
+      const url: string | undefined = provider?.url ?? provider?.blockfrostUrl;
+      const projectId: string | undefined =
+        provider?.projectId ?? provider?.bf?.projectId ?? provider?.headers?.project_id;
+      if (!url || !projectId) continue;
+      const unit = m.policyId + m.assetName;
+      const histUrl = `${url}/assets/${unit}/history`;
+      const res = await fetch(histUrl, { headers: { project_id: projectId } });
+      if (!res.ok) continue;
+      const arr = await res.json() as Array<{ tx_hash: string; action: string }>;
+      const mint = arr.find((h) => h.action === "minted");
+      if (mint?.tx_hash) {
+        log("WARN", `  ${k}: recovered lost mint TX ${mint.tx_hash} from on-chain history`);
+        state.mints[k] = { ...m, txHash: mint.tx_hash };
+        saveState(state);
+      }
+    } catch {
+      // Best-effort recovery — fall through to normal mint flow if
+      // Blockfrost unreachable or asset name is wrong.
+    }
+  }
+}
+
 interface ScriptsBundle {
   vaultNft: Script;
   governanceNft: Script;
@@ -129,12 +178,24 @@ export function buildScriptsBundle(
 // PHASE 2 — Mint 3 one-shot NFTs
 // ---------------------------------------------------------------------
 
-async function mintOneShotNft(
+/**
+ * Submit a one-shot NFT mint TX. Returns immediately on submit so the
+ * caller can persist `txHash` to state BEFORE awaiting confirmation.
+ * The await is then a separate call (`awaitTxAndSettle`) issued from
+ * the caller after the state save lands on disk.
+ *
+ * Atomic-save rationale: prior versions did `submit + await + return`,
+ * so a process death between submit (TX on-chain) and return
+ * permanently lost the TX hash from the operator's perspective —
+ * subsequent re-runs would resubmit, double-mint, and corrupt
+ * one-shot UTxO selection. By splitting submit from await, the state
+ * save anchors the on-chain effect at submit time.
+ */
+async function submitOneShotNftMint(
   lucid: LucidEvolution,
   script: Script,
   assetName: string,
   utxoRef: { txHash: string; outputIndex: number },
-  awaitSeconds: number,
 ): Promise<{ txHash: string; policyId: string }> {
   const policyId = mintingPolicyToId(script);
   const unit = policyId + assetName;
@@ -157,7 +218,6 @@ async function mintOneShotNft(
   const signed = await tx.sign.withWallet().complete();
   const txHash = await signed.submit();
   log("INFO", `  Mint ${policyId.slice(0, 12)}.${assetName} TX ${txHash}`);
-  await awaitTxAndSettle(lucid, txHash, awaitSeconds);
   return { txHash, policyId };
 }
 
@@ -172,14 +232,20 @@ export async function runPhase2Mints(
 
   log("STEP", "PHASE 2: minting one-shot NFTs");
 
+  // Atomic submit-then-save-then-await pattern: each NFT is (1) submitted,
+  // (2) immediately persisted with txHash, (3) awaited for confirmation.
+  // If the process dies between (1) and (2), `recoverLostMintTxHashes`
+  // (called at the start of every PHASE 2 invocation) reads the on-chain
+  // policy history via Blockfrost and rehydrates the missing txHash.
+  await recoverLostMintTxHashes(lucid, state);
+
   if (!state.mints.vaultNft!.txHash) {
     const utxoRef = state.mints.vaultNft!.utxoRef;
-    const { txHash, policyId } = await mintOneShotNft(
+    const { txHash, policyId } = await submitOneShotNftMint(
       lucid,
       scripts.vaultNft,
       vaultNftName,
       utxoRef,
-      cfg.ceremonyOptions.awaitConfirmSeconds,
     );
     state.mints.vaultNft = {
       txHash,
@@ -188,6 +254,7 @@ export async function runPhase2Mints(
       assetName: vaultNftName,
     };
     saveState(state);
+    await awaitTxAndSettle(lucid, txHash, cfg.ceremonyOptions.awaitConfirmSeconds);
   } else {
     log("INFO", `  vaultNft already minted: ${state.mints.vaultNft!.txHash}`);
   }
@@ -195,15 +262,15 @@ export async function runPhase2Mints(
   if (!state.mints.governanceNft!.txHash) {
     const utxoRef = state.mints.governanceNft!.utxoRef;
     const assetName = cfg.governance.governanceNftAssetName;
-    const { txHash, policyId } = await mintOneShotNft(
+    const { txHash, policyId } = await submitOneShotNftMint(
       lucid,
       scripts.governanceNft,
       assetName,
       utxoRef,
-      cfg.ceremonyOptions.awaitConfirmSeconds,
     );
     state.mints.governanceNft = { txHash, utxoRef, policyId, assetName };
     saveState(state);
+    await awaitTxAndSettle(lucid, txHash, cfg.ceremonyOptions.awaitConfirmSeconds);
   } else {
     log("INFO", `  governanceNft already minted: ${state.mints.governanceNft!.txHash}`);
   }
@@ -211,15 +278,15 @@ export async function runPhase2Mints(
   if (!state.mints.registryAuthNft!.txHash) {
     const utxoRef = state.mints.registryAuthNft!.utxoRef;
     const assetName = cfg.governance.registryAuthAssetName;
-    const { txHash, policyId } = await mintOneShotNft(
+    const { txHash, policyId } = await submitOneShotNftMint(
       lucid,
       scripts.registryAuthNft,
       assetName,
       utxoRef,
-      cfg.ceremonyOptions.awaitConfirmSeconds,
     );
     state.mints.registryAuthNft = { txHash, utxoRef, policyId, assetName };
     saveState(state);
+    await awaitTxAndSettle(lucid, txHash, cfg.ceremonyOptions.awaitConfirmSeconds);
   } else {
     log("INFO", `  registryAuthNft already minted: ${state.mints.registryAuthNft!.txHash}`);
   }
@@ -568,7 +635,33 @@ export async function runPhase4bStateUtxos(
   // --- Step 5: Vault (locks vault NFT + seed ADA) ---
   if (!state.stateUtxos.vault) {
     log("INFO", `  Vault at ${vaultAddr.slice(0, 40)}…`);
-    const datum = buildVaultDatum(cfg, hashes, nowMs);
+    // Preprod backdate options (Preprod-only — Mainnet leaves them all
+    // 0 by passing an empty object). All values are MILLISECONDS to
+    // subtract from `nowMs` for the corresponding datum field.
+    //
+    //   - feeMs: 8 days → bypasses 7d fee_update_cooldown_ms (H-UpdateFee).
+    //   - compoundMs: 91 days → bypasses 90d community_sunset threshold
+    //     (Phase L3 dead-man-switch). Set via env BACKDATE_COMPOUND_DAYS;
+    //     unset = 0 = no backdate. See tests/preprod/TIME-MACHINE.md.
+    const backdate =
+      cfg.network === "Preprod"
+        ? {
+            feeMs: 8 * 86_400_000,
+            compoundMs:
+              parseInt(process.env.BACKDATE_COMPOUND_DAYS ?? "0", 10) * 86_400_000,
+          }
+        : {};
+    if (cfg.network === "Mainnet" && Object.keys(backdate).length > 0) {
+      throw new Error("buildVaultDatum: Mainnet ceremony refuses backdate flags");
+    }
+    if (backdate.compoundMs && backdate.compoundMs > 0) {
+      log(
+        "INFO",
+        `  ⏰ Preprod backdate: last_compound_time/last_realloc_time -${backdate.compoundMs / 86_400_000}d ` +
+          `(L3 sunset E2E enabled)`,
+      );
+    }
+    const datum = buildVaultDatum(cfg, hashes, nowMs, backdate);
     const tx = await lucid
       .newTx()
       .pay.ToAddressWithData(

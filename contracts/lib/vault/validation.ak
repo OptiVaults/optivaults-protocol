@@ -335,6 +335,7 @@ pub fn validate_deposit(
       new.strategy_allocations == old.strategy_allocations,
       new.liqwid_positions == old.liqwid_positions,
       new.frozen == old.frozen,
+      new.community_sunset_triggered == old.community_sunset_triggered,
     }
   and {
     valid_amount,
@@ -378,6 +379,7 @@ pub fn validate_withdraw(
       new.strategy_allocations == old.strategy_allocations,
       new.liqwid_positions == old.liqwid_positions,
       new.frozen == old.frozen,
+      new.community_sunset_triggered == old.community_sunset_triggered,
     }
   and {
     valid_shares,
@@ -456,6 +458,7 @@ pub fn validate_compound(
 
   let valid_non_deposit = new.non_deposit_value == old.non_deposit_value
   let valid_frozen = new.frozen == old.frozen
+  let valid_sunset = new.community_sunset_triggered == old.community_sunset_triggered
   let valid_positions = new.liqwid_positions == old.liqwid_positions
   let valid_fee_time = new.last_fee_update_time == old.last_fee_update_time
   let valid_ada_swap_time = new.last_ada_swap_time == old.last_ada_swap_time
@@ -481,6 +484,7 @@ pub fn validate_compound(
     valid_buffer_floor,
     valid_non_deposit,
     valid_frozen,
+    valid_sunset,
     valid_positions,
     valid_fee_time,
     valid_ada_swap_time,
@@ -527,6 +531,7 @@ pub fn validate_update_fee(
       new.strategy_allocations == old.strategy_allocations,
       new.liqwid_positions == old.liqwid_positions,
       new.frozen == old.frozen,
+      new.community_sunset_triggered == old.community_sunset_triggered,
     }
 
   and {
@@ -540,7 +545,7 @@ pub fn validate_update_fee(
 }
 
 /// UpdateFeeSplit — adjusts the 3-way performance fee split. Hard caps:
-/// keeper ≤ 25%, gov ≤ 10%, sum ≤ 30% (treasury floor 70%).
+/// keeper ≤ 40%, gov ≤ 10%, sum ≤ 50% (treasury floor 50%).
 pub fn validate_update_fee_split(
   old: VaultDatum,
   new: VaultDatum,
@@ -574,6 +579,7 @@ pub fn validate_update_fee_split(
       new.strategy_allocations == old.strategy_allocations,
       new.liqwid_positions == old.liqwid_positions,
       new.frozen == old.frozen,
+      new.community_sunset_triggered == old.community_sunset_triggered,
     }
 
   and {
@@ -627,6 +633,7 @@ pub fn validate_update_slippage_policy(
       new.strategy_allocations == old.strategy_allocations,
       new.liqwid_positions == old.liqwid_positions,
       new.frozen == old.frozen,
+      new.community_sunset_triggered == old.community_sunset_triggered,
     }
 
   and {
@@ -635,6 +642,186 @@ pub fn validate_update_slippage_policy(
     valid_update,
     valid_accounting,
     check_immutable_fields(old, new),
+  }
+}
+
+/// Phase 1 governance safety — Layer 2 (2026-04-25):
+/// vault_protocol.DeployToProtocol freeze gate.
+///
+/// Default rule: DeployToProtocol is blocked under `frozen == 1`.
+///
+/// Layer 2 exception: when `frozen == 1` AND the deploy_token is NOT
+/// the deposit token (USDCx), allow the redeemer. This lets the keeper
+/// drain non-deposit-value (NDV) stable tokens — DJED, USDM, etc. —
+/// back to USDCx via the registry-whitelisted SwapAdapter even while
+/// the vault is frozen by EmergencyWithdraw. Without this exception,
+/// any freeze permanently strands the NDV portion until the 21-day
+/// `AdminDeployNonDeposit` governance fallback executes — a long
+/// window during which user `Withdraw` only pays out the proportional
+/// `idle_buffer` slice.
+///
+/// Why "deploy_token != deposit_token" is the right discriminator:
+///   - When the redeemer carries `deploy_token == USDCx`, the keeper
+///     is supplying capital to Liqwid (Compound flow). Doing this
+///     while the vault is frozen is exactly the operation we want
+///     to suppress (don't put new capital at risk during emergency).
+///   - When the redeemer carries `deploy_token == DJED` or
+///     `deploy_token == USDM`, the keeper is initiating a swap-out
+///     to USDCx via the SwapAdapter (Minswap V2). The destination is
+///     pinned to the vault's own address by the SwapAdapter validator,
+///     so an attacker controlling the keeper key cannot redirect the
+///     output to themselves; the worst they can do is force max
+///     `min_swap_peg_bps`-bounded slippage (~5-7%), and the resulting
+///     USDCx still lands in the vault for users to withdraw.
+///
+/// Attacker abuse bounds (single-actor governance + compromised key):
+///   1. Adapter swap is gated by `registry.swap_adapter_hashes` —
+///      adding a malicious adapter requires `UpdateRegistry`'s 14-day
+///      timelock, during which depositors can self-Withdraw.
+///   2. Output destination is enforced by SwapAdapter validator
+///      (vault address) — funds cannot route to attacker.
+///   3. `min_swap_peg_bps` peg-floor caps loss per swap (≤ 7%).
+///   4. Per-swap cooldown limits frequency.
+///
+/// Net effect: under freeze, an honest keeper can recover NDV → USDCx
+/// in O(swap-cooldown) time; an attacker keeper can force at most
+/// `slippage_cap × NDV` total loss before NDV is exhausted, and that
+/// loss is borne as bounded value movement (USDCx still lands in
+/// vault), not as outright theft.
+pub fn validate_deploy_frozen_gate(
+  frozen: Int,
+  deploy_token_policy: ByteArray,
+  deploy_token_name: ByteArray,
+  deposit_token_policy: ByteArray,
+  deposit_token_name: ByteArray,
+) -> Bool {
+  let is_deploy_deposit_token =
+    deploy_token_policy == deposit_token_policy && deploy_token_name == deposit_token_name
+  or {
+    frozen == 0,
+    and {
+      frozen == 1,
+      !is_deploy_deposit_token,
+    },
+  }
+}
+
+/// Phase 1 governance safety — Layer 3 / Dead-man-switch (2026-04-25):
+/// CommunitySunset trigger threshold.
+///
+/// Returns true when the vault has been operationally inactive for at
+/// least 90 days, measured by:
+///   `now >= max(last_compound_time, last_realloc_time) + 90 days`
+///
+/// Both timestamps are updated by the keeper:
+///   - `last_compound_time` advances on every productive Compound
+///     (real-yield harvest path).
+///   - `last_realloc_time` advances on every zero-yield heartbeat
+///     Compound (5-day cadence by default — see vault_keeper_hot.ak +
+///     spec/keeper-auth.md).
+///
+/// Either one moving means the keeper is alive, even if real yield is
+/// zero. The 90-day threshold ≈ 18 missed heartbeats ≈ keeper has been
+/// fully dead for 90+ days. This is the "founder failure" condition
+/// where neither keeper nor governance is responding to operational
+/// upkeep.
+///
+/// `min_valid_timestamp_ms` (sanity lower bound, 2023-11-14) protects
+/// against unset / corrupt timestamps that would let any TX trigger
+/// sunset prematurely.
+pub fn validate_community_sunset_trigger_time(
+  last_compound_time: Int,
+  last_realloc_time: Int,
+  now: Int,
+) -> Bool {
+  let last_activity =
+    if last_realloc_time > last_compound_time {
+      last_realloc_time
+    } else {
+      last_compound_time
+    }
+  // 90 days = 90 * 86_400 * 1_000 ms
+  let inactive_threshold_ms = 90 * 86_400 * 1_000
+  and {
+    last_activity > 1_700_000_000_000,
+    now >= last_activity + inactive_threshold_ms,
+  }
+}
+
+/// Phase 1 governance safety — Layer 3 / Dead-man-switch (2026-04-25):
+/// CommunitySunset datum transition.
+///
+/// Verifies the new datum strictly:
+///   - Sets `community_sunset_triggered = 1` (one-way 0 → 1)
+///   - Sets `frozen = 1` (atomically halt productive ops)
+///   - Preserves every other field (accounting + policy + identity)
+///
+/// All other governance + keeper redeemers preserve
+/// `community_sunset_triggered` (via the per-validator
+/// `new.community_sunset_triggered == old.community_sunset_triggered`
+/// invariant), so once set the flag is permanent.
+pub fn validate_community_sunset_transition(
+  old: VaultDatum,
+  new: VaultDatum,
+) -> Bool {
+  and {
+    // The two flag flips
+    old.community_sunset_triggered == 0,
+    new.community_sunset_triggered == 1,
+    new.frozen == 1,
+    // Every other field unchanged
+    new.total_deposited == old.total_deposited,
+    new.total_shares == old.total_shares,
+    new.idle_buffer == old.idle_buffer,
+    new.non_deposit_value == old.non_deposit_value,
+    new.last_compound_time == old.last_compound_time,
+    new.last_realloc_time == old.last_realloc_time,
+    new.last_fee_update_time == old.last_fee_update_time,
+    new.last_ada_swap_time == old.last_ada_swap_time,
+    new.strategy_allocations == old.strategy_allocations,
+    new.liqwid_positions == old.liqwid_positions,
+    new.performance_fee_bps == old.performance_fee_bps,
+    new.early_withdraw_fee_bps == old.early_withdraw_fee_bps,
+    new.min_hold_seconds == old.min_hold_seconds,
+    new.buffer_target_bps == old.buffer_target_bps,
+    new.keeper_fee_bps == old.keeper_fee_bps,
+    new.gov_fee_bps == old.gov_fee_bps,
+    new.max_slippage_bps == old.max_slippage_bps,
+    new.min_swap_peg_bps == old.min_swap_peg_bps,
+    check_immutable_fields(old, new),
+  }
+}
+
+/// Phase 1 governance safety — Layer 1 (2026-04-25):
+/// EmergencyWithdraw freeze-only invariant.
+///
+/// Used by vault_gov_emergency.EmergencyWithdraw to enforce that the
+/// emergency redeemer can only flip the `frozen` flag — it cannot
+/// reduce `total_deposited` or modify `liqwid_positions`. Real Liqwid
+/// loss accounting goes through vault_liqwid.RecallFromLiqwid's
+/// gov-fallback path which physically Recalls underlying and writes off
+/// only the actual realized loss (`supplied_value - underlying_received`,
+/// see vault_liqwid.ak:261-268).
+///
+/// Without this constraint a compromised single-actor governance can
+/// freeze + write off the entire Liqwid portion in a single TX, dropping
+/// `share_price` proportionally without any actual fund movement — a
+/// pure griefing vector that leaves qTokens orphaned in the vault.
+/// The freeze-only constraint forces all loss accounting through a
+/// redeemer that physically recovers what's recoverable.
+///
+/// `loss_amount` remains in the `EmergencyWithdraw` redeemer signature
+/// (and `payload_hash_emergency_withdraw`) for backward compatibility
+/// with multisig_gov action_id derivation, but is constrained to 0 here.
+pub fn validate_emergency_freeze_only(
+  loss_amount: Int,
+  old: VaultDatum,
+  new: VaultDatum,
+) -> Bool {
+  and {
+    loss_amount == 0,
+    new.total_deposited == old.total_deposited,
+    new.liqwid_positions == old.liqwid_positions,
   }
 }
 

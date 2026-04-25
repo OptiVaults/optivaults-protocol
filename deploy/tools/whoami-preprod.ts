@@ -12,7 +12,7 @@ dotenv.config({ path: "keeper/.env" });
 
 import * as net from "node:net";
 import { Lucid, paymentCredentialOf } from "@lucid-evolution/lucid";
-import { createBlockfrostProvider } from "../../../scripts/utils/blockfrostProvider.js";
+import { createBlockfrostProvider } from "../lib/blockfrostProvider.js";
 
 const SOCK = process.env.KEY_DAEMON_SOCKET || "/home/chrissoft/claude-code-docker/data/key-daemon-preprod.sock";
 const BF_KEY = process.env.BLOCKFROST_API_KEY_PREPROD;

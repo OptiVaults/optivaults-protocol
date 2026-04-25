@@ -68,7 +68,7 @@ V1 validator 集合從內部驗證期設計繼承下列架構不變量,作為 V1
 **`vault_user.ak` + `vault_keeper_hot.ak` + `vault_batcher.ak` + `vault_swap_ada.ak`:**
 - 編譯時參數:`keeper_stake_hash`(透過 `keeper_stake_script` zero-withdraw 授權——輪替時不用重部署)套在 `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada` 上;`vault_keeper_hot` 與 `vault_swap_ada` 另外加 `treasury_hash`(USDCx 費用 + ADA 換 USDCx 的收益路由到 script 地址,不是錢包 PKH)。`vault_user` 是純 permissionless 路徑(不需要 `keeper_stake_hash`)。
 - 授權模型:`vault_user` 放 Deposit + Withdraw(permissionless,使用者簽名)。`vault_keeper_hot` 放 Compound + RebalanceBuffer(keeper 授權)。`vault_batcher` 放 BatchProcess(keeper 授權,多筆 order 的 vUSDCx mint/burn 指揮)。`vault_swap_ada` 放 SwapAda(keeper 授權、ADA→USDCx swap、搭配雙源預言機,見 `spec/ada-swap.md`)。
-- Compound redeemer(放在 `vault_keeper_hot`)把費用做 **3-way 拆分**,依照 `keeper_fee_bps` + `gov_fee_bps` 分給 keeper / gov pool / treasury(上線值 2000 / 0 / 8000;上限由 UpdateFeeSplit 管——見 `spec/vault-datum.md` §2.2)。
+- Compound redeemer(放在 `vault_keeper_hot`)把費用做 **3-way 拆分**,依照 `keeper_fee_bps` + `gov_fee_bps` 分給 keeper / gov pool / treasury(上線值 4000 / 0 / 6000;上限由 UpdateFeeSplit 管——見 `spec/vault-datum.md` §2.2)。
 - 驗證費用拆分正確(rounding 不得被 skim)。
 - 驗證 Compound 時 treasury output 的 datum 被正確保留(跨 validator 對 `treasury.Receive`)。
 - 驗證 gov-pool 的 USDCx 實體金流與 `gov_share` 一致(跨 validator 對 `multisig_gov.ReceiveCompoundShare` 的 binding)。
@@ -127,7 +127,7 @@ V1 validator 集合從內部驗證期設計繼承下列架構不變量,作為 V1
 
 Fuzz 總跑量從 2,500 → 3,000(每次 build)。
 
-**跨引(測試計數度量)。** 本文件的「30 個 property × 100 iter = 3,000 fuzz runs」是**一個特定的度量**,只講 property-based fuzz 覆蓋。白皮書 §5.4 的「104 個 unit + property test / 每次 `aiken check` 跑 599 個隨機化 check」講的是**完整 Aiken 測試套件**(54 validation + 4 deregister + 8 split + 7 oracle + 12 swap + 8 property × per-iteration deterministic + 11 r72 = 104 個測試函數;「599 checks」是 `aiken check` 的 summary 行輸出,把每個確定性案例 + `aiken/fuzz` 的每次 property 呼叫都算一個 check)。兩個數字不是互相矛盾——它們描述不同層(本文聚焦在 `aiken/fuzz` 的隨機化迭代;白皮書是總計)。本文 3,000 fuzz-runs 的數字是在「每個 property 都跑滿 100 iter」的上限假設下;實務上 early-exit on first failure 代表有些 property 可能會少跑。
+**跨引(測試計數度量)。** 本文件的「30 個 property × 100 iter = 3,000 fuzz runs」是**一個特定的度量**,只講 property-based fuzz 覆蓋。白皮書 §5.4 的「144 個 unit + property test / 每次 `aiken check` 跑 639 個隨機化 check」講的是**完整 Aiken 測試套件**(「639 checks」是 `aiken check` 的 summary 行輸出,把每個確定性案例 + `aiken/fuzz` 的每次 property 呼叫都算一個 check)。兩個數字不是互相矛盾——它們描述不同層(本文聚焦在 `aiken/fuzz` 的隨機化迭代;白皮書是總計)。本文 3,000 fuzz-runs 的數字是在「每個 property 都跑滿 100 iter」的上限假設下;實務上 early-exit on first failure 代表有些 property 可能會少跑。
 
 ---
 
@@ -144,7 +144,7 @@ V1 特有的內部審計依**涵蓋區**組織,而不是用輪次編號。每個
 聚焦:`keeper_stake_script.ak` 整個 validator、透過 `multisig_gov` 的 `UpdateKeeperAuth`、每週輪替機制、保證金生命週期。出口:0 CRIT / 0 HIGH / 0 MEDIUM。
 
 **涵蓋區 C — V1 整合流程**
-聚焦:跨 validator 的流程——Compound 的 3 個 fee output(keeper + gov pool + treasury)、`UpdateKeeperAuth` 觸發 keeper_auth 狀態變化、m-of-n 下的 `TreasurySpend`、`DistributeSignerCompensation` + `ReceiveGovForfeit` 的跨 validator binding。出口:0 CRIT / 0 HIGH / 0 MEDIUM。
+聚焦:跨 validator 的流程——Compound 的 3 個 fee output(keeper + gov pool + treasury)、`UpdateKeeperAuth` 觸發 keeper_auth 狀態變化、m-of-n 下的 `TreasurySpend`、`DistributeSignerCompensation` + `ReceiveGovForfeit` 的跨 validator binding、**三層治理安全設計**(Layer 1 `vault_gov_emergency.EmergencyWithdraw` freeze-only / Layer 2 `vault_protocol.DeployToProtocol` 在 `frozen = 1` 下開放 USDCx swap-out / Layer 3 `vault_user.CommunitySunset` 90 天 permissionless dead-man-switch——見 `spec/governance.md §4.4` + `docs/security-model.md §5.4`)。出口:0 CRIT / 0 HIGH / 0 MEDIUM。
 
 **涵蓋區 D — V1 Regression**
 把所有 heritage regression test 重跑一遍 V1 validator。標記新編譯時參數帶來的任何 cascade 影響。出口:V1 重構後所有既有測試仍通過。

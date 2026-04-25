@@ -25,7 +25,7 @@ type VaultDatum {
   early_withdraw_fee_bps: Int,    // Early withdrawal fee in basis points
   min_hold_seconds: Int,          // Minimum post-Compound hold before Direct Withdraw
   buffer_target_bps: Int,         // Target buffer ratio (3500 = 35%)
-  keeper_fee_bps: Int,            // Keeper's share of performance fee, [0, 2500]
+  keeper_fee_bps: Int,            // Keeper's share of performance fee, [0, 4000]
   gov_fee_bps: Int,               // Governance signers' pool share, [0, 1000]
                                    // Treasury share is derived: 10000 - keeper_fee_bps - gov_fee_bps
 
@@ -40,14 +40,15 @@ type VaultDatum {
   registry_hash: ByteArray,       // Registry validator hash
   registry_auth_policy: ByteArray,  // Registry auth NFT policy
 
-  // --- Operational flag ---
-  frozen: Int,                    // 0 = normal operation, 1 = emergency frozen
+  // --- Operational flags ---
+  frozen: Int,                          // 0 = normal operation, 1 = emergency frozen
+  community_sunset_triggered: Int,      // 0 = normal, 1 = dead-man-switch fired (Phase 1, see governance.md §4.4.1)
 }
 ```
 
-**Total fields**: 26 (added `last_ada_swap_time` for the SwapAda redeemer — see `spec/ada-swap.md`). **Immutable** (never change after deploy): **9** (8 identity anchors + `vault_version`). **Governance-mutable** (adjustable within bounds by governance action): **6** (`performance_fee_bps`, `early_withdraw_fee_bps`, `min_hold_seconds`, `buffer_target_bps`, `keeper_fee_bps`, `gov_fee_bps`, with `strategy_allocations` also governance-settable as a separate action). **Operationally mutable** (changed per keeper/user action): the 10 accounting state fields (`total_deposited`, `total_shares`, `idle_buffer`, `non_deposit_value`, 4 time anchors, `strategy_allocations`, `liqwid_positions`) and the `frozen` flag.
+**Total fields**: 29 (= original 26 + `last_ada_swap_time` for SwapAda + `max_slippage_bps` + `min_swap_peg_bps` for §5.4 P2 + `community_sunset_triggered` for the Phase 1 dead-man-switch, see `spec/governance.md` §4.4.1). **Immutable** (never change after deploy): **9** (8 identity anchors + `vault_version`). **Governance-mutable** (adjustable within bounds by governance action): **8** (`performance_fee_bps`, `early_withdraw_fee_bps`, `min_hold_seconds`, `buffer_target_bps`, `keeper_fee_bps`, `gov_fee_bps`, `max_slippage_bps`, `min_swap_peg_bps`, with `strategy_allocations` also governance-settable as a separate action). **Operationally mutable** (changed per keeper/user action): the 10 accounting state fields (`total_deposited`, `total_shares`, `idle_buffer`, `non_deposit_value`, 4 time anchors, `strategy_allocations`, `liqwid_positions`) and the 2 operational flags (`frozen`, `community_sunset_triggered`).
 
-Count reconciliation: 9 immutable + 6 policy + 10 accounting + 1 operational = 26 ✓. Prior drafts of this spec incorrectly stated "13 immutable" — that counted the 9 true immutable fields plus 4 heritage-era fields that were moved to compile-time parameters on `vault_proxy` / `vusdcx` / `order` during the internal-verification compile-time-anchor refactor. The in-datum count is 9.
+Count reconciliation: 9 immutable + 8 policy + 10 accounting + 2 operational = 29 ✓.
 
 Two identity anchors that V1 deliberately does NOT store in the datum:
 
@@ -83,26 +84,26 @@ Moving these two anchors to compile-time parameters provides a strictly stronger
 | `early_withdraw_fee_bps` | Int | 10 (0.1%) | [0, 100] | `UpdateFee` governance action |
 | `min_hold_seconds` | Int | 60 | [0, 21600] (6 hours) — tightened from an earlier 24h cap after whitepaper review (see whitepaper §2.4 + §6.3 for rationale) | `UpdateFee` governance action |
 | `buffer_target_bps` | Int | 3500 (35%) | [0, 10000] — advisory target, not strictly enforced | `UpdateStrategy` governance action (bundled with allocation changes) |
-| `keeper_fee_bps` | Int | 2000 (20%) | [0, 2500] — 25% hard cap; combined with `gov_fee_bps` ≤ 3000 (30%) | `UpdateFeeSplit` governance action (21-day timelock) |
+| `keeper_fee_bps` | Int | 4000 (40%) | [0, 4000] — 40% hard cap; combined with `gov_fee_bps` ≤ 5000 (50%) | `UpdateFeeSplit` governance action (21-day timelock) |
 | `gov_fee_bps` | Int | 0 (disabled at launch) | [0, 1000] — 10% hard cap | `UpdateFeeSplit` governance action (21-day timelock) |
 
 The 4.5% hard cap on `performance_fee_bps` is a contract-level invariant enforced in the UpdateFee redeemer — **governance cannot raise the fee above 4.5% under any redeemer path**. This is distinct from "4.5% is the current fee": the field is mutable in [0, 450] but cannot exceed 450 bps.
 
 The 3-way performance-fee split (keeper / governance pool / treasury) is enforced at Compound time. The treasury share is not stored — it is computed as `10000 - keeper_fee_bps - gov_fee_bps`. Hard invariants verified by `vault_gov_policy.ak`'s UpdateFeeSplit redeemer (via the shared `validate_update_fee_split` helper):
 
-- `0 <= keeper_fee_bps <= 2500` (keeper ≤ 25%)
+- `0 <= keeper_fee_bps <= 4000` (keeper ≤ 40%)
 - `0 <= gov_fee_bps <= 1000` (gov pool ≤ 10%)
-- `keeper_fee_bps + gov_fee_bps <= 3000` (treasury floor ≥ 70%)
+- `keeper_fee_bps + gov_fee_bps <= 5000` (treasury floor ≥ 50%)
 
 Phase launch roadmap (governance can adjust within the caps, subject to 21-day timelock per change):
 
 | Phase | keeper_fee_bps | gov_fee_bps | Treasury | Activation conditions |
 |-------|----------------|-------------|----------|-----------------------|
-| V1 launch | 2000 (20%) | 0 (0%) | 80% | Deploy default; gov pool disabled; gov signers unpaid at launch |
-| Phase 2 | 2000 | 500 (5%) | 75% | Both: (a) TVL ≥ 500K USDCx **AND** (b) governance has executed `RotateSigners` to add at least one external (non-founder-connected) signer. Governance then executes `UpdateFeeSplit` to activate — no automatic promotion. |
-| Phase 3 | 2000 | 1000 (10%) | 70% | Both: (a) TVL ≥ 2M USDCx **AND** (b) governance has executed `RotateSigners` to seat at least one community-elected signer. Governance then executes `UpdateFeeSplit` to activate. |
+| V1 launch | 4000 (40%) | 0 (0%) | 60% | Deploy default; keeper share at validator hard cap to support open-source third-party keeper viability; gov pool disabled; gov signers unpaid at launch |
+| Phase 2 | 4000 | 500 (5%) | 55% | Both: (a) TVL ≥ 500K USDCx **AND** (b) governance has executed `RotateSigners` to add at least one external (non-founder-connected) signer. Governance then executes `UpdateFeeSplit` to activate — no automatic promotion. |
+| Phase 3 | 4000 | 1000 (10%) | 50% | Both: (a) TVL ≥ 2M USDCx **AND** (b) governance has executed `RotateSigners` to seat at least one community-elected signer. Governance then executes `UpdateFeeSplit` to activate. Treasury at 50% — the validator hard floor. |
 
-**Activation is not automatic.** Each phase transition requires an explicit governance `UpdateFeeSplit` action (with its own 21-day timelock). The TVL + signer-set preconditions are policy gates the governance applies off-chain when deciding whether to queue `UpdateFeeSplit`; they are not contract-enforced. The validator only enforces the hard caps (`keeper_fee_bps ≤ 2500`, `gov_fee_bps ≤ 1000`, `sum ≤ 3000`). A governance that queued `UpdateFeeSplit` to gov_fee_bps = 500 at TVL 100K (violating the Phase 2 TVL gate as a policy) would succeed on-chain as long as the hard caps are met — the off-chain narrative discipline is what keeps the phase model meaningful.
+**Activation is not automatic.** Each phase transition requires an explicit governance `UpdateFeeSplit` action (with its own 21-day timelock). The TVL + signer-set preconditions are policy gates the governance applies off-chain when deciding whether to queue `UpdateFeeSplit`; they are not contract-enforced. The validator only enforces the hard caps (`keeper_fee_bps ≤ 4000`, `gov_fee_bps ≤ 1000`, `sum ≤ 5000`). A governance that queued `UpdateFeeSplit` to gov_fee_bps = 500 at TVL 100K (violating the Phase 2 TVL gate as a policy) would succeed on-chain as long as the hard caps are met — the off-chain narrative discipline is what keeps the phase model meaningful.
 
 Every fee-split change is a separate `UpdateFeeSplit` governance action with full 21-day timelock and 1-of-n cancel veto. Changes apply from the next Compound onwards — already-accrued gov pool funds retain their prior treatment until distributed.
 
@@ -122,7 +123,8 @@ Every fee-split change is a separate `UpdateFeeSplit` governance action with ful
 
 | Field | Values | Effect when = 1 |
 |-------|--------|-----------------|
-| `frozen` | 0 (normal) / 1 (frozen) | Blocks Compound, BatchProcess, RebalanceBuffer, DeployToProtocol, SupplyToLiqwid, SwapAda. Does **not** block Withdraw, RecallFromLiqwid, RecallFromProtocol, MergeUtxo, AdminDeployNonDeposit, EmergencyWithdraw (fund-recovery and governance-gated cleanup operations remain open). Set to 1 via `EmergencyWithdraw` governance action. |
+| `frozen` | 0 (normal) / 1 (frozen) | Blocks Compound, Deposit, BatchProcess, RebalanceBuffer, SupplyToLiqwid, SwapAda. Also blocks the Supply path of `DeployToProtocol` (`deploy_token == deposit_token`), but the swap-out path (`deploy_token != deposit_token`) remains open under freeze (Layer 2 — see `governance.md` §4.4 + `docs/security-model.md` §5.4). Does **not** block Withdraw, RecallFromLiqwid, RecallFromProtocol, MergeUtxo, AdminDeployNonDeposit, EmergencyWithdraw (fund-recovery and governance-gated cleanup operations remain open). Set to 1 via `EmergencyWithdraw` governance action OR `CommunitySunset` (Phase 1 dead-man-switch). |
+| `community_sunset_triggered` | 0 (normal) / 1 (sunset fired) | One-way 0 → 1 flag. Set by `CommunitySunset` (`vault_user`, permissionless, ≥ 1 vUSDCx + 90-day inactivity precondition — see `governance.md` §4.4.1). Once set, opens permissionless paths in `vault_liqwid.RecallFromLiqwid` + `vault_protocol.DeployToProtocol` Layer 2 (any signer, no keeper/governance auth required). Preserved by every other redeemer; cannot be reset to 0 by any path. |
 
 ---
 

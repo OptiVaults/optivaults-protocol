@@ -30,14 +30,14 @@ Performance fee is split 3 ways, governed by `VaultDatum.keeper_fee_bps` and `Va
 
 | Phase | Trigger | Keeper | Gov pool | Treasury |
 |-------|---------|--------|----------|----------|
-| V1 launch | Deploy default | 20% | 0% (disabled) | 80% |
-| Phase 2 | TVL ≥ 500K + external signer added | 20% | 5% | 75% |
-| Phase 3 | TVL ≥ 2M + community signer added | 20% | 10% | 70% |
+| V1 launch | Deploy default | 40% | 0% (disabled) | 60% |
+| Phase 2 | TVL ≥ 500K + external signer added | 40% | 5% | 55% |
+| Phase 3 | TVL ≥ 2M + community signer added | 40% | 10% | 50% |
 
 **Hard caps** (enforced in `vault_gov_policy.ak` UpdateFeeSplit redeemer via the shared `validate_update_fee_split` helper, cannot be changed by any governance action):
-- `keeper_fee_bps <= 2500` (25%)
+- `keeper_fee_bps <= 4000` (40% — set high to support open-source third-party keeper viability under V1's public-goods positioning)
 - `gov_fee_bps <= 1000` (10%)
-- `keeper_fee_bps + gov_fee_bps <= 3000` (treasury floor ≥ 70%)
+- `keeper_fee_bps + gov_fee_bps <= 5000` (treasury floor ≥ 50%)
 
 **Each fee-split change is a separate `UpdateFeeSplit` governance TX with 21-day timelock** (§4.3 of `spec/governance.md`) — longest timelock of any action, because governance is adjusting its own pay.
 
@@ -53,13 +53,13 @@ Treasury share: split across four category buckets per `spec/treasury.md`.
 
 Performance-fee annual revenue assuming 6% gross APY and 4.5% fee rate:
 
-| TVL | Gross yield/yr | Perf fee 4.5% | Keeper 20% | Treasury 80% |
+| TVL | Gross yield/yr | Perf fee 4.5% | Keeper 40% | Treasury 60% |
 |-----|----------------|---------------|------------|--------------|
-| 100K USDCx (pre-audit cap) | 6,000 | 270 | 54 | 216 |
-| 500K USDCx | 30,000 | 1,350 | 270 | 1,080 |
-| 1M USDCx (sustainability threshold) | 60,000 | 2,700 | 540 | 2,160 |
-| 10M USDCx | 600,000 | 27,000 | 5,400 | 21,600 |
-| 100M USDCx | 6,000,000 | 270,000 | 54,000 | 216,000 |
+| 100K USDCx (pre-audit cap) | 6,000 | 270 | 108 | 162 |
+| 500K USDCx | 30,000 | 1,350 | 540 | 810 |
+| 1M USDCx (sustainability threshold) | 60,000 | 2,700 | 1,080 | 1,620 |
+| 10M USDCx | 600,000 | 27,000 | 10,800 | 16,200 |
+| 100M USDCx | 6,000,000 | 270,000 | 108,000 | 162,000 |
 
 All figures in USDCx. Numbers are illustrative reference points, not forecasts.
 
@@ -67,14 +67,14 @@ All figures in USDCx. Numbers are illustrative reference points, not forecasts.
 
 ## 3. Treasury category flow
 
-80% treasury share flows into four buckets at launch ratios (governance-adjustable within bounds):
+60% treasury share flows into four buckets at launch ratios 40/25/25/10 (governance-adjustable within bounds — sub-allocation rebalanced from the historical 30/40/20/10 to keep audit-reserve accumulation at 24% of total fee under the smaller treasury share, since the new 40% keeper direct share absorbs per-keeper infra cost that the ops bucket previously double-funded):
 
-| Category | Ratio | $/yr at 100K TVL | $/yr at 1M TVL | $/yr at 10M TVL |
-|----------|-------|-------------------|-----------------|------------------|
-| Audit reserve (30%) | 65 | 648 | 6,480 | Accumulates toward the next third-party audit invoice |
-| Operations (40%) | 86 | 864 | 8,640 | Hosted infrastructure: VPS, Blockfrost, monitoring, domains, CF Pages |
-| R&D (20%) | 43 | 432 | 4,320 | Protocol development, future bounty program (post-audit + TVL-scale, `docs/audit-scope.md §6.3`), ecosystem grants |
-| Buffer (10%) | 22 | 216 | 2,160 | Unexpected costs, legal consultation, incident response |
+| Category | Ratio | $/yr at 100K TVL | $/yr at 1M TVL | $/yr at 10M TVL | Purpose |
+|----------|-------|------------------:|----------------:|----------------:|---------|
+| Audit reserve (40%) | 65 | 648 | 6,480 | Accumulates toward the next third-party audit invoice (24% of total fee, same accumulation rate as historical 80%×30%) |
+| Operations (25%) | 41 | 405 | 4,050 | Platform-layer infrastructure: VPS (frontend/landing/API), Blockfrost (platform queries), monitoring, domains, CF Pages — per-keeper infra now funded directly via 40% keeper share, not from this bucket |
+| R&D (25%) | 41 | 405 | 4,050 | Protocol development, future bounty program (post-audit + TVL-scale, `docs/audit-scope.md §6.3`), ecosystem grants |
+| Buffer (10%) | 16 | 162 | 1,620 | Unexpected costs, legal consultation, incident response |
 
 ---
 
@@ -91,7 +91,7 @@ A minimum-viable V1 deployment requires:
 | Email / Discord / communication | $0–10/mo | Mostly free, optional paid relay for deliverability |
 | **Total** | **$30–200/mo** = **$360–2,400/yr** | Steady-state range for V1-scale operations |
 
-At the pre-audit 100K TVL cap, treasury operations bucket receives ~86 USDCx/yr (~$86). **This does not cover even the low-end operating cost estimate** — the gap (roughly $270–2,300/yr at 100K TVL) is absorbed by the protocol operator's out-of-pocket subsidy during the pre-audit phase.
+At the pre-audit 100K TVL cap, treasury operations bucket receives ~41 USDCx/yr (~$41) under the new 60%×25% allocation, while the keeper directly receives ~108 USDCx/yr from the 40% direct share. Combined keeper-related budget ~$149/yr at 100K. **This still does not cover the low-end operating cost estimate** ($360-$2,400/yr) — the gap is absorbed by the protocol operator's out-of-pocket subsidy during the pre-audit phase. E2's split shifts subsidy from "indirect via TreasurySpend reimbursement of keeper infra costs" to "direct via 40% keeper share at every Compound", removing one layer of governance friction while leaving the absolute Phase 1 shortfall unchanged.
 
 ---
 
@@ -99,13 +99,13 @@ At the pre-audit 100K TVL cap, treasury operations bucket receives ~86 USDCx/yr 
 
 ### 5.1 Revenue-vs-cost crossover
 
-Using the launch category ratios (40% of 80% = 32% of fees to operations):
+Under E2 launch sub-allocation (25% of 60% = 15% of fees to operations bucket):
 
-- **32% of `(TVL * 6% * 4.5%)` = annual ops budget**
-- Crossover (ops budget = $360/yr low-end cost): `TVL = $360 / (6% * 4.5% * 32%) ≈ $417,000`
-- Crossover (ops budget = $2,400/yr high-end cost): `TVL = $2,400 / (6% * 4.5% * 32%) ≈ $2,780,000`
+- **15% of `(TVL * 6% * 4.5%)` = annual ops budget**
+- Crossover (ops budget = $360/yr low-end cost): `TVL = $360 / (6% * 4.5% * 15%) ≈ $889,000`
+- Crossover (ops budget = $2,400/yr high-end cost): `TVL = $2,400 / (6% * 4.5% * 15%) ≈ $5.93M`
 
-So the "operations bucket alone covers basic infrastructure" threshold is approximately **USD 500K TVL** for minimum viability, **USD 2.5M TVL** for comfortable margin.
+The "operations bucket alone covers basic infrastructure" threshold is approximately **USD 900K TVL** for minimum viability, **USD 6M TVL** for comfortable margin under E2 — pushed back ~2× from the pre-E2 numbers because ops bucket shrunk from 32% to 15% of fee. **The shift is offset by the 40% keeper direct share absorbing per-keeper infra cost directly** (combined keeper-related budget actually slightly increased, from 52% of fee to 55% of fee). Platform-layer ops (frontend, landing, API server, treasury monitoring) is what the smaller ops bucket needs to cover — individual keeper VPS / Blockfrost / monitoring is funded by the keeper's own 40% share.
 
 Below this, V1 operates in a **bootstrapping phase** where running costs exceed treasury inflow. Initial shortfalls are absorbed by the project's founding capital. Above the crossover, OptiVaults' own revenue funds the baseline protocol operation, and higher TVL incrementally funds audit reserve + R&D + buffer categories.
 
@@ -142,16 +142,16 @@ Audit timeline (Q2-Q3 2027 target — see `audit-scope.md §5`) is set explicitl
 
 ### 5.3 Keeper share viability
 
-Keeper share is 20% of performance fee; per-year = `TVL × gross_APY × 0.009`. The table below assumes 6% current reference blended APY + a **3-keeper rotation** each taking ⅓ of keeper pool + $360/yr VPS-amortised infrastructure cost per keeper:
+Keeper share is 40% of performance fee at V1 launch; per-year = `TVL × gross_APY × 0.018`. The table below assumes 6% current reference blended APY + a **3-keeper rotation** each taking ⅓ of keeper pool + $360/yr VPS-amortised infrastructure cost per keeper:
 
 | TVL | Keeper pool/yr | Per keeper (3 active) | Net of $360/yr VPS cost |
 |-----|-----------------|------------------------|--------------------------|
-| 100K | 54 | 18 | −342 (loss) |
-| 500K | 270 | 90 | −270 (loss) |
-| 1M | 540 | 180 | −180 (loss) |
-| 5M | 2,700 | 900 | +540 (modest profit) |
-| 10M | 5,400 | 1,800 | +1,440 (economically viable) |
-| 100M | 54,000 | 18,000 | +17,640 (economically attractive) |
+| 100K | 108 | 36 | −324 (loss) |
+| 500K | 540 | 180 | −180 (loss) |
+| 1M | 1,080 | 360 | 0 (break-even) |
+| 5M | 5,400 | 1,800 | +1,440 (economically viable) |
+| 10M | 10,800 | 3,600 | +3,240 (attractive) |
+| 100M | 108,000 | 36,000 | +35,640 (highly attractive) |
 
 **Reading**: in the 3-keeper rotation configuration above, third-party keepers become economically viable at approximately **USD 5–10M TVL**. Below that, keepers run at a loss unless they're amortizing infrastructure across multiple protocols (e.g., already running batchers/keepers for other Cardano DeFi products).
 
@@ -315,13 +315,13 @@ Each Compound / MergeUtxo / BatchProcess / Supply / Recall TX routes `keeper_fee
 
 Additional per-TX cost from the A-Plain authorization pattern (keeper_auth UTXO spend on every keeper TX): approximately $292/yr at 8 TX/day steady state. Budgeted as keeper operating overhead.
 
-| TVL | Gross keeper fee 20% | Standard ops + A-Plain cost | Net |
+| TVL | Gross keeper fee 40% | Standard ops + A-Plain cost | Net |
 |-----|----------------------|-----------------------------|-----|
-| 100K | $54 | $1,552 | **-$1,498** (founding-capital subsidy absorbs gap) |
-| 500K | $270 | $1,552 | -$1,282 |
-| 1M | $540 | $1,588 | **-$1,048** (still below break-even) |
-| 5M | $2,700 | $1,734 | **+$966** |
-| 10M | $5,400 | $1,810 | **+$3,590** |
+| 100K | $108 | $1,552 | **-$1,444** (founding-capital subsidy absorbs gap) |
+| 500K | $540 | $1,552 | -$1,012 |
+| 1M | $1,080 | $1,588 | **-$508** (still below break-even, but ~half the prior gap at 20%) |
+| 5M | $5,400 | $1,734 | **+$3,666** |
+| 10M | $10,800 | $1,810 | **+$8,990** |
 | 25M | $13,500 | $2,078 | **+$11,422** |
 
 **Break-even TVL**: approximately USD 3–4M for standard-tier keeper economics. Below that, keepers operate at a loss; non-founder operators are not economically viable. Phase 4 `PermissionlessWithBond` activation is gated on TVL reaching this threshold.
@@ -397,7 +397,7 @@ For an average deposit holding 12+ months, network + swap frictions are typicall
 - You deposit USDCx. The vault gives you vUSDCx shares.
 - Yield accrues via auto-compounding; no action needed.
 - Fees you pay: **none on deposits, 0.1% on direct withdrawals**, 4.5% of harvested yield (never your principal).
-- Fees the keeper earns: **20% of the 4.5% harvest fee** (≈ 0.9% of yield). The other 80% (3.6% of yield) goes to on-chain treasury with category-bucketed spend rules.
+- Fees the keeper earns: **40% of the 4.5% harvest fee** at V1 launch (≈ 1.8% of yield, set high to support open-source third-party keeper viability). The other 60% (2.7% of yield) goes to on-chain treasury with category-bucketed spend rules.
 - **V1 launches in a bootstrapping phase** — at 100K TVL, revenue does not fully cover operating costs. V1 has three self-sustain tiers (§5.3): (a) founder-keeper marginal ops break even at $185K–$555K TVL (current APY) / $555K–$1.67M (pessimistic APY); (b) non-founder professional keeper at $740K–$1.48M / $2.22M–$4.44M; (c) institutional ops + audit-reserve accrual at $20M+ / $50M+. V1's actual target is tier (a)/(b); tier (c) is deliberately NOT a target — audit funding comes from §5.1 four-source stack (Catalyst + public-goods rate + scope reduction + founder self-fund), not from treasury accrual. Initial Phase 1 shortfalls are absorbed by the project's founding capital; if growth stalls below tier (a), §7.2 sunset protocol engages.
 - **Your principal is never trapped** — Withdraw is always available on-chain regardless of keeper state, hosted infrastructure availability, or founder status.
 

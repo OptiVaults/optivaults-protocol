@@ -179,6 +179,7 @@ validator vault_swap_ada(
             new_datum.strategy_allocations == old_datum.strategy_allocations,
             new_datum.liqwid_positions == old_datum.liqwid_positions,
             new_datum.frozen == old_datum.frozen,
+            new_datum.community_sunset_triggered == old_datum.community_sunset_triggered,
             new_datum.performance_fee_bps == old_datum.performance_fee_bps,
             new_datum.early_withdraw_fee_bps == old_datum.early_withdraw_fee_bps,
             new_datum.min_hold_seconds == old_datum.min_hold_seconds,

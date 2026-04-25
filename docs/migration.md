@@ -16,7 +16,7 @@ V1 introduces several structural changes that cannot be expressed as a datum upg
 - **Heritage-era datum fields removed** — prior internal-verification versions carried `keeper_pkh` (authorization PKH) and `fee_collector` (USDCx recipient wallet) directly in `VaultDatum`. V1 replaces both:
   - `keeper_pkh` → `keeper_stake_hash` compile-time anchor on `vault_user` / `vault_keeper_hot` / `vault_protocol` / `vault_recall` / `vault_liqwid`; the actual authorized PKH set lives in the stake-script's own datum (governance-mutable via `UpdateKeeperAuth`, rotation without vault redeploy).
   - `fee_collector` → `treasury_hash` compile-time anchor on `vault_keeper_hot` (post-Phase-77 home of Compound; Compound's treasury share routes to the script address, not a wallet PKH).
-- **Changed fee split** (100% to one wallet → 3-way split: 20% keeper / 0% gov pool at launch / 80% treasury) requires the new treasury UTXO and multisig_gov UTXO to exist at Compound time.
+- **Changed fee split** (100% to one wallet → 3-way split: 40% keeper / 0% gov pool at launch / 60% treasury — keeper share at validator hard cap to support open-source third-party keeper viability) requires the new treasury UTXO and multisig_gov UTXO to exist at Compound time.
 - **New compile-time parameters** on nearly every validator — every validator hash changes.
 
 Because validator hashes change, script addresses change, and no existing UTXO can be spent by the new validators. The only safe path is:
@@ -39,6 +39,14 @@ Old vault is frozen (`frozen = 1`) via governance. Deposits disabled. Withdrawal
 **Phase C — Old Vault Residual**
 
 Any remaining UTXOs in the old vault continue to accrue passive Liqwid yield until their depositor withdraws. Operator commits to keeper coverage of the old vault for at least 12 months after Phase B.
+
+**V1 protections gained on migration (informational).** Once a depositor migrates from the internal-verification vault into V1, three structural protections that do not exist on the old vault take effect automatically:
+
+1. **Layer 1 — EmergencyWithdraw freeze-only**: V1 governance cannot write loss directly into `total_deposited` via EmergencyWithdraw. All loss accounting flows through physical `vault_liqwid.RecallFromLiqwid` (governance fallback path), so a compromised gov key cannot brick share price by datum mutation alone.
+2. **Layer 2 — Frozen-state USDCx swap-out**: under `frozen = 1`, the keeper (or governance, in fallback) can still swap NDV stables (DJED / USDM) back to USDCx via the SwapAdapter whitelist, so depositors can withdraw 1:1 USDCx during emergency rather than receiving mixed-asset payouts.
+3. **Layer 3 — CommunitySunset 90-day dead-man-switch**: `vault_user.CommunitySunset` is a permissionless redeemer any vUSDCx holder can trigger if the vault has been inactive for 90 days. It atomically sets `frozen = 1` + opens `RecallFromLiqwid` and `DeployToProtocol` to permissionless callers, allowing any depositor to drive the full Recall → swap → Withdraw chain without operator or governance involvement.
+
+These three layers bound depositor loss under single-signer governance failure and remove the 90-day-after-keeper-failure tail risk that the old internal-verification vault carried. Full design + 6-scenario threat walkthrough: `docs/security-model.md §5.4`.
 
 ---
 

@@ -309,9 +309,9 @@ export function loadConfig(
       `minHoldSeconds ${cfg.vaultInitialParams.minHoldSeconds} > 21600 (6h hard cap, per V1 internal audit tightening)`,
     );
   }
-  if (cfg.vaultInitialParams.keeperFeeBps > 2500) {
+  if (cfg.vaultInitialParams.keeperFeeBps > 4000) {
     throw new Error(
-      `keeperFeeBps ${cfg.vaultInitialParams.keeperFeeBps} > 2500 (25% hard cap)`,
+      `keeperFeeBps ${cfg.vaultInitialParams.keeperFeeBps} > 4000 (40% hard cap)`,
     );
   }
   if (cfg.vaultInitialParams.govFeeBps > 1000) {
@@ -320,10 +320,10 @@ export function loadConfig(
     );
   }
   if (
-    cfg.vaultInitialParams.keeperFeeBps + cfg.vaultInitialParams.govFeeBps > 3000
+    cfg.vaultInitialParams.keeperFeeBps + cfg.vaultInitialParams.govFeeBps > 5000
   ) {
     throw new Error(
-      `keeperFeeBps + govFeeBps > 3000 (treasury floor 70% hard cap)`,
+      `keeperFeeBps + govFeeBps > 5000 (treasury floor 50% hard cap)`,
     );
   }
   if (cfg.vaultInitialParams.seedLovelace < 10000000) {

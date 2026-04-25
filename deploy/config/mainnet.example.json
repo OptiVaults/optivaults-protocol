@@ -32,25 +32,25 @@
     "earlyWithdrawFeeBps": 10,
     "minHoldSeconds": 60,
     "bufferTargetBps": 3500,
-    "keeperFeeBps": 2000,
+    "keeperFeeBps": 4000,
     "govFeeBps": 0,
     "maxSlippageBps": 200,
     "minSwapPegBps": 9900,
     "vaultVersion": 1,
     "seedLovelace": 15000000,
-    "comment": "Mainnet launch uses the same params as Preprod \u2014 4.5% perf fee, 60s min_hold, 20/0/80 fee split, 15 ADA seed. These are the validator-enforced hard-cap ceilings (perf 450, hold 21600 = 6h, keeper+gov 3000). Policy changes post-deploy go through governance timelocks."
+    "comment": "Mainnet launch uses the same params as Preprod \u2014 4.5% perf fee, 60s min_hold, 40/0/60 fee split, 15 ADA seed. Validator-enforced hard caps: perf 450 bps (4.5%), min_hold 21600 s (6h), keeper 4000 bps (40%), gov 1000 bps (10%), keeper+gov 5000 bps (treasury floor 50%). Policy changes post-deploy go through governance timelocks."
   },
   "treasuryInitialParams": {
-    "auditBps": 3000,
-    "opsBps": 4000,
-    "rdBps": 2000,
+    "auditBps": 4000,
+    "opsBps": 2500,
+    "rdBps": 2500,
     "bufferBps": 1000,
     "monthlyCapAudit": 500000000,
     "monthlyCapOps": 500000000,
     "monthlyCapRd": 500000000,
     "monthlyCapBuffer": 500000000,
     "minAuditReserve": 0,
-    "comment": "Launch defaults per economics.md \u00a74.2. min_audit_reserve=0 at launch (non-binding). Future UpdateParams may raise min_audit_reserve as audit-reserve balance grows \u2014 this value is immutable downward."
+    "comment": "Launch defaults per economics.md \u00a74.2. 40/25/25/10 split bumps audit to 40% so audit reserve accumulation rate stays at 24% of total fee under the new 40% keeper share. min_audit_reserve=0 at launch (non-binding). Future UpdateParams may raise min_audit_reserve as audit-reserve balance grows \u2014 this value is immutable downward."
   },
   "keeperAuthInitialParams": {
     "registrationMode": "GovernanceOnly",

@@ -38,7 +38,7 @@ V1 在 Cardano 上以四個不同 UTxO 類別維護狀態。每個類別在任�
 - 尚未部署到收益來源的閒置 USDCx(「buffer」)
 - 金庫地址上介於 swap 與 Liqwid supply 之間暫存的非存入穩定幣部位(DJED / USDM)
 - Liqwid 部位的 qToken 收據
-- 會計 datum(`VaultDatum`,26 個欄位——見 `spec/vault-datum.md`)
+- 會計 datum(`VaultDatum`,29 個欄位——見 `spec/vault-datum.md`)
 - 小量 ADA 餘額,覆蓋 min-UTXO 需求與 DEX order 資金
 
 Vault NFT 提供**編譯時信任錨點**:`vault_proxy`、`vusdcx`、`order` 三個 validator 都把 Vault NFT 的 minting policy 燒進自己的 script hash。在 `vault_proxy` 地址但**沒有** Vault NFT 的 UTxO,**不是**合法 vault、也不可能被任何 validator 誤認。
@@ -119,7 +119,7 @@ V1 出廠時帶 **17 個 logic validator + 4 個 NFT mint policy + 1 個 DEX ada
 | # | Validator | 角色 | 授權模型 |
 |---|-----------|------|---------|
 | 1 | `vault_proxy` | 持有 vault UTxO 的薄 spending validator;透過 zero-withdraw forward 邏輯到 staking validator | 編譯時參數化:(user、keeper_hot、swap_ada、protocol、recall、liqwid、gov_policy、gov_emergency、admin_deploy、batcher 的 stake_hashes + vault_nft_policy)——11 params、10 routes |
-| 2 | `vault_user` | Staking validator:Deposit、Withdraw、BatchProcess——使用者路徑 + vUSDCx mint/burn 指揮 | 編譯時參數化:(keeper_stake_hash、governance_nft_policy、governance_nft_name);Deposit/Withdraw permissionless,BatchProcess 透過 keeper_stake_script zero-withdraw 做 keeper 授權;`publish` handler 由 ActDeregisterStake(A2)閘控 |
+| 2 | `vault_user` | Staking validator:Deposit、Withdraw、CommunitySunset——permissionless 使用者路徑(BatchProcess 在 Phase 77d 切到 `vault_batcher`)。CommunitySunset 是 Phase 1 dead-man-switch;見 `governance.md` §4.4.1。 | 編譯時參數化:(governance_nft_policy、governance_nft_name)——`keeper_stake_hash` 不再需要,因為三個 redeemer 都是 permissionless。CommunitySunset 由任何 vUSDCx 持有者觸發,前提是 `max(last_compound_time, last_realloc_time) + 90d ≤ now`。`publish` handler 由 ActDeregisterStake(A2)閘控。 |
 | 3 | `vault_keeper_hot` | Staking validator:Compound、RebalanceBuffer、SwapAda——keeper 熱路徑 | 編譯時參數化:(keeper_stake_hash、treasury_hash、governance_nft_policy、governance_nft_name);三個 redeemer 全走 keeper_stake_script zero-withdraw keeper 授權;`publish` handler 由 ActDeregisterStake(A2)閘控 |
 | 4 | `vault_protocol` | Staking validator:DeployToProtocol(DEX,透過 SwapAdapter 分派) | 編譯時參數化:(keeper_stake_hash、governance_nft_policy、governance_nft_name);僅 keeper 授權;`verify_swap_via_adapter`(來自 `lib/vault/swap_adapter.ak`)整合 adapter 呼叫 + Tier 2 peg-floor + 選用 Tier 1 oracle bound;`publish` handler 由 A2 閘控 |
 | 5 | `vault_recall` | Staking validator:RecallFromProtocol、MergeUtxo | 編譯時參數化:(keeper_stake_hash、governance_nft_policy、governance_nft_name);keeper-with-fallback(keeper 停擺 7 天後治理介入);`publish` handler 由 A2 閘控 |
@@ -223,13 +223,13 @@ Batch 中的 order 按 **pre-batch snapshot** 定價(TX 開始時的 `total_depo
 
 ### 5.9 Keeper:Compound
 
-Keeper 觸發收益收割:vault 當下的 `idle_buffer + non_deposit_value - total_deposited` 換算為鏈上收益,其中 4.5%(或更低、依治理設定)抽為績效費,再拆成 20% 給執行 keeper + 80% 給 treasury。
+Keeper 觸發收益收割:vault 當下的 `idle_buffer + non_deposit_value - total_deposited` 換算為鏈上收益,其中 4.5%(或更低、依治理設定)抽為績效費,V1 啟動時拆成 40% 給執行 keeper + 60% 給 treasury(keeper 份額在 validator 硬上限以支持開源第三方 keeper 經濟可行性)。
 
 - **Spend**:vault UTxO、treasury UTxO、keeper_stake_script zero-withdraw
 - **Output**:
   - 新 vault UTxO(`total_deposited += net_yield`、`idle_buffer` 反映重分配)
   - 新 treasury UTxO(協議份額依當下比例拆進四個類別桶)
-  - USDCx 轉到 keeper 地址(perf_fee 的 20%)
+  - USDCx 轉到 keeper 地址(perf_fee 的 40%)
 - **授權**:keeper stake script 的 withdrawal
 - **Cooldown**:compound 之間最少 1 小時;validity range 寬度 ≤ 1 小時,防 timestamp 操弄
 - **Zero-yield 模式**:若 `on_chain_yield == 0`,Compound 以 allocation-only 模式執行(無 perf_fee、無 keeper 份、無 treasury inflow);用來在沒有真實收益時推進 `last_compound_time`

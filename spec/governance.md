@@ -212,9 +212,9 @@ Governance cannot raise these caps — they are protocol constants in `lib/vault
 **Scope:** `keeper_fee_bps`, `gov_fee_bps`. Treasury share is derived as `10000 - keeper_fee_bps - gov_fee_bps` and not stored.
 
 **Hard caps (enforced at validator level):**
-- `keeper_fee_bps <= 2500` (25% ceiling)
+- `keeper_fee_bps <= 4000` (40% ceiling — set high to support open-source third-party keeper viability under V1's public-goods positioning)
 - `gov_fee_bps <= 1000` (10% ceiling)
-- `keeper_fee_bps + gov_fee_bps <= 3000` (treasury floor ≥ 70%)
+- `keeper_fee_bps + gov_fee_bps <= 5000` (treasury floor ≥ 50%)
 
 **Timelock:** 21 days (**longest timelock of any governance action**, because governance is adjusting its own compensation).
 
@@ -226,20 +226,44 @@ Governance cannot raise these caps — they are protocol constants in `lib/vault
 **Public disclosure obligation:** signers must publicly announce the proposed new split, rationale, and expected TVL impact within 1 hour of queuing. Failure to disclose is grounds for public trust re-evaluation (not contract-enforced).
 
 **Phase roadmap (indicative, each step requires its own UpdateFeeSplit TX):**
-- Phase 1 (launch): `keeper 2000 / gov 0 / treasury 8000` — gov pool disabled at launch
-- Phase 2 (TVL ≥ 500K + external signer added via RotateSigners): `keeper 2000 / gov 500 / treasury 7500`
-- Phase 3 (TVL ≥ 2M + community signer added): `keeper 2000 / gov 1000 / treasury 7000`
+- Phase 1 (launch): `keeper 4000 / gov 0 / treasury 6000` — keeper at validator hard cap, gov pool disabled at launch
+- Phase 2 (TVL ≥ 500K + external signer added via RotateSigners): `keeper 4000 / gov 500 / treasury 5500`
+- Phase 3 (TVL ≥ 2M + community signer added): `keeper 4000 / gov 1000 / treasury 5000` — treasury at validator hard floor
 
 ### 4.4 EmergencyWithdraw
 
-**Purpose:** Escape hatch when Liqwid returns bad-debt or a protocol suffers catastrophic loss. Allows governance to remove qTokens from `liqwid_positions` even if `qtoken_delta * rate < supplied_value` (normal recall path rejects this).
+**Purpose:** Atomically halt productive operations (`frozen = 1`) when governance observes a catastrophic protocol condition (sustained depeg, Liqwid bad-debt, or other emergency requiring an immediate stop).
 
 **Preconditions:**
-- Threshold signatures
-- `target_script == vault_protocol_hash`
-- Redeemer includes `loss_amount >= 0` which is absorbed into `non_deposit_value` accounting
+- Threshold signatures (m-of-n)
+- `target_script == vault_gov_emergency_hash`
+- Redeemer carries `loss_amount` and `freeze_flag` in the payload-hash binding, but `loss_amount` is **constrained to 0** by the validator (see "Layer 1 — freeze-only" below)
 
-**Invariant relaxation:** EmergencyWithdraw is the **only** redeemer that may violate `alloc_sum + idle_buffer <= total_deposited` temporarily. It is the explicit escape hatch documented in the threat model.
+**Layer 1 — freeze-only (Phase 1 governance safety, 2026-04-25):** the validator enforces `valid_deposited` as `total_deposited` unchanged + `liqwid_positions` unchanged + `loss_amount == 0`. The redeemer **cannot** drop `total_deposited` or remove positions from datum. All real loss accounting happens in `vault_liqwid.RecallFromLiqwid`'s gov-fallback path which physically Recalls underlying USDCx and writes off only the actually-realized loss (`supplied_value − underlying_received`). This eliminates the griefing surface where a single-actor governance could drop `share_price` to zero by writing off positions from datum without the corresponding fund movement (qToken-orphan vector closed at validator level).
+
+**Composes with Layer 2 (`vault_protocol.DeployToProtocol`):** under `frozen = 1`, the keeper can still drive a swap-out (`deploy_token != deposit_token`) via the registry-whitelisted SwapAdapter. This lets honest keepers convert NDV stable tokens (DJED / USDM) back to USDCx during an emergency freeze so user `Withdraw` can pay out the full proportional share.
+
+### 4.4.1 CommunitySunset (vault_user, not governance)
+
+**Purpose:** Phase 1 dead-man-switch. Permits any vUSDCx holder to break the operational deadlock when the keeper + governance have both failed for ≥ 90 days.
+
+**Authorization:** permissionless — caller must hold ≥ 1 vUSDCx in some TX input.
+
+**Preconditions:**
+- `vault_input_count == 1`
+- `max(old.last_compound_time, old.last_realloc_time) + 90 days ≤ tx.validity_range.lower_bound`
+- `old.last_compound_time > 1_700_000_000_000` (sanity: protect against unset/zero timestamps)
+- `old.community_sunset_triggered == 0`
+
+**Effect:** `frozen = 1` and `community_sunset_triggered = 1` (one-way irreversible). All other fields preserved (`total_deposited`, `total_shares`, `idle_buffer`, `liqwid_positions`, every policy field, every immutable field).
+
+**Composes with the recovery validators:**
+- `vault_liqwid.RecallFromLiqwid` accepts any signer when `community_sunset_triggered == 1` (skips the keeper-active / 7-day-keeper-inactive gate). Loss-aware partial recall path applies same as the gov-fallback branch.
+- `vault_protocol.DeployToProtocol` Layer 2 path accepts any signer when `community_sunset_triggered == 1` (skips the keeper signature requirement). SwapAdapter destination + peg-floor + slippage caps still apply.
+
+After triggering, any vUSDCx holder can drive Recall → Swap → Withdraw without any keeper or governance intervention. The redeemer **only opens recovery paths** — it cannot mutate any value-bearing field; attackers cannot use it to drain or brick the vault.
+
+**Out-of-scope:** does NOT recover the ~870 ADA in reference-script lockup (founder's deploy wallet) nor the ~24 ADA in stake-credential deposits (gov-only A2 ActDeregisterStake). These accept their own residual loss as part of single-actor governance cost.
 
 ### 4.5 AdminDeployNonDeposit
 

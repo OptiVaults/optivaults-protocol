@@ -212,9 +212,9 @@ type StrategyPayload {
 **範圍**:`keeper_fee_bps`、`gov_fee_bps`。Treasury 份額為 `10000 - keeper_fee_bps - gov_fee_bps`,**不存**。
 
 **硬上限(validator 層強制)**:
-- `keeper_fee_bps <= 2500`(25% 上限)
+- `keeper_fee_bps <= 4000`(40% 上限——設高以支持公共財定位下的開源第三方 keeper 經濟可行性)
 - `gov_fee_bps <= 1000`(10% 上限)
-- `keeper_fee_bps + gov_fee_bps <= 3000`(treasury 下限 ≥ 70%)
+- `keeper_fee_bps + gov_fee_bps <= 5000`(treasury 下限 ≥ 50%)
 
 **Timelock**:21 天(**所有治理動作中最長的 timelock**,因為治理在調整自己的報酬)。
 
@@ -226,20 +226,44 @@ type StrategyPayload {
 **公開揭露義務**:簽名者必須在 queue 後 1 小時內公開宣布提議的新拆分、理由、預期 TVL 影響。**未揭露是公開信任重評的理由**(非合約強制)。
 
 **階段路線(示意;每一步都需要自己的 UpdateFeeSplit TX)**:
-- Phase 1(啟動):`keeper 2000 / gov 0 / treasury 8000`——gov pool 啟動時停用
-- Phase 2(TVL ≥ 500K + 透過 RotateSigners 加入外部簽名者):`keeper 2000 / gov 500 / treasury 7500`
-- Phase 3(TVL ≥ 2M + 加入社群簽名者):`keeper 2000 / gov 1000 / treasury 7000`
+- Phase 1(啟動):`keeper 4000 / gov 0 / treasury 6000`——keeper 在 validator 硬上限,gov pool 啟動時停用
+- Phase 2(TVL ≥ 500K + 透過 RotateSigners 加入外部簽名者):`keeper 4000 / gov 500 / treasury 5500`
+- Phase 3(TVL ≥ 2M + 加入社群簽名者):`keeper 4000 / gov 1000 / treasury 5000`——treasury 在 validator 硬下限
 
 ### 4.4 EmergencyWithdraw
 
-**用途**:Liqwid 發生壞帳或協議遭遇災難損失時的**逃生閥**。允許治理把 qToken 從 `liqwid_positions` 移除,即使 `qtoken_delta * rate < supplied_value`(normal recall 路徑會拒絕)。
+**用途**:當治理察覺嚴重的協議級事件(持續 depeg、Liqwid 壞帳,或其他需要立即停下的緊急狀況)時,**原子性地停掉所有生產性操作**(`frozen = 1`)。
 
 **前置條件**:
-- 門檻簽名
-- `target_script == vault_protocol_hash`
-- Redeemer 含 `loss_amount >= 0`,會吸收進 `non_deposit_value` 會計
+- 門檻簽名(m-of-n)
+- `target_script == vault_gov_emergency_hash`
+- Redeemer 攜帶 `loss_amount` + `freeze_flag`(都進 payload-hash 綁定),但 `loss_amount` 在 validator 層被**強制為 0**(見下方「Layer 1 — freeze-only」)
 
-**不變量鬆弛**:EmergencyWithdraw 是**唯一**可以**暫時**違反 `alloc_sum + idle_buffer <= total_deposited` 的 redeemer。這是威脅模型中明確文件化的逃生閥。
+**Layer 1 — freeze-only(Phase 1 治理安全,2026-04-25)**:validator 把 `valid_deposited` 改為要求 `total_deposited` 不變 + `liqwid_positions` 不變 + `loss_amount == 0`。Redeemer **不能**降低 `total_deposited`,也不能從 datum 移除部位。所有真實損失帳務改走 `vault_liqwid.RecallFromLiqwid` 的治理 fallback 路徑——透過實體 Recall underlying USDCx 並只寫入實際實現的損失(`supplied_value − underlying_received`)。這封閉了單一簽名者治理在金鑰失陷時可以「只動 datum 把部位寫掉造成 share_price 歸零」的 grief 攻擊面(qToken-orphan 向量在 validator 層被根除)。
+
+**與 Layer 2(`vault_protocol.DeployToProtocol`)組合**:在 `frozen = 1` 下,keeper 仍可透過 SwapAdapter 驅動 swap-out(`deploy_token != deposit_token`)。讓誠實 keeper 在緊急 freeze 期間仍能把 NDV stable token(DJED / USDM)換回 USDCx,使用戶 `Withdraw` 能完整支付按比例的份額。
+
+### 4.4.1 CommunitySunset(vault_user,非治理)
+
+**用途**:Phase 1 dead-man-switch。允許任何 vUSDCx 持有者在 keeper + 治理已連續失能 ≥ 90 天時打破運營死局。
+
+**授權**:permissionless——呼叫者必須在 TX 某個 input 中持有 ≥ 1 vUSDCx。
+
+**前置條件**:
+- `vault_input_count == 1`
+- `max(old.last_compound_time, old.last_realloc_time) + 90 days ≤ tx.validity_range.lower_bound`
+- `old.last_compound_time > 1_700_000_000_000`(防護:防止未設置 / 為 0 的時間戳被誤觸發)
+- `old.community_sunset_triggered == 0`
+
+**效果**:`frozen = 1` + `community_sunset_triggered = 1`(單向不可逆)。其他所有欄位完整保留(`total_deposited`、`total_shares`、`idle_buffer`、`liqwid_positions`、所有 policy 欄位、所有 immutable 欄位)。
+
+**與回收 validator 組合**:
+- `vault_liqwid.RecallFromLiqwid` 在 `community_sunset_triggered == 1` 時接受任何簽名者(跳過 keeper-active / 7-day-keeper-inactive gate)。Loss-aware partial recall 路徑與治理 fallback 分支相同。
+- `vault_protocol.DeployToProtocol` Layer 2 路徑在 `community_sunset_triggered == 1` 時接受任何簽名者(跳過 keeper 簽名要求)。SwapAdapter 目的地 + peg_floor + slippage cap 仍套用。
+
+觸發後,任何 vUSDCx 持有者都能驅動 Recall → Swap → Withdraw,完全不需要 keeper 或治理介入。Redeemer **只開回收路徑**——它不能修改任何含值欄位;攻擊者無法用它把 vault drain 或 brick 掉。
+
+**範圍外**:**不**回收 ~870 ADA 的 reference-script 鎖定(在創辦人部署錢包),也**不**回收 ~24 ADA 的 stake-credential 押金(只能透過治理 A2 ActDeregisterStake)。這兩部分作為單一簽名者治理的殘留成本被接受。
 
 ### 4.5 AdminDeployNonDeposit
 

@@ -32,7 +32,7 @@ use vault/types.{ActDeregisterStake, DeployToProtocol, VaultRedeemer}
 use vault/validation.{
   check_immutable_fields, check_policy_fields_unchanged,
   has_no_order_inputs as val_has_no_order_inputs, require_keeper_stake_script,
-  validate_allocations,
+  validate_allocations, validate_deploy_frozen_gate,
 }
 
 validator vault_protocol(
@@ -53,8 +53,32 @@ validator vault_protocol(
       // ══════════════════════════════════════════════════════
       DeployToProtocol { deploy_amount, new_allocations, deploy_token_policy, deploy_token_name, dest_output_idx } -> {
         expect vault_input_count == 1
-        expect old_datum.frozen == 0
-        let keeper_authorized = require_keeper_stake_script(tx, keeper_stake_hash)
+        // Phase 1 governance safety — Layer 2 (2026-04-25): freeze gate
+        // permits swap-out (deploy_token != deposit_token) under
+        // frozen=1 so keeper can drain NDV stable → USDCx for user
+        // withdraw even during emergency freeze. See
+        // `validate_deploy_frozen_gate` in lib/vault/validation.ak for
+        // attack-surface analysis + protection bounds. Supply-to-Liqwid
+        // (deploy_token == deposit_token) remains blocked under freeze.
+        expect
+          validate_deploy_frozen_gate(
+            old_datum.frozen,
+            deploy_token_policy,
+            deploy_token_name,
+            old_datum.deposit_token_policy,
+            old_datum.deposit_token_name,
+          )
+        // Phase 1 governance safety — Layer 3 (2026-04-25): under
+        // CommunitySunset, the keeper authorization is bypassed so any
+        // vUSDCx holder can drive a swap-out via SwapAdapter (combined
+        // with the Layer 2 frozen-gate exception above). The
+        // SwapAdapter validator still enforces destination=vault +
+        // peg_floor, so the sunset bypass only relaxes who can
+        // *initiate* the swap, not where the resulting USDCx lands.
+        let keeper_authorized = or {
+            require_keeper_stake_script(tx, keeper_stake_hash),
+            old_datum.community_sunset_triggered == 1,
+          }
         let (cont_output, new_datum) =
           get_continuing_datum(tx.outputs, proxy_hash, own_input.output)
 

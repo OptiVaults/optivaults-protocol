@@ -30,14 +30,14 @@
 
 | 階段 | 觸發條件 | Keeper | Gov pool | Treasury |
 |------|---------|--------|----------|----------|
-| V1 啟動 | 部署預設 | 20% | 0%(停用) | 80% |
-| Phase 2 | TVL ≥ 500K + 加入外部簽名者 | 20% | 5% | 75% |
-| Phase 3 | TVL ≥ 2M + 加入社群簽名者 | 20% | 10% | 70% |
+| V1 啟動 | 部署預設 | 40% | 0%(停用) | 60% |
+| Phase 2 | TVL ≥ 500K + 加入外部簽名者 | 40% | 5% | 55% |
+| Phase 3 | TVL ≥ 2M + 加入社群簽名者 | 40% | 10% | 50% |
 
 **硬上限**(在 `vault_gov_policy.ak` 的 UpdateFeeSplit redeemer,透過共用的 `validate_update_fee_split` helper 強制,任何治理動作都無法突破):
-- `keeper_fee_bps <= 2500`(25%)
+- `keeper_fee_bps <= 4000`(40%——設高以支持公共財定位下的開源第三方 keeper 經濟可行性)
 - `gov_fee_bps <= 1000`(10%)
-- `keeper_fee_bps + gov_fee_bps <= 3000`(treasury 下限 ≥ 70%)
+- `keeper_fee_bps + gov_fee_bps <= 5000`(treasury 下限 ≥ 50%)
 
 **每一次 fee-split 變更都是獨立的 `UpdateFeeSplit` 治理 TX,套 21 天 timelock**(`spec/governance.md` §4.3)——所有 action 中最長的 timelock,因為治理在調整自己的報酬。
 
@@ -53,13 +53,13 @@ Treasury 份額:依 `spec/treasury.md` 分進四個類別桶。
 
 績效費年度收入(假設 gross APY 6%、費率 4.5%):
 
-| TVL | 年 gross 收益 | 績效費 4.5% | Keeper 20% | Treasury 80% |
+| TVL | 年 gross 收益 | 績效費 4.5% | Keeper 40% | Treasury 60% |
 |-----|--------------|-------------|------------|--------------|
-| 100K USDCx(pre-audit 上限) | 6,000 | 270 | 54 | 216 |
-| 500K USDCx | 30,000 | 1,350 | 270 | 1,080 |
-| 1M USDCx(sustainability 門檻) | 60,000 | 2,700 | 540 | 2,160 |
-| 10M USDCx | 600,000 | 27,000 | 5,400 | 21,600 |
-| 100M USDCx | 6,000,000 | 270,000 | 54,000 | 216,000 |
+| 100K USDCx(pre-audit 上限) | 6,000 | 270 | 108 | 162 |
+| 500K USDCx | 30,000 | 1,350 | 540 | 810 |
+| 1M USDCx(sustainability 門檻) | 60,000 | 2,700 | 1,080 | 1,620 |
+| 10M USDCx | 600,000 | 27,000 | 10,800 | 16,200 |
+| 100M USDCx | 6,000,000 | 270,000 | 108,000 | 162,000 |
 
 數字都以 USDCx 計。上表為示意參考點,**不是預測**。
 
@@ -67,14 +67,14 @@ Treasury 份額:依 `spec/treasury.md` 分進四個類別桶。
 
 ## 3. Treasury 類別資金流
 
-80% 的 treasury 份額在啟動比例(治理在一定範圍內可調)下流進四個桶:
+60% 的 treasury 份額在啟動比例 40/25/25/10(治理在一定範圍內可調——sub-allocation 從歷史 30/40/20/10 重新平衡,讓 audit reserve 累積速度在較小的 treasury 份額下仍維持為總 fee 的 24%,因為新的 40% keeper 直接份額已吸收 ops bucket 過去重複補貼的 per-keeper infra 成本)下流進四個桶:
 
 | 類別 | 比例 | 100K TVL / 年 | 1M TVL / 年 | 10M TVL / 年 | 用途 |
 |------|------|--------------:|------------:|------------:|------|
-| Audit reserve(30%) | 65 | 648 | 6,480 | 向下一次第三方審計帳單累積 |
-| Operations(40%) | 86 | 864 | 8,640 | 代管基礎設施:VPS、Blockfrost、監控、網域、CF Pages |
-| R&D(20%) | 43 | 432 | 4,320 | 協議開發、未來 bounty 計畫(post-audit + TVL-scale,`docs/audit-scope.md §6.3`)、生態補助 |
-| Buffer(10%) | 22 | 216 | 2,160 | 預期外支出、法律諮詢、事件應變 |
+| Audit reserve(40%) | 65 | 648 | 6,480 | 向下一次第三方審計帳單累積(總 fee 的 24%,與舊 80%×30% 同樣累積速度) |
+| Operations(25%) | 41 | 405 | 4,050 | 平台層基礎設施:VPS(frontend/landing/API)、Blockfrost(平台 queries)、監控、網域、CF Pages——per-keeper infra 現在透過 40% keeper 份額直接補,不再從此 bucket |
+| R&D(25%) | 41 | 405 | 4,050 | 協議開發、未來 bounty 計畫(post-audit + TVL-scale,`docs/audit-scope.md §6.3`)、生態補助 |
+| Buffer(10%) | 16 | 162 | 1,620 | 預期外支出、法律諮詢、事件應變 |
 
 ---
 
@@ -91,7 +91,7 @@ Treasury 份額:依 `spec/treasury.md` 分進四個類別桶。
 | Email / Discord / 通訊 | $0–10/月 | 大多免費;為了送達率可能要付 relay |
 | **總計** | **$30–200/月** = **$360–2,400/年** | V1 規模營運的穩態範圍 |
 
-在 pre-audit 100K TVL 上限下,treasury operations 桶每年入帳約 86 USDCx(約 $86)。**這連低端運營成本都不夠**——差額(100K TVL 下大約每年 $270–2,300)由協議 operator 自掏腰包在 pre-audit 階段補上。
+在 pre-audit 100K TVL 上限下,treasury operations 桶每年入帳約 41 USDCx(60%×25% 新分配),keeper 透過 40% 直接份額另外拿到約 108 USDCx/年。Keeper-related 合計預算 ~$149/年 @ 100K。**這仍然不足以覆蓋低端運營成本**($360-$2,400/年)——差額由協議 operator 在 pre-audit 階段以啟動資金補上。E2 把補貼從「透過 TreasurySpend 補貼 keeper infra 的 indirect 路徑」轉為「每筆 Compound 直接拿 40% 的 direct 路徑」,移除一層治理摩擦,但**Phase 1 絕對缺口不變**。
 
 ---
 
@@ -99,13 +99,13 @@ Treasury 份額:依 `spec/treasury.md` 分進四個類別桶。
 
 ### 5.1 營收 vs 成本 交叉點
 
-用啟動的類別比例(fee 的 80% × operations 40% = 32% 到 operations):
+用 E2 啟動的類別比例(fee 的 60% × operations 25% = 15% 到 operations):
 
-- **32% × `(TVL × 6% × 4.5%)` = 年度 ops 預算**
-- 低端交叉點($360/年 ops):`TVL = $360 / (6% × 4.5% × 32%) ≈ $417,000`
-- 高端交叉點($2,400/年 ops):`TVL = $2,400 / (6% × 4.5% × 32%) ≈ $2,780,000`
+- **15% × `(TVL × 6% × 4.5%)` = 年度 ops 預算**
+- 低端交叉點($360/年 ops):`TVL = $360 / (6% × 4.5% × 15%) ≈ $889,000`
+- 高端交叉點($2,400/年 ops):`TVL = $2,400 / (6% × 4.5% × 15%) ≈ $5.93M`
 
-所以「operations 桶單獨覆蓋基礎設施」的門檻,最小可行約為 **USD 500K TVL**,舒適餘裕約為 **USD 2.5M TVL**。
+「operations 桶單獨覆蓋基礎設施」的門檻 E2 下約 **USD 900K TVL**(最小可行),**USD 6M TVL**(舒適餘裕)。比 pre-E2 的 $417K-$2.78M 推遲約 2×,因為 ops bucket 從 32% 縮到 15% of fee。**這個轉變被 40% keeper 直接份額吸收 per-keeper infra 成本所抵消**(keeper-related 合計預算反而從 fee 的 52% 微增到 55%)。Ops bucket 縮水後,需要它覆蓋的是**平台層基礎設施**(frontend / landing / API server / treasury 監控),個別 keeper VPS / Blockfrost / 監控由 keeper 自己 40% 份額支付。
 
 這條線以下,V1 處於**啟動期**,運行成本超過 treasury 入帳。初期缺口由專案啟動資金承擔;跨過門檻之後,OptiVaults 本身的營收即可支撐基線運營,更高的 TVL 則漸漸支撐 audit reserve + R&D + buffer 類別。
 
@@ -142,7 +142,7 @@ V1 的公共財定位(見白皮書 §8.1 + Executive Summary)支援一個非稀�
 
 ### 5.3 Keeper 份額可行性
 
-Keeper 份額是績效費的 20%;每年 = `TVL × gross_APY × 0.009`。下表假設 **6% 當下參考 blended APY** + **3-keeper 輪替**(每人取 keeper pool 的 ⅓) + **每位 keeper $360/年基礎設施成本**:
+Keeper 份額在 V1 啟動時是績效費的 40%;每年 = `TVL × gross_APY × 0.018`。下表假設 **6% 當下參考 blended APY** + **3-keeper 輪替**(每人取 keeper pool 的 ⅓) + **每位 keeper $360/年基礎設施成本**:
 
 | TVL | Keeper 年總 pool | 單一 keeper(3 位) | 扣 $360/年 VPS 後淨額 |
 |-----|-----------------|-------------------|---------------------|
@@ -315,14 +315,14 @@ Phase 2+ 可以透過 `UpdateKeeperAuth` 加入額外授權的 keeper。之後 k
 
 A-Plain 授權模式(每筆 keeper TX 都要 spend 一次 keeper_auth UTXO)帶來的額外每筆 TX 成本:穩態 8 TX/天 下大約 $292/年。列為 keeper 運營 overhead。
 
-| TVL | Gross keeper fee 20% | 標準 ops + A-Plain 成本 | 淨 |
+| TVL | Gross keeper fee 40% | 標準 ops + A-Plain 成本 | 淨 |
 |-----|----------------------|------------------------|-----|
-| 100K | $54 | $1,552 | **-$1,498**(啟動資金補差額) |
-| 500K | $270 | $1,552 | -$1,282 |
-| 1M | $540 | $1,588 | **-$1,048**(仍低於 break-even) |
-| 5M | $2,700 | $1,734 | **+$966** |
-| 10M | $5,400 | $1,810 | **+$3,590** |
-| 25M | $13,500 | $2,078 | **+$11,422** |
+| 100K | $108 | $1,552 | **-$1,444**(啟動資金補差額) |
+| 500K | $540 | $1,552 | -$1,012 |
+| 1M | $1,080 | $1,588 | **-$508**(仍低於 break-even,但約為 20% 時代缺口的一半) |
+| 5M | $5,400 | $1,734 | **+$3,666** |
+| 10M | $10,800 | $1,810 | **+$8,990** |
+| 25M | $27,000 | $2,078 | **+$24,922** |
 
 **Break-even TVL**:標準等級 keeper 經濟下約 **USD 3–4M**。之下,keeper 是虧的;非創辦人 operator 不符經濟。Phase 4 啟用 `PermissionlessWithBond` 的閘門就是 TVL 達到此門檻。
 
@@ -397,7 +397,7 @@ Net Yield ≈ Gross Liqwid yield
 - 你存 USDCx。金庫給你 vUSDCx 份額。
 - Yield 靠自動複利累積,不用動手。
 - 你要付的費用:**存款 0 費用、Direct Withdraw 0.1%、每次收割的 yield 抽 4.5%**(從不碰本金)。
-- Keeper 拿多少:**4.5% 收割費的 20%**(≈ yield 的 0.9%)。其餘 80%(yield 的 3.6%)進鏈上 treasury,依類別分桶使用。
+- Keeper 拿多少:V1 啟動時 **4.5% 收割費的 40%**(≈ yield 的 1.8%,設高以支持公共財定位下的開源第三方 keeper 經濟可行性)。其餘 60%(yield 的 2.7%)進鏈上 treasury,依類別分桶使用。
 - **V1 啟動於啟動期**——100K TVL 下,營收並不完全覆蓋運營成本。V1 有三層自給門檻(§5.3):(a) 創辦人-keeper 邊際運營在 $185K–$555K TVL(當下 APY)/ $555K–$1.67M(悲觀 APY) break even;(b) 非創辦人專業 keeper 在 $740K–$1.48M / $2.22M–$4.44M;(c) 機構級運營 + audit-reserve 累積在 $20M+ / $50M+。V1 的實際目標是層 (a) / (b);層 (c) **刻意不是目標**——審計資金來自 §5.1 的四源堆疊(Catalyst + 公共財費率 + 範圍縮減 + 創辦人自付),**不**靠 treasury 累積。Phase 1 初期缺口由啟動資金承擔;若成長停在層 (a) 以下,啟動 §7.2 的 sunset 協議。
 - **你的本金絕不被卡死**——Withdraw 隨時可在鏈上進行,與 keeper 狀態、代管基礎設施可用性、創辦人狀態都無關。
 

@@ -58,7 +58,7 @@ Every environment-specific value lives in `config/<network>.json`:
 - `performance_fee_bps ≤ 450`   (4.5% perf cap)
 - `early_withdraw_fee_bps ≤ 100` (1% cap)
 - `min_hold_seconds ≤ 21600`   (6 hours — tightened from 24h post-internal-audit)
-- `keeper_fee_bps ≤ 2500`, `gov_fee_bps ≤ 1000`, `keeper + gov ≤ 3000`
+- `keeper_fee_bps ≤ 4000`, `gov_fee_bps ≤ 1000`, `keeper + gov ≤ 5000`
 - `governance.threshold ∈ [2, signers]`, unanimity allowed (3-of-3 launch)
 - `treasury inflow bps` must sum to 10000, `audit_bps ≥ 2000`
 - `signers` must be 3–20 entries, all distinct, each valid 28-byte PKH hex

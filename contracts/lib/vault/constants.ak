@@ -48,14 +48,25 @@ pub const max_early_withdraw_fee_bps: Int = 100
 /// unaffected (it never observes min_hold_seconds).
 pub const max_min_hold_seconds: Int = 21_600
 
-/// Keeper share cap: 25% (2_500 bps).
-pub const max_keeper_fee_bps: Int = 2_500
+/// Keeper share cap: 40% (4_000 bps). Raised from 25% pre-V1-launch to
+/// align with the public-goods reference-implementation positioning —
+/// makes Phase 2+ ($500K-$1M TVL) third-party keeper viability reachable
+/// (breakeven drops from ~$1.5M to ~$1M at 6% APY) while keeping treasury
+/// majority at 50% floor. Total performance fee envelope still 4.5% (450
+/// bps) — only the within-fee allocation shifts.
+pub const max_keeper_fee_bps: Int = 4_000
 
 /// Gov pool cap: 10% (1_000 bps).
 pub const max_gov_fee_bps: Int = 1_000
 
-/// Combined keeper + gov pool cap: 30% (3_000 bps); treasury floor 70%.
-pub const max_keeper_plus_gov_bps: Int = 3_000
+/// Combined keeper + gov pool cap: 50% (5_000 bps); treasury floor 50%.
+/// Raised from 30% alongside the keeper cap bump above. Treasury 50% floor
+/// preserved by `treasury_audit_floor_bps = 2000` (audit reserve stays at
+/// 20% of treasury minimum) — at the new floor 50% × 20% = 10% of fee
+/// reaches audit reserve at minimum, vs the current 14% (70% × 20%). The
+/// treasury sub-allocation default is rebalanced in deploy config to keep
+/// effective audit accumulation at 24% of fee (60% × 40% audit_bps).
+pub const max_keeper_plus_gov_bps: Int = 5_000
 
 /// On-chain slippage cap ceiling (§5.4 Phase 2). Governance may set
 /// `max_slippage_bps` anywhere in `[0, max_slippage_bps_cap]`. 500 bps = 5%
@@ -170,27 +181,47 @@ pub const gov_min_ttl_ms: Int = 86_400_000
 /// Maximum TTL on any queued action (30 days)
 pub const gov_max_ttl_ms: Int = 30 * 86_400_000
 
-/// Per-action timelock floors (per spec/governance.md §3)
-pub const timelock_update_strategy_ms: Int = 7 * 86_400 * 1_000
-pub const timelock_update_fee_ms: Int = 14 * 86_400 * 1_000
-pub const timelock_update_fee_split_ms: Int = 21 * 86_400 * 1_000
+/// Per-action timelock floors (per spec/governance.md §3).
+///
+/// PREPROD OVERRIDE: all 11 action timelocks below shrunk to 60 seconds so
+/// the full governance H-path E2E matrix (Queue + wait + Execute × 13
+/// redeemers) can run within a single session. `timelock_emergency_ms=0`
+/// and `timelock_fast_update_markets_ms` unchanged (production values are
+/// already test-friendly). MUST revert to the production values (recorded
+/// below) before any mainnet build:
+///   timelock_update_strategy_ms          = 7  * 86_400 * 1_000
+///   timelock_update_fee_ms               = 14 * 86_400 * 1_000
+///   timelock_update_fee_split_ms         = 21 * 86_400 * 1_000
+///   timelock_admin_deploy_ms             = 7  * 86_400 * 1_000
+///   timelock_update_registry_ms          = 14 * 86_400 * 1_000
+///   timelock_update_keeper_auth_ms       = 14 * 86_400 * 1_000
+///   timelock_treasury_spend_ms           = 7  * 86_400 * 1_000
+///   timelock_update_treasury_params_ms   = 14 * 86_400 * 1_000
+///   timelock_rotate_signers_ms           = 14 * 86_400 * 1_000
+///   timelock_slash_bond_ms               = 14 * 86_400 * 1_000
+///   timelock_update_slippage_policy_ms   = 48 * 60 * 60 * 1_000
+pub const timelock_update_strategy_ms: Int = 60 * 1_000
+pub const timelock_update_fee_ms: Int = 60 * 1_000
+pub const timelock_update_fee_split_ms: Int = 60 * 1_000
 pub const timelock_emergency_ms: Int = 0
-pub const timelock_admin_deploy_ms: Int = 7 * 86_400 * 1_000
-pub const timelock_update_registry_ms: Int = 14 * 86_400 * 1_000
+pub const timelock_admin_deploy_ms: Int = 60 * 1_000
+pub const timelock_update_registry_ms: Int = 60 * 1_000
 pub const timelock_fast_update_markets_ms: Int = 3_600_000
-pub const timelock_update_keeper_auth_ms: Int = 14 * 86_400 * 1_000
-pub const timelock_treasury_spend_ms: Int = 7 * 86_400 * 1_000
-pub const timelock_update_treasury_params_ms: Int = 14 * 86_400 * 1_000
-pub const timelock_rotate_signers_ms: Int = 14 * 86_400 * 1_000
+pub const timelock_update_keeper_auth_ms: Int = 60 * 1_000
+pub const timelock_treasury_spend_ms: Int = 60 * 1_000
+pub const timelock_update_treasury_params_ms: Int = 60 * 1_000
+pub const timelock_rotate_signers_ms: Int = 60 * 1_000
 
 /// SlashBond (Phase 3+ only; per spec/keeper-auth.md §3.6)
-pub const timelock_slash_bond_ms: Int = 14 * 86_400 * 1_000
+pub const timelock_slash_bond_ms: Int = 60 * 1_000
 
-/// ActDeregisterStake: governance-gated stake credential deregister path
-/// enabling recovery of 2 ADA per staking validator deposit. Matches
-/// `timelock_update_keeper_auth_ms` on the 14-day tier because stake-
-/// registration deposits are high-impact structural state.
-pub const timelock_deregister_stake_ms: Int = 14 * 86_400 * 1_000
+/// ActDeregisterStake (A2, 2026-04-20): governance-gated stake credential
+/// deregister path enabling recovery of 2 ADA per staking validator deposit.
+/// PRODUCTION = 14 * 86_400 * 1_000 (14 days, matches
+/// `timelock_update_keeper_auth_ms`). Temporarily overridden to 1 hour for
+/// the in-progress Preprod A2 verification ceremony (`v1-a2-preprod` state).
+/// MUST revert to the 14d production value before any mainnet build.
+pub const timelock_deregister_stake_ms: Int = 60 * 60 * 1_000
 
 /// UpdateSlippagePolicy (§5.4 Phase 2, 2026-04-21): governance-gated
 /// adjustment of `max_slippage_bps` + `min_swap_peg_bps`. 48 hours chosen
@@ -200,7 +231,9 @@ pub const timelock_deregister_stake_ms: Int = 14 * 86_400 * 1_000
 /// preservation — depositors still have a full business day plus weekend
 /// to exit if they disagree with the policy change. 1-of-n cancel still
 /// applies throughout the 48h window.
-pub const timelock_update_slippage_policy_ms: Int = 48 * 60 * 60 * 1_000
+/// PREPROD OVERRIDE: 60 seconds. PRODUCTION = 48 * 60 * 60 * 1_000.
+/// MUST revert before any mainnet build.
+pub const timelock_update_slippage_policy_ms: Int = 60 * 1_000
 
 /// Heartbeat / quarterly-distribution cadence (90 days)
 pub const distribute_period_ms: Int = 90 * 86_400 * 1_000

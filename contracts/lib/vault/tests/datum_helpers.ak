@@ -14,7 +14,7 @@ use vault/types.{Allocation, LiqwidPosition, VaultDatum}
 ///   non_deposit_value: 0
 ///   strategy_allocations / liqwid_positions: empty
 ///   policy fields: launch defaults (450 perf / 10 early / 60 hold / 3500 buffer
-///                   / 2000 keeper / 0 gov)
+///                   / 4000 keeper / 0 gov)
 ///   identity fields: deterministic non-zero placeholders
 pub fn baseline_datum() -> VaultDatum {
   VaultDatum {
@@ -33,7 +33,7 @@ pub fn baseline_datum() -> VaultDatum {
     early_withdraw_fee_bps: 10,
     min_hold_seconds: 60,
     buffer_target_bps: 3500,
-    keeper_fee_bps: 2000,
+    keeper_fee_bps: 4000,
     gov_fee_bps: 0,
     max_slippage_bps: 200,
     min_swap_peg_bps: 9_850,
@@ -49,6 +49,7 @@ pub fn baseline_datum() -> VaultDatum {
     registry_auth_policy: #"66778899aabbccddeeff00112233445566778899aabbccddeeff0011",
 
     frozen: 0,
+    community_sunset_triggered: 0,
   }
 }
 

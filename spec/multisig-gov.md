@@ -148,7 +148,7 @@ Payload types per ActionKind (matches `governance.md` §4):
 | UpdateStrategy | `(new_allocations, new_buffer_target_bps)` |
 | UpdateFee | `(new_performance_fee_bps, new_early_withdraw_fee_bps, new_min_hold_seconds)` |
 | UpdateFeeSplit | `(new_keeper_fee_bps, new_gov_fee_bps)` |
-| EmergencyWithdraw | `(loss_amount, freeze_flag)` |
+| EmergencyWithdraw | `(loss_amount, freeze_flag)` — note: `loss_amount` is constrained to 0 by `vault_gov_emergency` per Layer 1 of the Phase 1 governance safety design (freeze-only). The field is preserved in payload-hash for backward compatibility with action_id derivation. See `governance.md` §4.4. |
 | AdminDeployNonDeposit | `(deploy_amount, deploy_token_policy, deploy_token_name)` — `new_allocations` + `dest_output_idx` are operational choices, not pre-committed |
 | UpdateRegistry | `<new_registry_datum>` (entire RegistryDatum value is the payload) |
 | FastUpdateMarkets | `<new_registry_datum>` (entire RegistryDatum value) |

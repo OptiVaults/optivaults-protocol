@@ -200,6 +200,8 @@ validator vault_batcher(
         let valid_time = new_datum.last_compound_time == old_datum.last_compound_time
         let valid_non_deposit = new_datum.non_deposit_value == old_datum.non_deposit_value
         let valid_frozen = new_datum.frozen == old_datum.frozen
+        let valid_sunset =
+          new_datum.community_sunset_triggered == old_datum.community_sunset_triggered
         let valid_realloc_time = new_datum.last_realloc_time == old_datum.last_realloc_time
         let valid_fee_time = new_datum.last_fee_update_time == old_datum.last_fee_update_time
 
@@ -308,6 +310,7 @@ validator vault_batcher(
           valid_imm,
           valid_non_deposit,
           valid_frozen,
+          valid_sunset,
           valid_realloc_time,
           valid_fee_time,
           new_datum.liqwid_positions == old_datum.liqwid_positions,

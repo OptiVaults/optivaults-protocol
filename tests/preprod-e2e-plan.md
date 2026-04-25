@@ -1,6 +1,6 @@
 # OptiVaults V1 — Preprod E2E Test Plan
 
-**Status**: Draft. Implements the test cases listed below as TypeScript scripts under `tests/preprod/` once the V1 keeper / API / deploy pipeline is wired (currently pending — the keeper reference implementation lives in a separate repository).
+**Status**: Draft. Implements the test cases listed below as TypeScript scripts under `tests/preprod/` once the V1 keeper / API / deploy pipeline is wired (currently pending — see `keeper/` and `contracts/` empty trees in README.md).
 
 **Audience**: V1 implementation engineers + future external auditor. The plan enumerates every redeemer that V1 ships with and the minimum verification scenarios required before Mainnet ceremony.
 
@@ -10,7 +10,7 @@
 
 ## 1. Scope
 
-This plan covers **on-chain Preprod transaction submission and verification** for every V1 redeemer. Off-chain unit tests live in `contracts/lib/vault/tests/*.ak` (validation predicates); keeper engine TS tests live in the separate keeper-implementation repository.
+This plan covers **on-chain Preprod transaction submission and verification** for every V1 redeemer. Off-chain unit tests live in `contracts/lib/vault/tests/*.ak` (validation predicates) and `keeper/test/` (keeper engine TS tests, future).
 
 **Out of scope** for this plan:
 - Mainnet operations (covered by `docs/runbooks/v1-mainnet-ceremony.md` once written)
@@ -204,7 +204,7 @@ Each row produces one or more on-chain TXs that MUST confirm + match the expecte
 | ID | Scenario | Expected |
 |----|----------|----------|
 | KHOT-1 | Compound zero-yield (heartbeat) | TX confirms; only `last_realloc_time` advances |
-| KHOT-2 | Compound buffer-funded with 1 USDCx yield (gov_fee_bps = 0) | TX confirms; treasury 80% + keeper 20% |
+| KHOT-2 | Compound buffer-funded with 1 USDCx yield (gov_fee_bps = 0) | TX confirms; treasury 60% + keeper 40% |
 | KHOT-3 | Compound buffer-funded with `gov_fee_bps = 500` (Phase 2) | TX confirms; multisig_gov UTXO consumed + pool += 5% × fee |
 | KHOT-4 | Compound with `validity_range > 1h` | TX fails (internal-verification width cap) |
 | KHOT-5 | RebalanceBuffer (datum unchanged, allocations may rotate) | TX confirms |
@@ -249,8 +249,8 @@ Each row produces one or more on-chain TXs that MUST confirm + match the expecte
 | GPOL-2 | UpdateStrategy with `buffer_target_bps < 500` | TX fails |
 | GPOL-3 | UpdateFee by gov: perf 4.0%, early 0.5%, hold 120s | TX confirms |
 | GPOL-4 | UpdateFee with perf > 4.5% | TX fails |
-| GPOL-5 | UpdateFeeSplit by gov: keeper 20%, gov 5% (Phase 2) | TX confirms |
-| GPOL-6 | UpdateFeeSplit with sum > 30% | TX fails |
+| GPOL-5 | UpdateFeeSplit by gov: keeper 40%, gov 5% (Phase 2) | TX confirms |
+| GPOL-6 | UpdateFeeSplit with sum > 50% | TX fails |
 | GPOL-7 | UpdateSlippagePolicy: max_slippage 300 bps, min_peg 9500 bps | TX confirms |
 | GPOL-8 | UpdateSlippagePolicy with `max_slippage_bps > 500` | TX fails (cap) |
 
@@ -298,7 +298,7 @@ These exercise the full TX patterns where multiple validators must succeed toget
 | INT-4 | userA Cancel pending order | order.spend(Cancel) |
 | INT-5 | Watchdog Expire pending order | order.spend(Expire) |
 | INT-6 | Compound (zero-yield, gov_fee=0) | vault_proxy.spend(UseKeeperHot) + vault_keeper_hot.withdraw(Compound) + keeper_stake_script.withdraw + treasury.spend(Receive=0 OR omit) |
-| INT-7 | Compound (buffer-funded, gov_fee=0) | vault_proxy.spend(UseKeeperHot) + vault_keeper_hot.withdraw(Compound) + keeper_stake_script.withdraw + treasury.spend(Receive=80% × fee) + keeper-share UTXO out |
+| INT-7 | Compound (buffer-funded, gov_fee=0) | vault_proxy.spend(UseKeeperHot) + vault_keeper_hot.withdraw(Compound) + keeper_stake_script.withdraw + treasury.spend(Receive=60% × fee) + keeper-share UTXO out |
 | INT-8 | Compound (Phase 2, gov_fee=500) | INT-7 + multisig_gov.spend(ReceiveCompoundShare delta=5% × fee) |
 | INT-9 | Strategy update flow: gov Queue → wait 7d → Execute UpdateStrategy | multisig_gov(QueueAction) → multisig_gov(ExecuteAction) + vault_gov_policy(UpdateStrategy) |
 | INT-10 | Fee-split update: gov Queue UpdateFeeSplit → wait 21d → Execute | multisig_gov(QueueAction) + multisig_gov(ExecuteAction) + vault_gov_policy(UpdateFeeSplit) |
@@ -333,6 +333,69 @@ Before tagging V1 mainnet candidate:
 - [ ] Deploy ceremony (NFT-1 through KAS-1) re-run cleanly on a fresh Preprod address.
 - [ ] Resource budget checks: every TX exec mem < 14 M, exec steps < 10 G (Conway era ceiling).
 - [ ] CBOR-tag-258 / Conway ref-script fee workarounds verified (per `optivaults/contracts/SECURITY.md` §External Trust Boundaries).
+
+## 6.1 Phase 1 governance safety — three-layer test cases (2026-04-25)
+
+Added with the Phase 1 governance safety design (validator commit `9626e8e` + docs commit `257c04e`). These verify the validator-level recovery primitives that make founder-only Phase 1 governance an acceptable launch fallback. See `docs/security-model.md` §5.4 for the threat model + scenario walkthroughs.
+
+**Per-layer scenario matrix** — 19 test cases across 3 layers. Numbered file naming convention: `40-l1-*.ts` for Layer 1, `50-l2-*.ts` for Layer 2, `60-l3-*.ts` for Layer 3. (Yes, `60-minswap-decoder-verify.ts` already exists at that prefix; if a number conflict surfaces, renumber to `70-l3-*.ts` etc.)
+
+### Layer 1 — EmergencyWithdraw freeze-only
+
+| Test | File | Scenario | Expected outcome |
+|------|------|----------|------------------|
+| L1-1 | `40-l1-emergency-freeze-happy.ts` | Governance executes `EmergencyWithdraw { loss_amount=0, freeze_flag=1 }` with no datum changes beyond `frozen` | TX confirms; on-chain `frozen=1`, every other field byte-identical to pre-state |
+| L1-2 | `41-l1-emergency-reject-loss-amount.ts` | Same TX but with `loss_amount=100_000` (any non-zero) | TX rejected by validator (`validate_emergency_freeze_only` constraint `loss_amount == 0`) |
+| L1-3 | `42-l1-emergency-reject-position-removal.ts` | Pre-state has 1 Liqwid position; TX attempts to remove it from `liqwid_positions` | TX rejected (`new.liqwid_positions == old.liqwid_positions` violated) |
+| L1-4 | `43-l1-emergency-reject-total-deposited-change.ts` | TX attempts to reduce `total_deposited` by 50_000_000 | TX rejected (`new.total_deposited == old.total_deposited` violated) |
+| L1-5 | `44-l1-withdraw-under-freeze.ts` | Post-L1-1 frozen state; user invokes `Withdraw` for proportional idle_buffer share | TX confirms; user receives proportional USDCx; vault `frozen` stays at 1 |
+| L1-6 | `45-l1-emergency-unfreeze.ts` | Post-L1-1; governance executes `EmergencyWithdraw { loss_amount=0, freeze_flag=0 }` | TX confirms; `frozen` returns to 0 |
+
+**Pre-state requirements**: vault with non-zero `total_deposited`, at least 1 Liqwid position (use mock Liqwid stack from Phase F if real Liqwid Preprod unavailable), governance UTxO available with multisig signers.
+
+### Layer 2 — DeployToProtocol USDCx-exception under frozen
+
+| Test | File | Scenario | Expected outcome |
+|------|------|----------|------------------|
+| L2-1 | `50-l2-frozen-blocks-supply.ts` | Vault frozen=1; keeper attempts `DeployToProtocol { deploy_token=USDCx, ... }` (Supply path) | TX rejected (`validate_deploy_frozen_gate` — `is_deploy_deposit_token == true` blocks under frozen) |
+| L2-2 | `51-l2-frozen-allows-djed-swap.ts` | Vault frozen=1 + holds DJED in NDV; keeper executes `DeployToProtocol { deploy_token=DJED, dest=Minswap V2 adapter, ... }` | TX confirms; DJED moves to swap order; (downstream) Minswap fills + USDCx returns to vault |
+| L2-3 | `52-l2-frozen-allows-usdm-swap.ts` | Same as L2-2 but USDM | TX confirms; USDM → swap order |
+| L2-4 | `53-l2-unfrozen-allows-supply.ts` | Vault frozen=0 (normal); `DeployToProtocol { deploy_token=USDCx }` Supply path | TX confirms (sanity — Layer 2 didn't break the normal path) |
+| L2-5 | `54-l2-frozen-swap-respects-peg-floor.ts` | Vault frozen=1; keeper attempts swap with `min_receive` below peg_floor (e.g., 89% of input) | TX rejected by SwapAdapter `verify_swap_via_adapter` (peg_floor cap) |
+| L2-6 | `55-l2-frozen-swap-destination-pinned.ts` | Vault frozen=1; keeper attempts swap with destination address ≠ vault | TX rejected by SwapAdapter destination check |
+
+**Pre-state requirements**: vault with NDV stable tokens (run a vaultSwap or simulated MergeUtxo donation first), governance UTxO + EmergencyFreeze TX to set frozen=1.
+
+### Layer 3 — CommunitySunset dead-man-switch
+
+| Test | File | Scenario | Expected outcome |
+|------|------|----------|------------------|
+| L3-1 | `60-l3-sunset-rejects-too-soon.ts` | `last_compound_time` 89 days ago; vUSDCx holder attempts `CommunitySunset` | TX rejected (`validate_community_sunset_trigger_time` — 90d threshold not met) |
+| L3-2 | `61-l3-sunset-rejects-no-vusdcx.ts` | 90+ days inactive; caller has no vUSDCx in any TX input | TX rejected (`caller_has_vusdcx` constraint fails) |
+| L3-3 | `62-l3-sunset-happy-trigger.ts` | 90+ days inactive; vUSDCx holder triggers | TX confirms; on-chain `frozen=1` + `community_sunset_triggered=1`, all accounting fields preserved |
+| L3-4 | `63-l3-sunset-rejects-double-trigger.ts` | Post-L3-3; another vUSDCx holder attempts to re-trigger | TX rejected (`old.community_sunset_triggered == 0` fails — one-way) |
+| L3-5 | `64-l3-sunset-rejects-accounting-mutation.ts` | 90+ days inactive; vUSDCx holder triggers but datum also drops `total_deposited` to 0 | TX rejected (`validate_community_sunset_transition` requires `total_deposited` unchanged) |
+| L3-6 | `65-l3-post-sunset-permissionless-recall.ts` | Post-L3-3; non-keeper non-gov vUSDCx holder fires `RecallFromLiqwid` for an existing position | TX confirms (sunset bypasses `require_keeper_stake_script_or_governance_fallback`) |
+| L3-7 | `66-l3-post-sunset-permissionless-swap.ts` | Post-L3-3 + post-L3-6; non-keeper holder fires `DeployToProtocol` Layer 2 swap (DJED → USDCx via Minswap V2) | TX confirms (sunset bypasses keeper signature requirement; SwapAdapter destination + peg_floor still enforced) |
+| L3-8 | `67-l3-post-sunset-full-recovery-chain.ts` | End-to-end: trigger sunset → Recall (DJED + USDM) → Swap to USDCx → Withdraw all proportional shares | All 4-5 TXs confirm; final state: vault has 0 Liqwid positions, 0 NDV stable, idle_buffer ≈ 0 (or only stuck dust), every depositor has received their proportional USDCx |
+
+**Pre-state requirements**: vault with non-zero Liqwid positions in DJED + USDM markets (mock Liqwid stack), realistic vUSDCx distribution across ≥ 2 user wallets, time-machine support for "90 days ago" `last_compound_time` (set during ceremony OR use validity-range manipulation if Preprod accepts past lower-bound).
+
+### Cross-layer integration tests
+
+| Test | File | Scenario | Expected outcome |
+|------|------|----------|------------------|
+| L-INT-1 | `68-int-grief-attack-l1-blocks.ts` | Simulates the pre-Layer-1 attack chain: governance fires `EmergencyWithdraw { loss_amount=full_TVL, positions=[] }` attempting to brick share_price | TX rejected by Layer 1; depositor `Withdraw` continues to function at unchanged share_price |
+| L-INT-2 | `69-int-honest-keeper-recovery-under-freeze.ts` | Governance freezes (legitimate); keeper drives Recall + Layer 2 swap → USDCx in idle_buffer; users withdraw proportional share | All TXs confirm; depositors recover full proportional USDCx |
+| L-INT-3 | `70-int-attacker-keeper-bounded-by-pegfloor.ts` | Frozen + attacker controls keeper; attacker fires Layer 2 swap repeatedly with max-slippage settings | Each TX confirms but slippage capped by peg_floor (≤ 5-7% per swap); USDCx still lands in vault, attacker gains 0; users still withdraw proportional |
+| L-INT-4 | `71-int-sunset-end-to-end-recovery.ts` | Full Scenario E walkthrough from `docs/security-model.md` §5.4 | Recovery completes; depositors receive full proportional USDCx; ref-script ADA + stake deposits remain stuck (out-of-scope) |
+
+### Test infrastructure dependencies
+
+- **Mock Liqwid stack** (Phase F prerequisite). Layer 1+3 tests need governance-fallback Recall path which only fires after 7-day keeper-inactivity OR community sunset; mock stack avoids real Liqwid Preprod gating.
+- **Time machine for sunset 90d threshold**. Either (a) ceremony-time `last_compound_time = now - 91d` for the L3 sub-suite, or (b) Preprod validity-range trick if lower-bound-in-past is accepted.
+- **Multi-user vUSDCx distribution**. L3-2 needs an account WITHOUT vUSDCx; the existing test ceremonies fund all wallets with vUSDCx for B-phase tests, so L3 sub-suite needs a fresh wallet variant.
+- **Simulated NDV stable**. Layer 2 tests need DJED/USDM in vault; reuse vaultSwap fill output OR send a `MergeUtxo` donation directly.
 
 ## 7. Open items / known gaps
 

@@ -46,6 +46,7 @@ use vault/types.{
 }
 use vault/validation.{
   check_immutable_fields, has_no_order_inputs as val_has_no_order_inputs,
+  validate_emergency_freeze_only,
 }
 
 validator vault_gov_emergency(
@@ -162,54 +163,18 @@ validator vault_gov_emergency(
               freeze_flag == 1,
             },
           }
+        // Layer 3 (Dead-man-switch) preservation: EmergencyWithdraw must
+        // not flip community_sunset_triggered. Sunset is owned by
+        // vault_user.CommunitySunset (one-way 0 → 1 by community vote).
+        let valid_sunset =
+          new_datum.community_sunset_triggered == old_datum.community_sunset_triggered
 
-        let cleared_principal = {
-          let old_sum =
-            list.foldl(
-              old_datum.liqwid_positions,
-              0,
-              fn(p, acc) { acc + p.supplied_value },
-            )
-          let new_sum =
-            list.foldl(
-              new_datum.liqwid_positions,
-              0,
-              fn(p, acc) { acc + p.supplied_value },
-            )
-          old_sum - new_sum
-        }
-        let positions_reduced =
-          list.length(new_datum.liqwid_positions) <= list.length(old_datum.liqwid_positions)
-        let valid_position_subset =
-          list.all(
-            new_datum.liqwid_positions,
-            fn(np) {
-              list.any(
-                old_datum.liqwid_positions,
-                fn(op) {
-                  and {
-                    op.market_id == np.market_id,
-                    op.qtokens_held == np.qtokens_held,
-                    op.supplied_value == np.supplied_value,
-                  }
-                },
-              )
-            },
-          )
+        // Phase 1 governance safety (2026-04-25 — Layer 1 of three-layer
+        // founder-only-acceptable design): EmergencyWithdraw is freeze-only.
+        // See `validate_emergency_freeze_only` in lib/vault/validation.ak
+        // for the rationale + design notes.
         let valid_deposited =
-          if cleared_principal > 0 {
-            and {
-              positions_reduced,
-              valid_position_subset,
-              new_datum.total_deposited == old_datum.total_deposited - cleared_principal,
-              new_datum.total_deposited >= 0,
-            }
-          } else {
-            and {
-              new_datum.total_deposited == old_datum.total_deposited,
-              new_datum.liqwid_positions == old_datum.liqwid_positions,
-            }
-          }
+          validate_emergency_freeze_only(loss_amount, old_datum, new_datum)
 
         and {
           governance_authorized,
@@ -236,6 +201,7 @@ validator vault_gov_emergency(
           valid_buffer,
           valid_non_deposit,
           valid_frozen,
+          valid_sunset,
         }
       }
 

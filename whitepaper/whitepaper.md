@@ -269,11 +269,11 @@ Yield is strictly the interest differential between Liqwid supply APY (blended a
 
 | Phase | Trigger | Keeper | Gov pool | Treasury |
 |-------|---------|--------|----------|----------|
-| V1 launch | Deploy default | 20% | 0% (disabled) | 80% |
-| Phase 2 | TVL ≥ 500K + external signer added | 20% | 5% | 75% |
-| Phase 3 | TVL ≥ 2M + community signer added | 20% | 10% | 70% |
+| V1 launch | Deploy default | 40% | 0% (disabled) | 60% |
+| Phase 2 | TVL ≥ 500K + external signer added | 40% | 5% | 55% |
+| Phase 3 | TVL ≥ 2M + community signer added | 40% | 10% | 50% |
 
-**Hard caps**: `keeper_fee_bps ≤ 2500` (25%), `gov_fee_bps ≤ 1000` (10%), `keeper + gov ≤ 3000` (treasury floor ≥ 70%). Changes require `UpdateFeeSplit` with **21-day timelock** (longest of any governance action — the governance is adjusting its own pay).
+**Hard caps**: `keeper_fee_bps ≤ 4000` (40%), `gov_fee_bps ≤ 1000` (10%), `keeper + gov ≤ 5000` (treasury floor ≥ 50%). Changes require `UpdateFeeSplit` with **21-day timelock** (longest of any governance action — the governance is adjusting its own pay). The 40% keeper cap is set explicitly to support open-source third-party keeper viability under V1's public-goods positioning — at 40% the Phase 2+ non-founder-keeper breakeven drops to ~$1M TVL (from ~$1.5M at the historical 25% cap).
 
 **V1-era disclosure on the three-way split.** Keeper / gov pool / treasury are three distinct on-chain flows in terms of address, redeemer authorization, and timelock. At V1 launch, however, the **human controllers** of these three flows overlap significantly — the founder operates the keeper and holds governance signer seats, and treasury spending also requires governance signatures (see §9.1). The three-way split in V1 is therefore **structural preparation for decentralization, not realized decentralization today**. See §6.1 (Six-identity separation target) for the rotation path to economic independence of the three pockets.
 
@@ -304,7 +304,7 @@ Keeper must sign each Compound TX. Fallback: if keeper is inactive for >7 days, 
 
 ### 3.1 Smart contract stack
 
-V1 deploys **17 logic validators**, plus 5 mint-only policies (vUSDCx share token + 4 one-shot NFTs), plus 1 DEX adapter:
+V1 deploys **17 logic validators** (one of which, `vusdcx`, is the share-token minting policy — see #17 in the list below), **4 one-shot NFT minting policies** (`vault_nft` / `governance_nft` / `registry_auth_nft` / `gov_signer_nft`), and **1 DEX adapter** (`minswap_v2_adapter`). Total: 17 + 4 + 1 = **22 compiled artefacts**.
 
 1. **vault_proxy** — entry point, forwards spends via Withdraw-Zero pattern (10 routes: User / KeeperHot / Batcher / SwapAda / Protocol / Recall / Liqwid / GovPolicy / GovEmergency / AdminDeploy; see §3.2).
 2. **vault_user** — Deposit, Withdraw only. Purely permissionless — no keeper authorization required.
@@ -339,7 +339,7 @@ Total compiled artefacts: **17 logic validators + 4 NFT mint policies + 1 DEX ad
 
 **Topology rationale.** The 22-artefact count reflects partitioning along four orthogonal seams (authorization-boundary, governance response-latency, bytecode-cost-center, size-fix) driven primarily by the Plutus V3 16 KB reference-script ceiling — not arbitrary subdivision. Engineering rationale + post-split sizes live in `spec/architecture.md §4.1`; this whitepaper does not enumerate the chronological commit-by-commit history, which has no bearing on depositor decisions.
 
-See `spec/architecture.md` for full redeemer details and `spec/vault-datum.md` for the VaultDatum schema (28 fields after §5.4 Phase 2).
+See `spec/architecture.md` for full redeemer details and `spec/vault-datum.md` for the VaultDatum schema (29 fields after §5.4 Phase 2 + Phase 1 governance safety dead-man-switch).
 
 ### 3.2 Withdraw-Zero Forwarding Pattern
 
@@ -406,8 +406,9 @@ At 100K USDCx TVL and ~5-6% net yield (current-reference scenario from `docs/eco
 | Gross yield/year (conservative 5%) | $5,000 |
 | Gross yield/year (optimistic 8%) | $8,000 |
 | Performance fee (4.5% of gross) | $225-360 |
-| Keeper share (20%) | $45-72 |
-| Treasury share (80%) | $180-288 |
+| Keeper share (40% at V1 launch) | $90-144 |
+| Gov pool (0% at launch, activated Phase 2+) | $0 |
+| Treasury share (60% at V1 launch) | $135-216 |
 | Operating costs (keeper + infra + audit reserve) | $360-2,400 |
 
 **Reality: protocol revenue does not cover operating costs at 100K TVL.**
@@ -486,9 +487,9 @@ The "$5–10M" figure earlier in this section corresponds to tier (b) under **pe
 
 **Three dimensions of self-sustain — read before the table.** The tier (a)/(b)/(c) breakevens above are computed on "keeper share covers keeper ops cost." That is **one of three distinct self-sustain dimensions**:
 
-- **(i) Keeper ops self-sustain** — keeper share (20% of 4.5% perf fee) ≥ keeper's own infra cost. **Tiers (a)/(b) above correspond to this dimension**.
-- **(ii) Treasury ops self-sustain** — the treasury 80% share covers basic ops ($360/yr) + R&D ($432/yr) + operational buffer. Tier (b) TVL ($740K–$1.48M) generates treasury inflow of ~$2,160–$4,320/yr, **comfortably covering this second dimension**.
-- **(iii) Audit-reserve self-funding** — the yearly audit-reserve allocation (30% of treasury inflow) accumulates enough to cover the next audit cost ($30–50K every 18–24 months). This dimension requires **$20M+ TVL**, corresponding to tier (c).
+- **(i) Keeper ops self-sustain** — keeper share (40% of 4.5% perf fee) ≥ keeper's own infra cost. **Tiers (a)/(b) above correspond to this dimension**. Keeper share doubled from the historical 20% to bring the Phase 2+ non-founder-keeper breakeven down to ~$1M TVL (vs ~$1.5M at the prior 25% cap).
+- **(ii) Treasury ops self-sustain** — the treasury 60% share covers basic ops ($360/yr) + R&D ($432/yr) + operational buffer. Tier (b) TVL ($740K–$1.48M) generates treasury inflow of ~$1,620–$3,240/yr, **still comfortably covering this second dimension** at the smaller treasury percentage because keeper share already absorbs per-keeper infra cost directly.
+- **(iii) Audit-reserve self-funding** — the yearly audit-reserve allocation (40% of treasury inflow under E2's 40/25/25/10 sub-allocation = 24% of total fee, identical to the prior 80%×30% = 24% accumulation rate) accumulates enough to cover the next audit cost ($30–50K every 18–24 months). This dimension still requires **$20M+ TVL**, corresponding to tier (c). The shift from 20%→40% keeper does not change the audit-reserve trajectory.
 
 So when reading the tier table: **tier (a)/(b) is "keeper breaks even," treasury ops is automatically comfortably covered at the same TVL, but audit-reserve accrual is NOT — audit funding comes from the §8.1 four-source stack, not from protocol revenue**. This is by design, not a gap.
 
@@ -579,7 +580,7 @@ At 100K TVL on the weekly tier (~52 Compounds/year + ~12 heartbeats + ~20 rebala
 
 **Vault ADA replenishment — the `SwapAda` closed loop.** Every `DeployToProtocol` (VaultSwap) TX costs the vault ~2 ADA net to Minswap V2 batcher fees; without replenishment the vault would drain to its `min_vault_ada` floor and block further Deploy TXs. V1 closes this loop on-chain via the `SwapAda` redeemer (spec: `spec/ada-swap.md`): when `vault.lovelace < 15 ADA`, the keeper invokes `SwapAda` giving the vault 10–50 ADA and receiving equivalent USDCx at the Charli3 + Orcfax oracle rate. Validator-enforced: 1h cooldown, 1h validity-range width cap, fair oracle-priced atomic barter — no trust premise beyond the oracle feed the system already depends on for depeg monitoring. Depositors bear Minswap batcher fees as a slow USDCx drain — at 100K TVL with ~1 SwapAda per 2–4 weeks (20–40 ADA per call ≈ 10–20 USDCx), this haircut is ~0.02% APY drag, negligible against 4–6% gross yield.
 
-Keeper side: the keeper receives its 20% fee share in **USDCx** and may periodically convert USDCx → ADA on Minswap for the Cardano network fees on its own wallet; that conversion costs ~60 bps per swap (quarterly → ~2.4 bps/year of keeper share friction, negligible at 100K TVL but grows linearly with keeper share). Structurally absorbable by the 20% keeper share ($54/year at 6% gross) only if the keeper is the founder amortizing other sunk costs. This is exactly why §4.3 states keeper operations are not commercially viable for non-founder operators until the $5-10M TVL range; it is not a promise V1 hides.
+Keeper side: the keeper receives its 40% fee share in **USDCx** and may periodically convert USDCx → ADA on Minswap for the Cardano network fees on its own wallet; that conversion costs ~60 bps per swap (quarterly → ~2.4 bps/year of keeper share friction, negligible at 100K TVL but grows linearly with keeper share). Structurally absorbable by the 40% keeper share ($108/year at 6% gross at 100K TVL) only when the keeper amortises other sunk costs (founder operating model), or once TVL crosses ~$1M (where the 40% share alone covers a low-end non-founder keeper standalone-ops budget). The 40% cap (set at validator hard cap) was chosen specifically to bring this third-party-keeper viability point down to ~$1M TVL — see §4.3 for the full breakeven matrix.
 
 #### 4.5.1 Per-depositor on-chain fees (Direct vs Queue, side-by-side)
 
@@ -675,7 +676,7 @@ V1's Liqwid exposure comes from supplying USDCx, DJED, and USDM to Liqwid's acti
 V1 mitigations:
 
 - **Share-price transparency** — losses surface on the next Compound, not hidden. Depositors can see them in vault accounting before the next allocation decision.
-- **`EmergencyWithdraw`** — governance can mark a loss (`loss_amount`) and freeze the vault for recovery planning. 0-day timelock for this specific action.
+- **`EmergencyWithdraw`** — governance can freeze the vault for recovery planning (0-day timelock). Phase 1 governance safety constraint: this redeemer is **freeze-only** at the validator level — it cannot reduce `total_deposited` or modify `liqwid_positions`. Real loss accounting happens via `vault_liqwid.RecallFromLiqwid`'s gov-fallback path which physically Recalls underlying USDCx and writes off only the actually-realized shortfall (see §5.5.1 Layer 1 + `docs/security-model.md` §5.4).
 - **`KeeperToggleMarket`** — keeper can unilaterally disable new Supply to a specific Liqwid market (one-way flag `active: True → False`) without governance delay. This is the fast-response layer when keeper sees anomalies but governance hasn't yet convened.
 - **Per-market position isolation** — `LiqwidPosition { market_id, qtokens_held, supplied_value }` is tracked per Liqwid market independently, so contagion from one market's bad debt does not automatically write off the other markets.
 
@@ -724,7 +725,7 @@ Worst case: keeper stops operating. Users can still withdraw via Direct Withdraw
 
 Launch configuration is **3-of-3 multisig** (3 signers, threshold 3 — unanimity required). The signer slate is **1 founder signer + 2 independent well-known Cardano SPOs**, with all three identities disclosed on the website. The 3-of-3 unanimity requirement is deliberate: even if the founder's key is compromised or the founder makes a unilateral decision error, **the founder cannot queue any governance action alone** — 2 independent SPOs must also sign; conversely, the founder colluding with any one SPO only yields 2-of-3, still insufficient. The 1-of-3 cancel asymmetry is preserved: any single signer (including either independent SPO) can veto a queued action during its timelock window.
 
-Independent SPO recruitment is completed before mainnet ceremony. Selection criteria: Cardano mainnet SPO operating ≥ 2 years, on-chain public identity (pool ticker + website), no prior commercial partnership with the founder, strong community / technical reputation, and ideally at least one signer outside the Asia time zone for governance response-time diversity.
+Independent SPO recruitment is the **target** for completion before mainnet ceremony but is **not a contract-level launch blocker** — the §5.5.1 three-layer governance safety design provides an acceptable fallback if recruitment lags (V1 may launch with founder-only governance, with SPO recruitment continuing in the post-launch window; this is a contingency path, not a target). Selection criteria: Cardano mainnet SPO operating ≥ 2 years, on-chain public identity (pool ticker + website), no prior commercial partnership with the founder, strong community / technical reputation, and ideally at least one signer outside the Asia time zone for governance response-time diversity.
 
 **SPO signer role framing — Cardano community service.** The two independent SPO signers at V1 launch are committing to a **Cardano community-service role, not an economic-incentive role**. Phase 2+ `UpdateFeeSplit` to 5-10% gov pool share (gated on $500K TVL) is upside, not primary motivation. SPOs take this role because: (a) they support Cardano DeFi public-goods infrastructure, (b) their stake-pool-operator identity provides structural dissent-veto protection for V1 depositors, (c) the role extends their reputation asset, analogous to DRep commitment. If V1 stays in Phase 1 terminal state (§1.5.3 + §8.2 scenario), SPO commitment is not expected to yield financial return — this aligns with V1's non-commercial public-goods positioning and community-service role framing. SPO recruitment outreach is conducted with this framing explicit to avoid signer expectation / actual-incentive-structure mismatch.
 
@@ -742,6 +743,25 @@ Residual risk: **3-of-3 collusion** (all three signers acting together to push a
 - **Validator-level hard caps** (§6.3) — even a fully-colluding governance cannot touch them
 
 **Post-audit roadmap.** Once the external audit passes and TVL grows, governance rotates per §6.1 Phase 2/3/4. From Phase 2 onward (5+ signers with a community-selected signer added), threshold drops to `n-1` (e.g., 4-of-5) so that at least one signer is always outside the passing quorum and can exercise genuine 1-of-n structural dissent — strengthening the 3-of-3 launch property ("founder can be blocked by any single SPO") into "a quorum-outside independent signer always exists".
+
+### 5.5.1 Three-layer governance safety design
+
+Independent of signer slate composition, the V1 validator set carries three layers of structural protection against governance-key compromise. These layers were designed to make **single-actor governance an acceptable Phase 1 fallback** in the event SPO recruitment lags — depositor recovery does not depend on the precise number or independence of governance signers.
+
+**Layer 1 — EmergencyWithdraw is freeze-only.** The `EmergencyWithdraw` redeemer in `vault_gov_emergency` cannot reduce `total_deposited`, cannot remove or modify any `liqwid_positions` entry, and cannot accept a non-zero `loss_amount`. Its sole effect is flipping the `frozen` flag (0 ↔ 1). All loss accounting must go through `vault_liqwid.RecallFromLiqwid`'s gov-fallback path which physically Recalls underlying USDCx + writes off only the actual realized loss (`supplied_value − underlying_received`). A compromised governance key cannot drop the share price by writing off positions from datum without the corresponding fund movement — the qToken-orphan griefing vector is closed at the validator level.
+
+**Layer 2 — DeployToProtocol stays open under freeze for swap-out.** When `frozen == 1` and the redeemer's `deploy_token != deposit_token`, the keeper can still drive a swap-out via the registry-whitelisted SwapAdapter (Minswap V2). The destination is pinned to the vault's own address by the SwapAdapter validator, so an attacker controlling the keeper key cannot redirect output; the worst they can force is the Tier 2 peg-floor-bounded slippage (≤ 5-7%), and the resulting USDCx still lands in the vault for users to withdraw. Without this exception, a freeze would permanently strand the NDV portion until the 21-day `AdminDeployNonDeposit` governance fallback executes — Layer 2 closes that long window.
+
+**Layer 3 — CommunitySunset dead-man-switch.** When the vault has been operationally inactive for ≥ 90 days (`max(last_compound_time, last_realloc_time) + 90 days ≤ now`), any vUSDCx holder can invoke the permissionless `CommunitySunset` redeemer in `vault_user`. This atomically sets `frozen = 1` and `community_sunset_triggered = 1` (one-way irreversible). Once triggered:
+
+- `vault_liqwid.RecallFromLiqwid` accepts any signer (no keeper or governance signature required).
+- `vault_protocol.DeployToProtocol` Layer 2 path accepts any signer (same).
+
+Any vUSDCx holder can then drive the full recovery chain — Recall → Swap → Withdraw — without any keeper or governance intervention. The 90-day threshold corresponds to ≈ 18 missed zero-yield heartbeats (5-day cadence), proving the keeper is fully dead. The sunset path **only opens recovery** — it cannot mutate `total_deposited`, `total_shares`, `idle_buffer`, `liqwid_positions`, or any policy / immutable field. Validator preservation invariants ensure the SwapAdapter destination + peg-floor + slippage bounds still apply during sunset, so an attacker cannot use the open recovery paths to drain value.
+
+**What this means in practice.** If the founder is honest but solo-signing, the system runs as a normal 1-of-1 multisig with timelock + cancel safety primitives. If the founder's key is compromised, the attacker cannot extract value (Layer 1 closes the brick path; Layer 2 keeps recovery flowing; hard caps in §6.3 limit fee abuse). If the founder is incapacitated for 90+ days, depositors execute Layer 3 community sunset and recover their USDCx without any operator cooperation. Recovery does NOT cover the ~870 ADA in reference-script lockup nor the ~24 ADA in stake-credential deposits — those funds are bound to the founder's deploy wallet and to A2 governance, respectively, and accept their own residual loss as part of single-actor governance cost.
+
+This three-layer design is what makes founder-only governance an **acceptable Phase 1 fallback** rather than a critical risk. SPO recruitment remains the preferred path for the credibility + structural dissent benefits, but it is not a launch blocker.
 
 ### 5.6 Pre-audit risk
 
@@ -781,7 +801,7 @@ Hard caps baked into validators, immune to governance:
 - `performance_fee_bps` > 450 (4.5%) — rejected by `UpdateFee` redeemer in `vault_gov_policy.ak`
 - `early_withdraw_fee_bps` > 100 (1%) — rejected by `UpdateFee`
 - `min_hold_seconds` > 21600 (6 hours) — rejected by `UpdateFee`. Rationale: on V1's weekly Compound cadence, even at the maximum 6h setting the Direct Withdraw gate is active for only ~3.6% of the week; the Queue Withdraw path is never observed by this gate, so user funds cannot be locked regardless of the setting. Tightened from an earlier 24h cap — see §2.4.
-- `keeper_fee_bps` > 2500 (25%) or `gov_fee_bps` > 1000 (10%) or `keeper_fee_bps + gov_fee_bps` > 3000 (treasury floor 70%) — rejected by `UpdateFeeSplit`
+- `keeper_fee_bps` > 4000 (40%) or `gov_fee_bps` > 1000 (10%) or `keeper_fee_bps + gov_fee_bps` > 5000 (treasury floor 50%) — rejected by `UpdateFeeSplit`
 - `signers` < 3 or `threshold` < 2 or `threshold` > `signers` (unanimity `threshold == signers` explicitly allowed — V1 launch uses 3-of-3)
 - Any change to compile-time anchors (requires full redeploy)
 
@@ -815,7 +835,7 @@ The full bond + slashing state machine is specified in `spec/keeper-auth.md` and
 
 ### 7.4 Founder as keeper operator and one of three governance signers
 
-At V1 launch, the founder runs the keeper instance and also holds **1 of 3 governance signer seats** (the other 2 seats are held by independent Cardano SPOs — see §5.5). This arrangement is disclosed in §6.1 as a **single-operator risk at launch** — scope limited to the keeper-operator choice; it does not extend to the governance layer (1 founder + 2 independent SPOs co-sign), to the contract source (fully open-source), or to the keeper source (fully open-source and on-chain-switchable via `UpdateKeeperAuth`).
+**At V1 launch with completed SPO recruitment**, the founder runs the keeper instance and also holds **1 of 3 governance signer seats** (the other 2 seats are held by independent Cardano SPOs — see §5.5). **If SPO recruitment is not yet complete at launch** (§5.5.1 fallback scenario), the founder operates all 3 signer seats with key separation (multiple HD-derived keys held in physically separate signing environments); the §5.5.1 three-layer governance safety design + §6.3 hard caps preserve depositor recovery paths regardless of signer-slate composition. Either way, this arrangement is disclosed in §6.1 as a **single-operator risk at launch** — scope limited to the keeper-operator choice (and, in the fallback scenario, the governance signer slate); it does not extend to the contract source (fully open-source) or to the keeper source (fully open-source and on-chain-switchable via `UpdateKeeperAuth`).
 
 **What 3-of-3 unanimity at Phase 1 actually does** (honest framing):
 
@@ -931,7 +951,7 @@ If a critical bug requires V2, migration follows the same fresh-deploy pattern d
 - **Source code public** before mainnet launch.
 - **Audit reports public** as they complete.
 - **Governance actions public** — every QueueAction announced within 1 hour, on-chain history is canonical.
-- **Wind-down protocol public** — if the founder cannot continue, 90-day notice + fee-to-zero + Liqwid-positions-pre-recalled precondition (see §4.1 sunset mechanics) + EmergencyWithdraw governance path + `emergency-withdraw` self-serve tool.
+- **Wind-down protocol public** — if the founder cannot continue, 90-day notice + fee-to-zero + Liqwid-positions-pre-recalled precondition (see §4.1 sunset mechanics) + EmergencyWithdraw governance path + `emergency-withdraw` self-serve tool. **Hard-failure backstop**: even if both founder and any SPO co-signers are completely unreachable for 90 days, any vUSDCx holder can invoke the permissionless `CommunitySunset` redeemer (vault_user) to atomically freeze the vault and open permissionless `RecallFromLiqwid` + swap-to-USDCx paths for full self-serve depositor recovery — see §5.5.1 Layer 3 + `docs/security-model.md` §5.4 scenario E.
 - **No rug-pull architecture.** Every invariant that could drain funds is closed at the validator level, not the social level.
 - **Founder incapacitation protocol.** The V1 launch has the founder simultaneously serving as keeper operator, 1-of-3 governance signer, and ref-deployer-wallet controller; individual-level single-point-of-failure risk is real. Response mechanisms: (a) **Short-term absence (< 7 days)** — the 7-day keeper-inactivity window in the contract automatically activates; Direct Withdraw remains fully operational and the early-withdraw fee is waived; (b) **Medium-term incapacity (7-30 days)** — the two independent SPOs can queue `UpdateKeeperAuth` (14-day timelock + 1-of-n cancel) to rotate the keeper PKH to a community successor; (c) **Permanent incapacity** — the two SPOs trigger the §4.1 sunset path (90-day notice + fee=0 + depositor self-serve exit). The ref-deployer wallet key is currently controlled solely by the founder; if that key is lost or inaccessible, approximately 420 ADA of ref-script capital is permanently locked (but **this does not block depositor withdrawals** — ref-scripts remain available as reference inputs). V2 deployment ceremony will incorporate a multi-sig ref-deployer wallet or community key-escrow mechanism to eliminate this SPOF.
 
@@ -946,7 +966,7 @@ The 100K cap is not a suggestion — it is an acknowledgment that V1 is producti
 
 ### 9.4 Known V1 limits (disclosed rather than hidden)
 
-- **All 12 V1 staking-credential 2 ADA stake deposits are reclaimable.** Each of `vault_user`, `vault_keeper_hot`, `vault_batcher`, `vault_swap_ada`, `vault_protocol`, `vault_recall`, `vault_liqwid`, `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`, `keeper_stake_script`, and `minswap_v2_adapter` carries its own A2 gov-gated `publish` handler — total 24 ADA reclaimable via governance at sunset. (Earlier monolithic-validator topologies had a 2 ADA permanent-lock caveat on the largest validator due to a 16 KB ceiling collision with the `publish` handler; the partitioning documented in `spec/architecture.md §4.1` resolved this.)
+- **All 12 V1 staking-credential 2 ADA stake deposits are reclaimable.** Each of `vault_user`, `vault_keeper_hot`, `vault_batcher`, `vault_swap_ada`, `vault_protocol`, `vault_recall`, `vault_liqwid`, `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`, `keeper_stake_script`, and `minswap_v2_adapter` carries its own A2 gov-gated `publish` handler — total 24 ADA reclaimable via governance at sunset. (10 of these are vault-proxy Withdraw-Zero routes per §3.2; the additional 2 — `keeper_stake_script` and `minswap_v2_adapter` — carry their own staking credentials for delegation independence and operate outside the vault-proxy dispatch.) Earlier monolithic-validator topologies had a 2 ADA permanent-lock caveat on the largest validator due to a 16 KB ceiling collision with the `publish` handler; the partitioning documented in `spec/architecture.md §4.1` resolved this.
 - **100K TVL cap is NOT enforced at the contract level** — it is operator-enforced via frontend deposit gating + keeper `tvlCapMonitor` alerts. This is a deliberate V1 design choice, not an oversight. A contract-level cap was designed (`max_tvl` datum field + `ActUpdateTvlCap` 7-day-timelock governance action, "Option B" in internal review) but not shipped for two reasons: (1) The cap exists only to signal pre-audit prudence; post-external-audit the cap is either raised unlimited or the V2 deploy removes it, making a gov-adjustable on-chain mechanism single-use lifecycle overhead. (2) At V1 launch gov runs 3-of-3 unanimity with 1 founder + 2 independent SPO signers (§5.5); while 3-of-3 blocks unilateral founder action, cap-sizing judgment is not SPOs' core domain (they are stake pool operators, not vault economic-model designers) — handing the cap to SPO-gated governance during the pre-audit phase is not a meaningful check either — so the honest label "operator-enforced" is stronger than the appearance of "contract-enforced". Depositors who want belt-and-suspenders contract-level deposit limits should wait for Phase 2 gov rotation (external signer added, §6.1) — at that point an on-chain cap would have meaningful dissent-veto semantics and V2 will reconsider.
 - **Reference-script capital lockup.** V1's 18 reference-script UTXOs at the deploy wallet address (17 logic validators + 1 SwapAdapter) tie up ~870 ADA (Conway-era per-byte `minFeeRefScriptCostPerByte` × 1.10× operator safety multiplier — V1 Preprod measured 871.51 ADA exactly), recoverable via `deploy/tools/reclaim-refs.ts` once the operator decides to sunset the deployment. Plus 24 ADA in stake-credential deposits (12 × 2 ADA) reclaimable via A2 governance after a 14d timelock. See §8.2 for the pre-launch audit context.
 - **Architectural complexity growth.** V1's first cut was 12 validators; the current topology is **22 artefacts** (17 logic validators + 4 NFT mint policies + 1 DEX adapter), an 80% growth driven by the Plutus V3 16 KB reference-script ceiling and the §5.4 P3-P5 slippage-stack additions. Each new validator added (a) an independent audit scope surface, (b) an additional compile-time anchor set, (c) an additional reference-script UTXO (~50 ADA each at current parameters), and (d) an additional deploy-ceremony TX. Net effect on first deploy: ref-script lockup grew from earlier estimates of ~400 ADA to actual measured 871.51 ADA (+118%), and ceremony TX count grew from ~18 to 27-30 (+50%). External audit budget impact: **12 staking-credential A2 `publish` handlers must each be audited individually** (instead of the previously-locked single `vault_core` lock that was outside audit scope), so the resolution of "vault_core 2 ADA permanent lock" came at the cost of expanded audit surface. Future feature additions risk further splits — the trajectory from 12 → 22 in one V1 cycle suggests V2 may need to either (a) accept higher artefact counts as the new baseline, or (b) consolidate via on-chain dispatch tables. V1 chose (a) explicitly because the design freeze-then-audit-then-launch sequence does not allow for late re-architecture; V2 will reconsider.
@@ -986,7 +1006,7 @@ Every governance QueueAction's payload hash can be reverse-engineered from CBOR 
 
 **Specs** (under `spec/`):
 - `architecture.md` — **17-logic-validator catalog** with redeemer details (+ 4 one-shot NFT mint policies + 1 DEX adapter = 22 total artefacts); §4.1 partitioning rationale (4 orthogonal seams: authorization-boundary, response-latency, bytecode-cost-center, size-fix)
-- `vault-datum.md` — VaultDatum schema (**28 fields** post §5.4 Phase 2; adds `max_slippage_bps` + `min_swap_peg_bps` on top of the prior 26-field layout), immutable vs governance-mutable vs operationally-mutable classification, per-redeemer state-transition matrix
+- `vault-datum.md` — VaultDatum schema (**29 fields** post §5.4 Phase 2 + Phase 1 governance safety; adds `max_slippage_bps` + `min_swap_peg_bps` + `community_sunset_triggered` on top of the prior 26-field layout), immutable vs governance-mutable vs operationally-mutable classification, per-redeemer state-transition matrix
 - `governance.md` — 14 governance action kinds (including `ActDeregisterStake` for operator-side stake-deposit recovery), timelock floors, launch signer set + rotation roadmap
 - `multisig-gov.md` — MultisigGov validator internals, action_id / payload_hash computation, `is_gov_authorized` cross-validator helper
 - `gov-nft.md` — Gov Signer soul-bound NFT minting policy (reputation-only, non-transferable)

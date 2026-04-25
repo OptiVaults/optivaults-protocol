@@ -156,14 +156,23 @@ validator vault_liqwid(
       // ══════════════════════════════════════════════════════
       RecallFromLiqwid { market_id } -> {
         expect vault_input_count == 1
-        let authorized =
-          require_keeper_stake_script_or_governance_fallback(
-            tx,
-            keeper_stake_hash,
-            old_datum.governance_policy,
-            old_datum.governance_name,
-            old_datum.last_compound_time,
-          )
+        // Phase 1 governance safety — Layer 3 (2026-04-25): under
+        // CommunitySunset, any vUSDCx holder can drive RecallFromLiqwid
+        // without keeper or gov signature. The downstream `is_keeper`
+        // check still gates strict-principal (keeper) vs partial-loss
+        // accounting (everyone else), so sunset uses the same partial
+        // path as governance fallback — physical underlying recovered,
+        // any shortfall written off as actual realized loss.
+        let authorized = or {
+            require_keeper_stake_script_or_governance_fallback(
+              tx,
+              keeper_stake_hash,
+              old_datum.governance_policy,
+              old_datum.governance_name,
+              old_datum.last_compound_time,
+            ),
+            old_datum.community_sunset_triggered == 1,
+          }
 
         let market = find_liqwid_market(tx, old_datum, market_id)
         let u_pol = market.underlying_policy
@@ -308,6 +317,7 @@ validator vault_liqwid(
           new_datum.strategy_allocations == old_datum.strategy_allocations,
           new_datum.last_compound_time == old_datum.last_compound_time,
           new_datum.frozen == old_datum.frozen,
+          new_datum.community_sunset_triggered == old_datum.community_sunset_triggered,
           new_datum.last_realloc_time == old_datum.last_realloc_time,
           new_datum.last_fee_update_time == old_datum.last_fee_update_time,
           new_datum.last_ada_swap_time == old_datum.last_ada_swap_time,
