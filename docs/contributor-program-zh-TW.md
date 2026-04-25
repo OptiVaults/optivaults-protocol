@@ -98,15 +98,15 @@ tokens:
 
 本計畫認可以下貢獻類別:
 
-| 角色 | 做什麼 | 典型酬庸機制 |
-|------|-------|-------------|
-| **整合貢獻者** | 實作新 DEX 路徑、新 Liqwid 市場、其他協議整合 | 機制 A(事前 bounty) |
-| **Keeper 工程師** | 改善 keeper 可靠性、監控、恢復工具 | 機制 A + B |
-| **Frontend 貢獻者** | React UI 改善、i18n、UX 打磨 | 機制 B(回溯性) |
-| **安全研究者** | 透過協調流程揭露漏洞 | 機制 A(依 `docs/audit-scope.md` 的 tier) |
-| **文件貢獻者** | 白皮書更新、教學、翻譯 | 機制 B |
-| **審計方(正式合作)** | 第三方安全審計 | 從 Treasury audit reserve 出,不走 R&D |
-| **工具開發者** | CLI 改進、監控 bot、區塊瀏覽器儀表板 | 機制 A + B |
+| 角色 | 目標 repo | 做什麼 | 典型酬庸機制 |
+|------|----------|-------|-------------|
+| **整合貢獻者** | `optivaults-protocol`(新 DEX adapter / Liqwid 市場條目)+ `optivaults-reference`(keeper 支援) | 實作新 DEX 路徑、新 Liqwid 市場、其他協議整合 | 機制 A(事前 bounty) |
+| **Keeper 工程師** | `optivaults-reference` | 改善 keeper 可靠性、監控、恢復工具 | 機制 A + B |
+| **Frontend 貢獻者** | `optivaults-reference` | React UI 改善、i18n、UX 打磨 | 機制 B(回溯性) |
+| **安全研究者** | `optivaults-protocol`(validator / 部署)或 `optivaults-reference`(operator)——scope 見各 repo 的 `SECURITY.md` | 透過協調流程揭露漏洞 | 機制 A(依 `docs/audit-scope.md` 的 tier) |
+| **文件貢獻者** | `optivaults-protocol`(spec / whitepaper / docs)或 `optivaults-reference`(operator docs) | 白皮書更新、教學、翻譯 | 機制 B |
+| **審計方(正式合作)** | `optivaults-protocol`(主要、外部審計目標)+ `optivaults-reference`(另走時程) | 第三方安全審計 | 從 Treasury audit reserve 出,不走 R&D |
+| **工具開發者** | `optivaults-reference`(主要)——視工具用途而定 | CLI 改進、監控 bot、區塊瀏覽器儀表板 | 機制 A + B |
 
 每一種角色除了現金酬庸以外,都可能額外拿到貢獻者 NFT(機制 C)。
 

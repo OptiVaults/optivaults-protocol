@@ -97,15 +97,15 @@ This is aspirational. V1 does not commit to RetroPGF at launch. Its feasibility 
 
 The program recognizes these categories of contribution:
 
-| Role | What they do | Typical reward mechanism |
-|------|-------------|--------------------------|
-| **Integration contributor** | Implements new DEX routes, Liqwid markets, other protocol integrations | Mechanism A (pre-bountied) |
-| **Keeper engineer** | Improves keeper reliability, monitoring, recovery tools | Mechanism A + B |
-| **Frontend contributor** | React UI improvements, i18n, UX polish | Mechanism B (retroactive) |
-| **Security researcher** | Discloses vulnerabilities via coordinated process | Mechanism A (bounty per `docs/audit-scope.md` tiers) |
-| **Documentation contributor** | Whitepaper updates, guides, translations | Mechanism B |
-| **Auditor (formal engagement)** | Third-party security audit | Funded from Treasury audit reserve, not R&D |
-| **Tool developer** | CLI improvements, monitoring bots, block-explorer dashboards | Mechanism A + B |
+| Role | Target repo | What they do | Typical reward mechanism |
+|------|-------------|-------------|--------------------------|
+| **Integration contributor** | `optivaults-protocol` (new DEX adapter / Liqwid market entry) + `optivaults-reference` (keeper support) | Implements new DEX routes, Liqwid markets, other protocol integrations | Mechanism A (pre-bountied) |
+| **Keeper engineer** | `optivaults-reference` | Improves keeper reliability, monitoring, recovery tools | Mechanism A + B |
+| **Frontend contributor** | `optivaults-reference` | React UI improvements, i18n, UX polish | Mechanism B (retroactive) |
+| **Security researcher** | `optivaults-protocol` (validator / deploy) OR `optivaults-reference` (operator) — see each repo's `SECURITY.md` for scope | Discloses vulnerabilities via coordinated process | Mechanism A (bounty per `docs/audit-scope.md` tiers) |
+| **Documentation contributor** | `optivaults-protocol` (spec / whitepaper / docs) OR `optivaults-reference` (operator docs) | Whitepaper updates, guides, translations | Mechanism B |
+| **Auditor (formal engagement)** | `optivaults-protocol` (primary, external audit target) + `optivaults-reference` (separate track) | Third-party security audit | Funded from Treasury audit reserve, not R&D |
+| **Tool developer** | `optivaults-reference` (primarily) — depends on tool purpose | CLI improvements, monitoring bots, block-explorer dashboards | Mechanism A + B |
 
 Every role may receive a Contributor NFT (Mechanism C) in addition to cash compensation.
 

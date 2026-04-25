@@ -24,16 +24,20 @@ V1 的安全故事建立在三層:(1) 部署時燒進 validator hash 的編譯�
 
 V1 把權責拆在六個不同的密鑰控制身份。依政策,**沒有任何一個人持有超過一個身份**。
 
-| 身份 | 角色 | 鏈上表徵 | 輪替路徑 |
-|------|------|---------|---------|
-| 1. **Keeper** | Compound、rebalance、batch、swap、Liqwid supply / recall | 透過 `keeper_stake_script` zero-withdraw 模式授權——`keeper_stake_hash` 是 `vault_user` / `vault_keeper_hot` / `vault_protocol` / `vault_recall` / `vault_liqwid` 的編譯時參數;實際授權 PKH 集合放在 stake-script 自己的 datum(治理可變) | `UpdateKeeperAuth` 透過治理(14 天 timelock)更新 stake-script datum |
-| 2. **治理簽名者 A** | 3-of-3 quorum 成員 | `GovDatum.signers` 中的 pubkey | `RotateSigners` 14 天 timelock |
-| 3. **治理簽名者 B** | 3-of-3 quorum 成員 | `GovDatum.signers` 中的 pubkey | `RotateSigners` 14 天 timelock |
-| 4. **治理簽名者 C** | 3-of-3 quorum 成員 | `GovDatum.signers` 中的 pubkey | `RotateSigners` 14 天 timelock |
-| 5. **Ref-script deployer** | 部署 validator reference script、持有 deployer wallet UTXO | Deploy wallet pubkey(鏈下身份,以 TX 歷史錨定) | V1 部署完成後退場(ref script 不可變) |
-| 6. **創辦人補貼錢包** | 持有個人 runway,在金庫 break-even 前補貼 | 個人 Cardano wallet | 依白皮書 §9.2 退場或公開交接 |
+**層級界定說明**:以下六個身份全部是**跑 vault 實例的運營角色**。它們描述 OptiVaults 代跑的實例(或任何 fork)。協議層程式本身([`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol))**沒有任何控制者**——任何人都可以讀、fork、或部署自己的實例、用自己的身份集合。下表是**運營 `optivaults.app` 的實例**的;fork 運營者組自己的身份集合,與 OptiVaults 的完全獨立。
 
-**啟動現實**:V1 啟動時,身份 1 + 5 + 6 都是**同一位創辦人**。身份 2/3/4 是創辦人 + 2 位信任的合作者。這個 6-身份地圖是**目標狀態**——白皮書 §8.6 揭露當下的集中度與分離路徑。
+| # | 身份 | 層 | 角色 | 鏈上表徵 | 輪替路徑 |
+|---|------|----|------|---------|---------|
+| 1 | **Keeper** | Operator | Compound、rebalance、batch、swap、Liqwid supply / recall | 透過 `keeper_stake_script` zero-withdraw 模式授權——`keeper_stake_hash` 是 `vault_user` / `vault_keeper_hot` / `vault_protocol` / `vault_recall` / `vault_liqwid` 的編譯時參數;實際授權 PKH 集合放在 stake-script 自己的 datum(治理可變) | `UpdateKeeperAuth` 透過治理(14 天 timelock)更新 stake-script datum |
+| 2 | **治理簽名者 A** | Instance 治理 | 3-of-3 quorum 成員 | `GovDatum.signers` 中的 pubkey | `RotateSigners` 14 天 timelock |
+| 3 | **治理簽名者 B** | Instance 治理 | 3-of-3 quorum 成員 | `GovDatum.signers` 中的 pubkey | `RotateSigners` 14 天 timelock |
+| 4 | **治理簽名者 C** | Instance 治理 | 3-of-3 quorum 成員 | `GovDatum.signers` 中的 pubkey | `RotateSigners` 14 天 timelock |
+| 5 | **Ref-script deployer** | Operator | 部署 validator reference script、持有 deployer wallet UTXO | Deploy wallet pubkey(鏈下身份,以 TX 歷史錨定) | V1 部署完成後退場(ref script 不可變) |
+| 6 | **創辦人補貼錢包** | Operator | 持有個人 runway,在金庫 break-even 前補貼 | 個人 Cardano wallet | 依白皮書 §9.2 退場或公開交接 |
+
+**「Instance 治理」vs「Operator」**——治理簽名者(身份 2-4)控制鏈上協議政策變更(費率、策略、keeper 授權);他們是**該 vault 實例的治理**。Fork 運營者會有自己的治理簽名者集合,與 OptiVaults 的分開,可能有不同的簽名者數、輪替政策、人。**協議層程式不關心簽名者是誰**——它只檢查任何治理動作是否有達門檻的簽名。
+
+**啟動現實**:V1 啟動時,身份 1 + 5 + 6 都是**同一位創辦人**。身份 2/3/4 是創辦人 + 2 位信任的合作者。這個 6-身份地圖是 OptiVaults 實例的**目標狀態**——白皮書 §8.6 揭露當下的集中度與分離路徑。
 
 ---
 
@@ -77,7 +81,10 @@ V1 把權責拆在六個不同的密鑰控制身份。依政策,**沒有任何�
 
 **狀態**:已關閉。
 
-### 3.4 Keeper 錢包被劫持(在範圍,有界)
+### 3.4 Keeper 錢包被劫持(在範圍,有界——operator 層 scope)
+
+**層級 scope**:Keeper 錢包被入侵是 **operator 層**威脅。它影響 OptiVaults 代跑實例(或任何 fork)的運營可用性,但**不會蔓延到協議層**——使用相同 Aiken 合約、但獨立 keeper 錢包的 fork,不會受 OptiVaults 的 keeper 被入侵影響。下方的鏈上不變量約束 keeper 被入侵的傷害,**不論被入侵的是哪個實例的 keeper**。
+
 
 **情境**:Keeper 熱錢包被入侵。攻擊者可以:
 - 簽 Compound、RebalanceBuffer、MergeUtxo、BatchProcess、SupplyToLiqwid、RecallFromLiqwid、DeployToProtocol、VaultSwap、AdminDeployNonDeposit(僅 gov-path)、KeeperToggleMarket。

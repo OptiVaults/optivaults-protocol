@@ -24,16 +24,20 @@ V1's security story rests on three layers: (1) compile-time trust anchors that a
 
 V1 separates authority across six distinct key-controlled identities. No single human controls more than one, by policy.
 
-| Identity | Role | On-Chain Artifact | Rotation Path |
-|----------|------|-------------------|---------------|
-| 1. **Keeper** | Compound, rebalance, batch, swap, Liqwid supply/recall | Authorized via `keeper_stake_script` zero-withdraw pattern — `keeper_stake_hash` is a compile-time param of `vault_user` / `vault_keeper_hot` / `vault_protocol` / `vault_recall` / `vault_liqwid`; the actual authorized PKH set lives in the stake-script's own datum (governance-mutable) | `UpdateKeeperAuth` via governance (14-day timelock) updates the stake-script datum |
-| 2. **Governance Signer A** | 1-of-3 quorum member | pubkey in `GovDatum.signers` | `RotateSigners` 14d timelock |
-| 3. **Governance Signer B** | 1-of-3 quorum member | pubkey in `GovDatum.signers` | `RotateSigners` 14d timelock |
-| 4. **Governance Signer C** | 1-of-3 quorum member | pubkey in `GovDatum.signers` | `RotateSigners` 14d timelock |
-| 5. **Ref-script deployer** | Deploys validator reference scripts, holds deployer wallet UTXOs | Deploy wallet pubkey (off-chain identity, anchored via TX history) | Retirement after V1 deploy completes (ref scripts are immutable) |
-| 6. **Founder subsidy wallet** | Holds personal runway funding the vault until break-even | Personal Cardano wallet | Retirement or public hand-off per §9.2 of whitepaper |
+**Layer-scoping note**: all six identities below are **operational roles for running a vault instance**. They describe the OptiVaults-operated instance (or any vault fork). The protocol-layer code itself ([`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol)) has no controllers — anyone may read it, fork it, or deploy their own instance with their own identity set. The table below is about the **operator instance** running at `optivaults.app`; a fork operator assembles their own identity set, which is entirely independent of OptiVaults's.
 
-**Launch reality:** at V1 launch, identities 1 + 5 + 6 are the same founder. Identities 2/3/4 are founder + 2 trusted collaborators. The 6-identity map is the **target state** — §8.6 of the whitepaper discloses the current concentration and the path to separation.
+| # | Identity | Layer | Role | On-Chain Artifact | Rotation Path |
+|---|----------|-------|------|-------------------|---------------|
+| 1 | **Keeper** | Operator | Compound, rebalance, batch, swap, Liqwid supply/recall | Authorized via `keeper_stake_script` zero-withdraw pattern — `keeper_stake_hash` is a compile-time param of `vault_user` / `vault_keeper_hot` / `vault_protocol` / `vault_recall` / `vault_liqwid`; the actual authorized PKH set lives in the stake-script's own datum (governance-mutable) | `UpdateKeeperAuth` via governance (14-day timelock) updates the stake-script datum |
+| 2 | **Governance Signer A** | Instance governance | 1-of-3 quorum member | pubkey in `GovDatum.signers` | `RotateSigners` 14d timelock |
+| 3 | **Governance Signer B** | Instance governance | 1-of-3 quorum member | pubkey in `GovDatum.signers` | `RotateSigners` 14d timelock |
+| 4 | **Governance Signer C** | Instance governance | 1-of-3 quorum member | pubkey in `GovDatum.signers` | `RotateSigners` 14d timelock |
+| 5 | **Ref-script deployer** | Operator | Deploys validator reference scripts, holds deployer wallet UTXOs | Deploy wallet pubkey (off-chain identity, anchored via TX history) | Retirement after V1 deploy completes (ref scripts are immutable) |
+| 6 | **Founder subsidy wallet** | Operator | Holds personal runway funding the vault until break-even | Personal Cardano wallet | Retirement or public hand-off per §9.2 of whitepaper |
+
+**"Instance governance" vs "Operator"** — governance signers (identities 2-4) control on-chain protocol-policy mutations (fee rate, strategy, keeper authorization); they are governance **for this specific vault instance**. A fork operator would have their own governance signer set, separate from OptiVaults's, with potentially different signer counts, rotation policies, and humans. The protocol-layer code doesn't care who the signers are — it just checks that the required threshold signs any governance action.
+
+**Launch reality:** at V1 launch, identities 1 + 5 + 6 are the same founder. Identities 2/3/4 are founder + 2 trusted collaborators. The 6-identity map is the **target state** for the OptiVaults instance — §8.6 of the whitepaper discloses the current concentration and the path to separation.
 
 ---
 
@@ -77,7 +81,9 @@ Common mischaracterization to flag: **"any 1-of-n signer can execute arbitrary a
 
 **Status:** closed.
 
-### 3.4 Keeper Wallet Hijack (in-scope, bounded)
+### 3.4 Keeper Wallet Hijack (in-scope, bounded — operator-layer scope)
+
+**Layer scope**: keeper wallet compromise is an **operator-layer** threat. It affects operational availability of the OptiVaults-operated instance (or any fork) but does not propagate to the protocol layer — a fork running the same Aiken contracts with an independent keeper wallet is unaffected by OptiVaults's keeper compromise. The on-chain invariants below bound keeper-compromise damage regardless of which instance's keeper is compromised.
 
 **Scenario:** Keeper's hot key is compromised. Attacker can:
 - Sign Compound, RebalanceBuffer, MergeUtxo, BatchProcess, SupplyToLiqwid, RecallFromLiqwid, DeployToProtocol, VaultSwap, AdminDeployNonDeposit (gov-path only), KeeperToggleMarket.

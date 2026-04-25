@@ -4,6 +4,8 @@ V1 是 vault stack 的全新部署。Cardano 智能合約不可變——V1 **不
 
 本文件是 canonical 使用者面遷移參考。
 
+**層級界定**:遷移是**協議層**事件——存入者從內部驗證期 vault 合約提領 USDCx、再存進 V1 vault 合約,兩邊都是鏈上動作、用自己錢包完成。**Operator 層**(哪個 `optivaults.app` URL 提供 UI、哪個 keeper 處理 TX)**不是遷移路徑的一部分**;存入者可以只用 `withdraw-cli` + 任意錢包 + 任意 V1 存款 UI(OptiVaults 代跑或 fork 都行)完成遷移。完整兩層 framing 見 `whitepaper §3.5`。
+
 ---
 
 ## 1. 為何採用新部署

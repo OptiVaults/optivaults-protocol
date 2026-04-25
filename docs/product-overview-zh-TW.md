@@ -11,7 +11,14 @@ OptiVaults V1 是 Cardano 上的非託管智能合約 vault。使用者存入 US
 
 **V1 是 Cardano DeFi 公共財參考實作 (reference implementation),不是商業產品**——4.5% 績效費用於覆蓋協議運營 + 審計儲備,不是創辦人或投資人的收益;Apache 2.0 授權讓其他團隊可以 fork 下來做特化。存入者應以「貢獻公共財 + 當早期驗證者」的心態進入,不是購買商業服務(完整定位見白皮書 Executive Summary + §12 免責聲明)。
 
-**V1 尚未完成第三方審計，整體存款上限 100K USDCx（約 $100K）。** 這個數字是上限，不是目標——Phase 1（啟動後頭 6-12 個月）實際預期 TVL 落在 **$5K-$25K** 之間。換句話說：我們希望小規模、務實的使用者在真實環境下協助驗證系統，不是衝 TVL 的快速募集。外部審計預計 2026 年 Q3 進行，審計通過後才會放寬上限。
+**V1 尚未完成第三方審計,整體存款上限 100K USDCx(約 $100K)。** 這個數字是上限,不是目標——Phase 1(啟動後頭 6-12 個月)實際預期 TVL 落在 **$5K-$25K** 之間。換句話說:我們希望小規模、務實的使用者在真實環境下協助驗證系統,不是衝 TVL 的快速募集。外部審計目前目標 **Q2-Q3 2027**(反映 Cardano Project Catalyst Round 時程不確定性,見白皮書 §8.1),審計通過後才會放寬上限。
+
+**程式住在哪(兩個 repo)**。你可以在 GitHub 讀到 V1 的每一行原始碼,它拆在兩個 Apache-2.0 公 repo:
+
+- **協議層**——[`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol):實際控制你資金的 Aiken 智能合約、白皮書、部署流程。**你的 vUSDCx 由這一層鑄造;4.5% fee 上限、no-admin-drain 不變量、keeper 停擺 7 天免費提領**——這些都由這層強制。Fork 跑自己的完全免費。
+- **Operator 層**——[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference):運營 `optivaults.app` 的 TypeScript 程式(keeper、API、frontend、恢復 CLI)。這層就是 4.5% fee 支撐的對象。歡迎 fork;fork 運營者跑自己的實例、自訂費率。
+
+**你的 USDCx 在金庫裡時,保護它的是智能合約,不是 OptiVaults 這家機構**。這個區分很重要,因為**若 OptiVaults 明天消失,你的存款仍可透過 self-serve 工具(`withdraw-cli` / `emergency-withdraw`)取回,不需要我們的基礎設施**。完整兩層架構見白皮書 §3.5。
 
 ---
 

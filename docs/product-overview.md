@@ -13,6 +13,13 @@ OptiVaults V1 is a non-custodial smart-contract vault on Cardano. You deposit US
 
 **V1 is pre-audit software under a 100K USDCx (≈$100K) total-deposits ceiling.** This is a ceiling, not a target — Phase 1 expected total TVL is actually **$5K-$25K** over the first 6-12 months. Read that as: we want a small number of pragmatic depositors to help us validate the system under real conditions, not a land-rush. External audit is targeted for **Q2-Q3 2027** (reflecting Cardano Project Catalyst Round timing uncertainty — see whitepaper §8.1), after which the cap will be raised.
 
+**Where the code lives (two repos).** You can read every line of V1's source on GitHub. It's split across two public Apache-2.0 repositories:
+
+- **Protocol layer** — [`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol): the Aiken smart contracts that actually control your funds, the whitepaper, and the deploy pipeline. This is what your vUSDCx are minted by and what enforces the 4.5% fee cap + no-admin-drain invariant + 7-day keeper-inactive waiver. Zero-fee to fork and run yourself.
+- **Operator layer** — [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference): the TypeScript code that runs `optivaults.app` (keeper, API, frontend, recovery CLIs). This layer is what the 4.5% fee funds. Forks welcome; fork operators run their own instance with their own fee.
+
+**When your USDCx is in the vault, the smart contracts are what protect it — not OptiVaults as a company.** This distinction matters because if OptiVaults the organisation disappeared tomorrow, your deposit is still recoverable via self-serve tools (`withdraw-cli` / `emergency-withdraw`) without needing our infrastructure. See `whitepaper §3.5` for the full two-layer architecture detail.
+
 ---
 
 ## 1.1 What makes V1 distinct

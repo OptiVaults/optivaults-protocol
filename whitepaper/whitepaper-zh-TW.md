@@ -375,6 +375,21 @@ V1 大量使用編譯期參數，把信任在部署當下就錨定住。寫進 v
 | Charli3 + Orcfax oracles | `SwapAda` 補充機制所需的 ADA/USD 價格 + P4 Tier 1 oracle-based fair-price 邊界 | 價格公平性與新鮮度——透過共用 `lib/vault/oracle.ak` 以 dual-feed（2 個 healthy sample 必須在 2% 分歧窗口內、個別新鮮度上限 10 分鐘）聚合中位數回傳（§5.4 P5 已完成），oracle 設定位於 Registry 的 `asset_oracles`，由 governance `UpdateRegistry`（14 天 timelock）管理 | 治理 `UpdateOracleSource`（14 天 timelock）可切換資料源；V1 launch 時 `asset_oracles = []`，SwapAda 在 governance 啟用 ADA 條目前不運作 |
 | Blockfrost / Ogmios | keeper 與 API 使用的鏈上索引 | UTXO 狀態正確 | 多源備援、以鏈上為準 |
 
+### 3.5 兩層 code 結構
+
+V1 的原始碼**拆在兩個獨立公 repo**,各自有自己的審計範圍、釋出週期、安全通報管道:
+
+| 層 | Repository | 裡面放什麼 | Fee | Fork 意涵 |
+|----|-----------|----------|-----|---------|
+| **協議層** | [`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol) | Aiken validators、spec、whitepaper、部署流程 | **零 fee**——任何人 fork 並啟動自己的 vault 實例,**完全不用付 OptiVaults** | fork 協議層 = 產出全新、獨立的 vault |
+| **Operator 層** | [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference) | TypeScript keeper、API server、frontend、CLI 工具(self-serve Withdraw / Emergency) | OptiVaults 在 `optivaults.app` 代跑的實例收已實現收益的 4.5% | 歡迎 fork;fork 者自訂費率(或零)、自己跑自己的基礎設施 |
+
+**4.5% 績效費是 operator 實例的屬性,不是協議本身的屬性**。若團隊 fork `optivaults-protocol` 並部署自己的 vault——用自己的 keeper 錢包跑自己的 `optivaults-reference` fork,或用完全重寫的 keeper——**他們對 OptiVaults 沒有任何欠款**。合約層強制的 4.5% 硬上限適用於「某一個 vault 實例的存入者該付多少績效費」,只約束該 vault 治理所能設的值,**不約束 fork 運營者對他們自己存入者收多少**。
+
+**安全通報 routing**:協議層發現(Aiken validator bug、datum injection、鏈上不變量違反)走 `optivaults-protocol/SECURITY.md`。Operator 層發現(keeper runtime、API 驗證、frontend XSS、CLI 解析)走 `optivaults-reference/SECURITY.md`。不確定就預設走協議層,triage 會轉派。
+
+**審計範圍對應層分離**。Q2-Q3 2027 的外部審計明確針對協議層(見 §8.1 與 `docs/audit-scope.md`)。Operator 層有自己獨立的審計時程;其信任屬性較窄,因為失敗模式受鏈上協議不變量的約束(被入侵的 keeper 可以造成運營 DoS,但**無法抽走本金**)。
+
 ---
 
 ## 4. 經濟模型

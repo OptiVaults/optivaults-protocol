@@ -4,6 +4,8 @@ V1 is a fresh deployment of the vault stack. Cardano smart contracts are immutab
 
 This document is the canonical user-facing migration reference.
 
+**Layer scoping**: migration is a **protocol-layer** event — depositors withdraw USDCx from the internal-verification-era vault contract and deposit into the V1 vault contract, both on-chain actions using their own wallet. The **operator layer** (which `optivaults.app` URL serves the UI, which keeper processes the TX) is not part of the migration path; depositors can complete the full migration using only `withdraw-cli` + any wallet of their choice + any V1 deposit UI (OptiVaults-operated or a fork). See `whitepaper §3.5` for the full two-layer framing.
+
 ---
 
 ## 1. Why a Fresh Deploy

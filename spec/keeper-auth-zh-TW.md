@@ -382,6 +382,8 @@ V1 mainnet 部署時,KeeperAuthDatum 初始化為:
 
 這就是 stake-validator 方法**相對於其他方案**(硬編碼 PKH list、License NFT minting policy 等)的**主要架構好處**:授權政策**在單一 validator 自己的 datum 內演進**,對協議其他部分不可見。
 
+**層級界定**:上述 `UpdateKeeperAuth` 治理動作是**協議層**事件——它變動一個特定 vault 實例的鏈上狀態。**Operator 層**(`optivaults-reference` 的 keeper TypeScript 程式、錢包金鑰管理、代管基礎設施)**完全獨立**——fork 運營者決定在自己實例中要註冊哪些 keeper PKH,是**該實例的治理決策**,與 TypeScript keeper 如何實作無關。**同一份 operator 層程式可以對任何把其 PKH 白名單的協議層 vault 運作**。
+
 ---
 
 ## 7. 為什麼不用 License NFT minting policy

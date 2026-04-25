@@ -378,6 +378,21 @@ Changing any anchor requires a full redeploy (new validator hashes, new vault ad
 | Charli3 + Orcfax oracles | ADA/USD price feed for the `SwapAda` replenishment redeemer + P4 Tier 1 oracle-based fair-price bound on DEX swaps | Fair price + freshness — via the shared `lib/vault/oracle.ak` dual-feed aggregator (≥ 2 healthy samples within 2% cross-feed disagreement window, each ≤ 10-minute stale, returns midpoint). Oracle config lives in the registry's `asset_oracles`, managed via governance `UpdateRegistry` (14-day timelock). | Governance `UpdateOracleSource` (14-day timelock) can rotate feeds if one source degrades; V1 launch ships with `asset_oracles = []` — SwapAda is inactive until governance enables the ADA entry (bootstrap via `MergeUtxo` donations) |
 | Blockfrost / Ogmios | Chain indexing for keeper + API | UTXO state accuracy | Multi-source, on-chain truth |
 
+### 3.5 Two-layer code organisation
+
+V1's source code is split across **two separate public repositories**, each with its own audit scope, release cycle, and security-disclosure channel:
+
+| Layer | Repository | What lives there | Fee | Fork implications |
+|-------|-----------|------------------|-----|-------------------|
+| **Protocol layer** | [`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol) | Aiken validators, spec, whitepaper, deploy pipeline | **Zero fee** — anyone may fork and launch a vault instance without paying OptiVaults anything | Forking the protocol layer produces a new, independent vault |
+| **Operator layer** | [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference) | TypeScript keeper, API server, frontend, CLI tools (self-serve Withdraw / Emergency) | 4.5% of realised yield on the **OptiVaults-operated instance** at `optivaults.app` | Forks are encouraged; a fork operator sets their own fee (or zero) and runs their own hosted infrastructure |
+
+**The 4.5% performance fee is a property of the operator instance, not of the protocol.** A team that forks `optivaults-protocol` and deploys their own vault — with their own keeper wallet running their own fork of `optivaults-reference`, or with a completely rewritten keeper — owes OptiVaults nothing. The contract-enforced 4.5% hard cap applies to the performance fee paid by depositors of a given vault instance; it constrains what governance of that specific vault can set, not what fork operators can charge their own depositors.
+
+**Security-disclosure routing.** Protocol-layer findings (Aiken validator bugs, datum injection, on-chain invariant violations) go to `optivaults-protocol/SECURITY.md`. Operator-layer findings (keeper runtime bugs, API authentication, frontend XSS, CLI parsing) go to `optivaults-reference/SECURITY.md`. When in doubt, protocol-layer is the default channel — triage will forward.
+
+**Audit scope parallels the layer split.** The Q2-Q3 2027 external audit targets the protocol layer specifically (see §8.1 and `docs/audit-scope.md`). Operator-layer code is audited separately on its own schedule; its trust properties are narrower because its failure modes are bounded by the on-chain protocol's invariants (a compromised keeper can cause operational DoS but cannot extract principal).
+
 ---
 
 ## 4. Economic Model

@@ -2,6 +2,8 @@
 
 **範圍**:錢在協議中怎麼流、誰付什麼、何時協議進入自給狀態。
 
+**層級界定(重要)**:本文件所有 fee 數字描述的是 **OptiVaults 代跑的 vault 實例**(`optivaults.app`)——也就是存入者與 operator 層([`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference))之間的互動。**協議層**([`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol))是**零 fee**:fork Aiken 合約的團隊,不論他們的運營選擇為何,都不需要付錢給 OptiVaults。當治理設 `performance_fee_bps` 時,設的是**該特定 vault 實例的費率**;合約中的 4.5% 硬上限是**協議層對任何跑該 validator 的 vault 的約束**,**不是**資金流向 OptiVaults。完整兩層 framing 見 `whitepaper §3.5`。
+
 ---
 
 ## 1. 費用結構一眼就看懂

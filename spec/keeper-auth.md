@@ -383,6 +383,8 @@ When TVL and ecosystem maturity justify permissionless keeper registration, the 
 
 This is the **primary architectural benefit** of the stake-validator approach over alternatives (hardcoded PKH list, License NFT minting policy, etc.): authorization policy evolves within a single validator's own datum, invisible to the rest of the protocol.
 
+**Layer scoping**: the `UpdateKeeperAuth` governance action above is a **protocol-layer** event — it mutates on-chain state that applies to a specific vault instance. The **operator layer** (`optivaults-reference`'s keeper TypeScript code, wallet key management, hosting infrastructure) is entirely independent — a fork operator choosing which keeper PKHs to register in their instance is a governance decision for that instance, separate from how the TypeScript keeper is coded. The same operator-layer code can run against any protocol-layer vault that whitelists its PKH.
+
 ---
 
 ## 6. Why not use a License NFT minting policy instead?

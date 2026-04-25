@@ -135,6 +135,8 @@ Fuzz 總跑量從 2,500 → 3,000(每次 build)。
 
 V1 特有的內部審計依**涵蓋區**組織,而不是用輪次編號。每個區域獨立追蹤;輪次數要看複審時的發現密度與範圍調整而定。
 
+**層級界定**:涵蓋區 A-D + F 覆蓋**協議層**([`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol))——Aiken validators + 部署流程。區 E 覆蓋 **operator 層**([`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference))——TypeScript keeper + API + frontend + CLI。Q2-Q3 2027 的外部審計(§5)明確針對協議層;operator 層依自己時程審、scope 宣告於 `optivaults-reference/SECURITY.md`。Fork 協議層的團隊**繼承 A-D/F 的覆蓋歷史**(相同 validator hash);fork operator 層的團隊**繼承 E 方法論但要自己對他們特定的 TypeScript delta 做 E 審計**。
+
 **涵蓋區 A — Treasury**
 聚焦:`treasury.ak` 整個 validator、透過 `multisig_gov` 的 `TreasurySpend` + `UpdateTreasuryParams` + `ReceiveGovForfeit`。出口:0 CRIT / 0 HIGH / 0 MEDIUM。
 

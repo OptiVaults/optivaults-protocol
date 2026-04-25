@@ -135,6 +135,8 @@ Total fuzz runs expand from 2,500 → 3,000 per build.
 
 V1-specific internal audit work is organized by coverage area rather than enumerated round numbers. Each area is tracked independently; the round count depends on finding density and scope refinement during review.
 
+**Layer scoping**: coverage areas A-D + F cover the **protocol layer** ([`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol)) — Aiken validators + deploy pipeline. Area E covers the **operator layer** ([`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)) — TypeScript keeper + API + frontend + CLI. The external Q2-Q3 2027 audit (§5) targets the protocol layer specifically; the operator layer is audited on its own schedule with its own scope statement in `optivaults-reference/SECURITY.md`. Forks of the protocol layer inherit the A-D/F coverage history (same validator hashes); forks of the operator layer inherit the E methodology but need their own E audit of their specific TypeScript deltas.
+
 **Coverage area A — Treasury**
 Focus: `treasury.ak` entire validator, `TreasurySpend` + `UpdateTreasuryParams` + `ReceiveGovForfeit` via `multisig_gov`. Exit: 0 CRIT / 0 HIGH / 0 MEDIUM findings.
 
