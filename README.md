@@ -21,7 +21,7 @@ This directory contains the V1 design, specification, implementation, and migrat
 OptiVaults V1 is intentionally split across **two repositories**, reflecting two fundamentally different things:
 
 - **`optivaults-protocol`** (this repo) — the **protocol layer**. Aiken validators, protocol specification, whitepaper, deploy pipeline. **Zero fee** at this layer; any team may fork and launch their own vault without paying anything. Pure Cardano DeFi commons contribution.
-- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)** — the **operator reference implementation**. TypeScript keeper, API server, frontend, CLI tools. Runs the `optivaults.app` live vault instance. Funded by the contract-enforced 4.5% performance fee (20% keeper / 80% treasury; no founder dividend, no investor return, no token). Apache 2.0 — forks welcome.
+- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)** — the **operator reference implementation**. TypeScript keeper, API server, frontend, CLI tools. Runs the `optivaults.app` live vault instance. Funded by the contract-enforced 4.5% performance fee (40% keeper / 60% treasury at launch — keeper share at the validator hard cap to support open-source third-party keeper viability; no founder dividend, no investor return, no token). Apache 2.0 — forks welcome.
 
 The **4.5% fee happens only at the operator layer**. The protocol itself costs nothing to use if you run your own instance. See `docs/economics.md` for the full fee breakdown and `docs/security-model.md §2` for the trust model across the two layers.
 
@@ -43,9 +43,9 @@ OptiVaults V1 is characterized by the following architectural decisions. Each is
 1. **Non-custodial on-chain vault** — user funds are controlled exclusively by Aiken PlutusV3 smart contracts; no operator key can extract principal.
 2. **USDCx as deposit asset** — Cardano-native USD-pegged stablecoin issued by Circle via its xReserve crosschain reserve mechanism. The vault routes deposits to Liqwid Finance stablecoin markets (DJED, USDM) and Minswap V2 DEX paths for diversified yield.
 3. **Governance by m-of-n MultisigGov** — all protocol-policy changes (strategy, fee rate, emergency freeze) gated by multi-signature with 7-day timelock and 1-of-n cancel veto.
-4. **On-chain treasury** — 80% of performance-fee revenue flows to a governance-managed treasury contract with contract-enforced category buckets (audit reserve / operations / R&D / operational buffer).
+4. **On-chain treasury** — 60% of performance-fee revenue flows to a governance-managed treasury contract with contract-enforced category buckets (audit reserve / operations / R&D / operational buffer; launch sub-allocation 40/25/25/10 keeps audit-reserve accumulation rate at 24% of total fee — same as the prior 80%×30% allocation).
 5. **Stake-validator keeper authorization** — keeper operations are authenticated via a stake validator with a mode flag, allowing the authorization rules to evolve (governance-approved list → permissionless-with-bond) without redeploying the main vault contracts.
-6. **20% keeper fee share** — executing keeper receives 20% of performance fee per Compound as operational compensation; 80% to treasury.
+6. **40% keeper fee share** — executing keeper receives 40% of performance fee per Compound as operational compensation (validator hard cap); 60% to treasury. Set high to support post-audit Phase 2+ third-party keeper viability under the public-goods positioning.
 7. **User-set batch tip** — Order UTXO carries a user-specified maximum tip; keepers collect within that bound when processing batched orders.
 8. **Withdraw-Zero forwarding pattern** — single vault UTXO delegates to 10 staking validators (`vault_user`, `vault_keeper_hot`, `vault_batcher`, `vault_swap_ada`, `vault_protocol`, `vault_recall`, `vault_liqwid`, `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`) via `vault_proxy` for size compliance and clean role separation. Partitioning rationale (4 orthogonal seams: authorization-boundary, governance response-latency, bytecode-cost-center, size-fix) is documented in `spec/architecture.md §4.1`. Every staking credential (the 10 Withdraw-Zero dispatched validators + `keeper_stake_script` + `minswap_v2_adapter` SwapAdapter = 12 total) carries its own A2 `publish` handler, so all 12 stake-registration deposits are reclaimable at sunset via governance.
 9. **Compile-time trust anchors** — Vault Identity NFT, governance NFT policy, treasury script, and keeper stake script all baked into validator script hashes at deploy time, not datum fields.
@@ -61,7 +61,7 @@ OptiVaults V1 is characterized by the following architectural decisions. Each is
 ├── README.md                   This file
 ├── spec/                       V1 protocol specification
 │   ├── architecture.md         High-level protocol architecture (incl. §4.1 split history)
-│   ├── vault-datum.md          VaultDatum fields, invariants, transitions (28 fields)
+│   ├── vault-datum.md          VaultDatum fields, invariants, transitions (29 fields)
 │   ├── treasury.md             Treasury contract specification
 │   ├── keeper-auth.md          Keeper stake-validator specification
 │   ├── order-batch.md          Order + BatchProcess + user-tip specification

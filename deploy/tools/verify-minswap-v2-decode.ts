@@ -17,11 +17,10 @@
  * fix is needed.
  *
  * The current replacement — which verifies the NEW adapter logic against
- * real mainnet datums — is:
- *
- *     v1/tests/preprod/60-minswap-decoder-verify.ts
- *
- * Run that instead.
+ * real mainnet datums — lives in the operator-private test tree, alongside
+ * the rest of the Preprod E2E test infrastructure. Operators wishing to
+ * reproduce that verification should adapt the byte-for-byte structural
+ * test against their own copy of a recent Minswap V2 mainnet order datum.
  */
 import * as dotenv from "dotenv";
 dotenv.config({ path: "keeper/.env" });

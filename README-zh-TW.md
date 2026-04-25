@@ -20,7 +20,7 @@
 OptiVaults V1 **刻意被拆成兩個 repo**,反映兩個**根本不同**的東西:
 
 - **`optivaults-protocol`**(本 repo)——**協議層**。Aiken validators、協議規格、白皮書、部署流程。**本層零費用**;任何團隊都可以 fork 並啟動自己的 vault,完全不用付錢。**純 Cardano DeFi commons 貢獻**。
-- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)**——**operator 參考實作**。TypeScript keeper、API server、frontend、CLI 工具。跑 `optivaults.app` 的 live vault 實例。由合約強制的 4.5% 績效費支撐(20% keeper / 80% treasury;**無創辦人 dividend、無投資人 return、無 token**)。Apache 2.0——歡迎 fork。
+- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)**——**operator 參考實作**。TypeScript keeper、API server、frontend、CLI 工具。跑 `optivaults.app` 的 live vault 實例。由合約強制的 4.5% 績效費支撐(啟動 40% keeper / 60% treasury——keeper 份額推到合約硬上限以支持開源第三方 keeper 經濟可行性;**無創辦人 dividend、無投資人 return、無 token**)。Apache 2.0——歡迎 fork。
 
 **4.5% fee 只發生在 operator 層**。**協議本身免費**——你跑自己實例就不需要付。完整費用拆分見 `docs/economics-zh-TW.md`;跨兩層的信任模型見 `docs/security-model-zh-TW.md §2`。
 
@@ -42,9 +42,9 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 1. **非託管鏈上金庫**——使用者資金全程由 Aiken PlutusV3 智能合約管控,沒有任何 operator 密鑰能提走本金。
 2. **以 USDCx 作為存入資產**——Circle 透過 xReserve 跨鏈儲備機制在 Cardano 發行的美元錨定原生穩定幣。金庫將存入的 USDCx 路由至 Liqwid Finance 的穩定幣市場(DJED、USDM)以及 Minswap V2 的 DEX 路徑,以取得分散後的收益。
 3. **m-of-n MultisigGov 治理**——所有協議政策變更(策略、費率、緊急凍結)都必須通過多簽 + 7 天 timelock + 1-of-n 取消否決。
-4. **鏈上金庫儲備**——績效費收入的 80% 流進由治理管理的 treasury 合約,並由合約強制劃分至四個用途(audit reserve / operations / R&D / operational buffer)。
+4. **鏈上金庫儲備**——績效費收入的 60% 流進由治理管理的 treasury 合約,並由合約強制劃分至四個用途(audit reserve / operations / R&D / operational buffer;啟動 sub-allocation 40/25/25/10 維持 audit-reserve 累積速度為總 fee 的 24%)。
 5. **以 stake validator 做 keeper 授權**——keeper 的操作透過一個帶 mode flag 的 stake validator 驗證,讓授權規則可以演進(治理核可清單 → 帶保證金的 permissionless),不需要重部署主 vault 合約。
-6. **keeper 費率分成 20%**——執行該筆 Compound 的 keeper 拿 20% 績效費作為營運補償;其餘 80% 進 treasury。
+6. **keeper 費率分成 40%**——執行該筆 Compound 的 keeper 拿 40% 績效費作為營運補償(validator 硬上限);其餘 60% 進 treasury。設在硬上限是為了在公共財定位下支持 post-audit Phase 2+ 第三方 keeper 經濟可行性。
 7. **使用者自訂 batch tip**——Order UTxO 帶有使用者自訂的 tip 上限;keeper 在處理 batched order 時只能在此上限內收取。
 8. **Withdraw-Zero forwarding pattern**——單一 vault UTxO 透過 `vault_proxy` 委派給 10 個 staking validator(`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`),以滿足大小限制並做乾淨的角色分離。切分理由(四條正交軸線:授權邊界、治理反應延遲、bytecode 成本集中點、size 修正)整理於 `spec/architecture.md §4.1`。每個 stake credential(10 個 Withdraw-Zero 委派的 validator + `keeper_stake_script` + `minswap_v2_adapter` SwapAdapter,共 12 個)都各自帶有自己的 A2 `publish` handler,所以這 12 份 stake-registration 押金都可以在 sunset 時透過治理回收。
 9. **編譯時信任錨點**——Vault Identity NFT、governance NFT policy、treasury script、keeper stake script 都在部署時燒進 validator script hash,而不是放在 datum 欄位。
@@ -60,7 +60,7 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 ├── README.md                   本檔案
 ├── spec/                       V1 協議規格
 │   ├── architecture.md         高階架構(含 §4.1 切分歷史)
-│   ├── vault-datum.md          VaultDatum 欄位、不變量、狀態轉移(28 欄位)
+│   ├── vault-datum.md          VaultDatum 欄位、不變量、狀態轉移(29 欄位)
 │   ├── treasury.md             Treasury 合約規格
 │   ├── keeper-auth.md          Keeper stake-validator 規格
 │   ├── order-batch.md          Order + BatchProcess + user-tip 規格
