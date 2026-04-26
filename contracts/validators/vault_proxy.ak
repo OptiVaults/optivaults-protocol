@@ -316,9 +316,54 @@ validator vault_proxy(
             },
           )
 
+        // R75 L-4 fix (audit-0426): defense-in-depth — enforce
+        // `withdrawal_count == 1` symmetrically with the primary
+        // VaultDatum branch (see line ~140-163 + line 240). Pre-fix
+        // the NoDatum branch only checked `has_authorized_withdrawal`
+        // (≥1) and relied transitively on the primary spend handler
+        // (which MUST also run because `has_primary` enforces a
+        // primary input is present) to enforce the count. That
+        // transitive safety holds today (Plutus requires every spend
+        // handler to PASS for TX validity), but if a future refactor
+        // weakens the primary branch's count check, the NoDatum
+        // branch had no second line of defense. Inline copy of
+        // primary's fold below — auditor-friendly local check at the
+        // cost of one extra fold over `tx.withdrawals` per
+        // MergeUtxo / EmergencyWithdraw TX (~50-100 B bytecode,
+        // vault_proxy currently has ~11.6 KB headroom under Plutus
+        // V3 ceiling so well within budget). If V2 introduces more
+        // staking validators, consider refactoring both branches to
+        // share a `count_authorized_withdrawals` helper for single-
+        // source-of-truth (deferred per YAGNI 2026-04-26 review).
+        let withdrawal_count =
+          list.foldl(
+            tx.withdrawals,
+            0,
+            fn(pair, acc) {
+              let Pair(cred, _) = pair
+              if or {
+                cred == Script(user_stake_hash),
+                cred == Script(keeper_hot_stake_hash),
+                cred == Script(swap_ada_stake_hash),
+                cred == Script(protocol_stake_hash),
+                cred == Script(recall_stake_hash),
+                cred == Script(liqwid_stake_hash),
+                cred == Script(gov_policy_stake_hash),
+                cred == Script(gov_emergency_stake_hash),
+                cred == Script(admin_deploy_stake_hash),
+                cred == Script(batcher_stake_hash),
+              } {
+                acc + 1
+              } else {
+                acc
+              }
+            },
+          )
+
         and {
           has_primary,
           has_authorized_withdrawal,
+          withdrawal_count == 1,
         }
       }
     }

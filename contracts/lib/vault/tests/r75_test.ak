@@ -33,11 +33,20 @@
 ////     `payout_output_index`, double-counting the user's payout
 ////     output as the keeper's tip. Tested below.
 ////
-//// Other audit-0426 findings (M-3 / L-2 / L-3 / L-4 / L-5 / I-1 / I-2
-//// / I-3) were either accepted as defense-in-depth, already-mitigated,
-//// or operational (Preprod-overrides-must-revert documentation). See
-//// `contracts/SECURITY.md` and audit-0426.md for the full disposition
-//// matrix.
+////   - L-4 LOW — vault_proxy.ak NoDatum branch enforces
+////     `withdrawal_count == 1` symmetrically with the primary
+////     VaultDatum branch (defense-in-depth gap closure). Tested
+////     below.
+////
+//// Other audit-0426 findings (M-3 / L-2 / L-3 / L-5 / I-1 / I-2 /
+//// I-3) were either accepted as defense-in-depth (NFT one-shot anchor
+//// is the primary defense for M-3), already-mitigated (R73 F-1
+//// admissibility guard for L-2; R72 F-1 cross-validator binding for
+//// L-3), or operational (Preprod-overrides-must-revert documentation
+//// for L-5). See `contracts/SECURITY.md` and audit-0426.md for the
+//// full disposition matrix.
+
+use aiken/collection/list
 
 // ─────────────────────────────────────────────────────────────────────
 // M-2: tip_output_idx ≠ payout_output_index in order.ak::Process
@@ -121,4 +130,95 @@ test r75_m2_tip_idx_distinct_zero_max_zero_lovelace_accepted() {
   // output would fail Cardano's min-ADA rule, but the per-order
   // predicate still accepts it — min-ADA is a different layer.)
   tip_ok(1, 0, 0, 0)
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// L-4: vault_proxy NoDatum branch enforces withdrawal_count == 1
+// ─────────────────────────────────────────────────────────────────────
+//
+// Pre-fix the NoDatum branch only enforced
+// `has_authorized_withdrawal` (≥ 1 of the 10 staking validators
+// invoked) and relied transitively on the primary VaultDatum branch
+// (which `has_primary` forces to be present in the same TX) to
+// enforce `withdrawal_count == 1`. Plutus's all-spend-handlers-must-
+// pass rule made this transitively safe today, but the NoDatum
+// branch had no second line of defense if the primary branch's
+// count check were ever weakened in a future refactor.
+//
+// Post-fix the NoDatum branch independently computes
+// `withdrawal_count` (inline copy of primary's fold over all 10
+// stake hashes) and `expect`s it == 1. The fold predicate exercised
+// below mirrors the on-chain logic verbatim.
+//
+// The fold is intentionally NOT extracted into a shared helper at
+// this revision — V1 launch-candidate posture favours minimal diff
+// + explicit symmetry over single-source-of-truth. If V2 introduces
+// more staking validators and the touch-site count grows beyond ~6,
+// revisit refactoring both branches to share a
+// `count_authorized_withdrawals(tx, hashes)` helper.
+
+fn count_authorized(
+  withdrawal_creds: List<Int>,
+  authorized_ids: List<Int>,
+) -> Int {
+  list.foldl(
+    withdrawal_creds,
+    0,
+    fn(cred_id, acc) {
+      if list.any(authorized_ids, fn(h) { h == cred_id }) {
+        acc + 1
+      } else {
+        acc
+      }
+    },
+  )
+}
+
+// Mock 10 stake hashes as opaque integer IDs (the on-chain validator
+// uses ByteArray hashes; using Int here keeps tests focused on the
+// counting logic without dragging hex-literal noise).
+const auth_ids: List<Int> = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+test r75_l4_zero_withdrawals_count_zero() {
+  count_authorized([], auth_ids) == 0
+}
+
+test r75_l4_one_authorized_withdrawal_count_one() {
+  // Happy path: NoDatum branch sees exactly one staking validator
+  // invoked → withdrawal_count == 1 → expect passes.
+  count_authorized([5], auth_ids) == 1
+}
+
+test r75_l4_two_authorized_withdrawals_rejected() {
+  // The exact pre-fix gap: two staking validators invoked
+  // simultaneously. Post-fix NoDatum's count fold catches this
+  // independently of the primary branch.
+  count_authorized([3, 7], auth_ids) == 2
+}
+
+test r75_l4_three_authorized_withdrawals_rejected() {
+  // Beyond two — multi-validator smuggling attempt.
+  count_authorized([1, 5, 9], auth_ids) == 3
+}
+
+test r75_l4_one_authorized_one_unrelated_count_one() {
+  // Mixed bag: one authorized + one unrelated stake credential
+  // (e.g., a user delegating their own stake key in the same TX).
+  // count_authorized only counts the authorized ones → still 1.
+  count_authorized([5, 999], auth_ids) == 1
+}
+
+test r75_l4_only_unrelated_withdrawals_count_zero() {
+  // No authorized invocations at all. NoDatum branch's
+  // `has_authorized_withdrawal` would also reject — count check is
+  // a defense-in-depth secondary signal here.
+  count_authorized([999, 1000], auth_ids) == 0
+}
+
+test r75_l4_duplicate_same_validator_counts_each() {
+  // Edge: same staking validator credential appearing twice in
+  // tx.withdrawals. (Conway permits this only with distinct values
+  // per credential — but we count instances, not unique creds.)
+  // Should still trigger the > 1 rejection.
+  count_authorized([5, 5], auth_ids) == 2
 }
