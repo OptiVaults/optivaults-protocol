@@ -28,6 +28,8 @@ type VaultDatum {
   keeper_fee_bps: Int,            // Keeper's share of performance fee, [0, 4000]
   gov_fee_bps: Int,               // Governance signers' pool share, [0, 1000]
                                    // Treasury share is derived: 10000 - keeper_fee_bps - gov_fee_bps
+  max_slippage_bps: Int,          // §5.4 P2 Tier 1 oracle-based fair-price bound, [0, 500] (5% cap)
+  min_swap_peg_bps: Int,          // §5.4 P2 Tier 2 peg-floor bound, [9_300, 9_950]
 
   // --- Immutable identity parameters ---
   vault_version: Int,             // V1 = 1; for debugging + version-gated off-chain tools

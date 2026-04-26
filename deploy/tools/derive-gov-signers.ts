@@ -19,6 +19,7 @@ dotenv.config({ path: "keeper/.env" });
 
 import * as net from "node:net";
 import { CML } from "@lucid-evolution/lucid";
+import { getKeyDaemonSocket } from "../lib/keyDaemon.js";
 
 async function getMnemonic(sockPath: string): Promise<string> {
   if (process.env.KEEPER_MNEMONIC) return process.env.KEEPER_MNEMONIC;
@@ -33,7 +34,7 @@ async function getMnemonic(sockPath: string): Promise<string> {
 }
 
 async function main() {
-  const sock = process.env.KEY_DAEMON_SOCKET || "/home/chrissoft/claude-code-docker/data/key-daemon-preprod.sock";
+  const sock = getKeyDaemonSocket();
   const mnemonic = await getMnemonic(sock);
   const { mnemonicToEntropy } = await import("bip39");
   const entropy = mnemonicToEntropy(mnemonic);

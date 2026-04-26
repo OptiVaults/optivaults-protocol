@@ -43,7 +43,7 @@ pub type LiqwidPosition {
 ///
 /// V1 §5.4 Phase 2 (2026-04-21): added `max_slippage_bps` +
 /// `min_swap_peg_bps` to the Policy group (6 → 8 fields) for on-chain
-/// slippage enforcement. See spec/governance.md §4.X `UpdateSlippagePolicy`
+/// slippage enforcement. See spec/governance.md §4.3.1 `UpdateSlippagePolicy`
 /// + whitepaper §5.4 for the Tier 1 oracle + Tier 2 peg-floor mechanism.
 pub type VaultDatum {
   // — Accounting (10) —

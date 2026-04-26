@@ -331,7 +331,7 @@ V1 依賴三個外部 Cardano 原生協議。**沒有任何一個合約性地承
 
 Vault UTxO 帶 ADA 有兩個並存目的:
 
-1. **Min-UTxO**(Cardano 協議需求):UTxO 必須持有足夠 lovelace 覆蓋自身序列化 output 大小 + token 數。28 欄 VaultDatum(§5.4 P2 + Phase 77 family 抽取後)序列化約 400–600 bytes(視 `strategy_allocations` + `liqwid_positions` 長度與數值而定);配上 2 個 token(Vault NFT + USDCx),min-UTxO 落在 2.5–3.5 ADA 區間。Operator 應視為**約略**——每次部署時依 Cardano 協議參數精確量。
+1. **Min-UTxO**(Cardano 協議需求):UTxO 必須持有足夠 lovelace 覆蓋自身序列化 output 大小 + token 數。29 欄 VaultDatum(§5.4 P2 + Phase 77 family 抽取後 + Phase 1 governance safety dead-man-switch)序列化約 400–600 bytes(視 `strategy_allocations` + `liqwid_positions` 長度與數值而定);配上 2 個 token(Vault NFT + USDCx),min-UTxO 落在 2.5–3.5 ADA 區間。Operator 應視為**約略**——每次部署時依 Cardano 協議參數精確量。
 2. **DEX-order 運營 buffer**:`DeployToProtocol` 送 Minswap V2 order 帶約 4 ADA(batcher fee + order min-UTXO),這些 ADA 從 vault 的 lovelace 餘額出。每筆 order 吃 ~4 ADA;fill 時 Minswap batcher 消 ~2 ADA 當 fee、vault 淨收回 ~2 ADA,**每個 swap 週期從 vault 淨損失 ~2 ADA 給 Minswap 基礎設施**。
 
 ### 7.5.1 合約強制的邊界(`max_deploy_ada`、`min_vault_ada`)

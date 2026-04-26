@@ -230,6 +230,22 @@ type StrategyPayload {
 - Phase 2(TVL ≥ 500K + 透過 RotateSigners 加入外部簽名者):`keeper 4000 / gov 500 / treasury 5500`
 - Phase 3(TVL ≥ 2M + 加入社群簽名者):`keeper 4000 / gov 1000 / treasury 5000`——treasury 在 validator 硬下限
 
+### 4.3.1 UpdateSlippagePolicy
+
+**用途**:治理閘控調整 §5.4 Phase 2 的兩個滑點上限(`max_slippage_bps` Tier 1 oracle 邊界 + `min_swap_peg_bps` Tier 2 peg-floor 邊界)。讓治理可以在不升級合約的前提下調整 `DeployToProtocol` 的滑點嚴格度。
+
+**範圍**:`max_slippage_bps`、`min_swap_peg_bps`。其他 VaultDatum 欄位**不得變更**。
+
+**硬上限(validator 層強制,定義在 `lib/vault/constants.ak`)**:
+- `0 <= new_max_slippage_bps <= max_slippage_bps_cap`(`max_slippage_bps_cap = 500` → 絕對上限 5%)
+- `min_swap_peg_bps_floor <= new_min_swap_peg_bps <= min_swap_peg_bps_ceiling`(9_300..9_950 → 介於 93% 與 99.5% peg)
+
+**Timelock**:48 小時(`timelock_update_slippage_policy_ms`)。比費用類動作短,理由:(a) 這個變更**加強**或**放鬆**安全邊界,而非重導資金流;(b) 市場狀況(例如短暫 depeg)可能需要即時調整。Production timelock = 48 小時;Preprod 為了 ceremony 迭代速度覆寫成 60 秒。
+
+**Payload-hash 綁定**:`payload_hash_update_slippage_policy(new_max_slippage_bps, new_min_swap_peg_bps)`(見 `lib/vault/helpers.ak`)。Payload 在 queue 時即固定,execute 不能換值。
+
+**與 `vault_protocol.DeployToProtocol` 的組合**:每次 `DeployToProtocol` 都會檢查 `max_slippage_bps`(Tier 1,當 `registry.asset_oracles` 有 deploy 資產時)+ `min_swap_peg_bps`(Tier 2,從 Minswap V2 route datum 的 `min_receive` 解出)。任一邊界收緊後,於新 datum 落鏈後的下一筆 deploy 起生效。
+
 ### 4.4 EmergencyWithdraw
 
 **用途**:當治理察覺嚴重的協議級事件(持續 depeg、Liqwid 壞帳,或其他需要立即停下的緊急狀況)時,**原子性地停掉所有生產性操作**(`frozen = 1`)。

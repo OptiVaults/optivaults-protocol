@@ -230,6 +230,22 @@ Governance cannot raise these caps — they are protocol constants in `lib/vault
 - Phase 2 (TVL ≥ 500K + external signer added via RotateSigners): `keeper 4000 / gov 500 / treasury 5500`
 - Phase 3 (TVL ≥ 2M + community signer added): `keeper 4000 / gov 1000 / treasury 5000` — treasury at validator hard floor
 
+### 4.3.1 UpdateSlippagePolicy
+
+**Purpose:** Governance-gated adjustment of the two §5.4 Phase 2 slippage caps (`max_slippage_bps` Tier 1 oracle bound + `min_swap_peg_bps` Tier 2 peg-floor bound). Lets governance tune `DeployToProtocol` slippage strictness without a contract upgrade.
+
+**Scope:** `max_slippage_bps`, `min_swap_peg_bps`. No other VaultDatum field may change.
+
+**Hard caps (validator-enforced via `lib/vault/constants.ak`):**
+- `0 <= new_max_slippage_bps <= max_slippage_bps_cap` (`max_slippage_bps_cap = 500` → 5% absolute ceiling)
+- `min_swap_peg_bps_floor <= new_min_swap_peg_bps <= min_swap_peg_bps_ceiling` (9_300..9_950 → between 93% and 99.5% peg)
+
+**Timelock:** 48 hours (`timelock_update_slippage_policy_ms`). Set short relative to fee actions because (a) the change strengthens or relaxes a safety bound rather than redirecting funds, and (b) market conditions (e.g., a brief depeg event) may require timely re-tuning. Production timelock = 48h; Preprod override = 60s for ceremony iteration.
+
+**Payload-hash binding:** `payload_hash_update_slippage_policy(new_max_slippage_bps, new_min_swap_peg_bps)` (see `lib/vault/helpers.ak`). Payload bound at queue time; execute cannot swap the values.
+
+**Composes with `vault_protocol.DeployToProtocol`:** every `DeployToProtocol` checks both `max_slippage_bps` (Tier 1, when `registry.asset_oracles` has the deploy asset) and `min_swap_peg_bps` (Tier 2, decoded from Minswap V2 route datum's `min_receive`). Tightening either bound takes effect on the next deploy after the new datum lands.
+
 ### 4.4 EmergencyWithdraw
 
 **Purpose:** Atomically halt productive operations (`frozen = 1`) when governance observes a catastrophic protocol condition (sustained depeg, Liqwid bad-debt, or other emergency requiring an immediate stop).

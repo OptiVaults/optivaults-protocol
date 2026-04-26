@@ -27,6 +27,7 @@ import {
 } from "@lucid-evolution/lucid";
 import type { LucidEvolution, Script, UTxO } from "@lucid-evolution/lucid";
 import { createBlockfrostProvider } from "../lib/blockfrostProvider.js";
+import { getKeyDaemonSocket } from "../lib/keyDaemon.js";
 
 type Net = "Preprod" | "Mainnet";
 type Target =
@@ -173,7 +174,7 @@ async function main() {
   const plutus = JSON.parse(fs.readFileSync("contracts/plutus.json", "utf8"));
   const provider = createBlockfrostProvider(bfUrl, bfKey);
   const lucid = await Lucid(provider as any, args.network);
-  const sock = process.env.KEY_DAEMON_SOCKET || "/home/chrissoft/claude-code-docker/data/key-daemon-preprod.sock";
+  const sock = getKeyDaemonSocket();
   const mnemonic = await getMnemonic(sock);
   lucid.selectWallet.fromSeed(mnemonic);
   const wallet = await lucid.wallet().address();

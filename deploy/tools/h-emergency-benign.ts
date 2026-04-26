@@ -34,6 +34,7 @@ import {
 import type { LucidEvolution, UTxO } from "@lucid-evolution/lucid";
 import { blake2b } from "@noble/hashes/blake2b";
 import { createBlockfrostProvider } from "../lib/blockfrostProvider.js";
+import { getKeyDaemonSocket } from "../lib/keyDaemon.js";
 
 const ACCOUNTS_TO_SIGN = [0, 1];
 const ACTION_KIND_EMERGENCY = 4;
@@ -153,7 +154,7 @@ async function main() {
 
   const provider = createBlockfrostProvider(bfUrl, bfKey);
   const lucid = await Lucid(provider as any, args.network);
-  const sock = process.env.KEY_DAEMON_SOCKET || "/home/chrissoft/claude-code-docker/data/key-daemon-preprod.sock";
+  const sock = getKeyDaemonSocket();
   const mnemonic = await getMnemonic(sock);
   lucid.selectWallet.fromSeed(mnemonic);
   const wallet = await lucid.wallet().address();

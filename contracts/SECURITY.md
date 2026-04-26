@@ -301,7 +301,7 @@ After R63, R64, and R71, a safe redeployment requires:
    ```
 4. **Withdraw-CLI sync** (manual): update `optivaults/withdraw-cli/src/config.ts` `V9_PREPROD` with the fresh hashes and `npm publish` a new version.
 
-See `scripts/deploy/README.md` for the complete runbook. For mainnet deployment architecture, see `docs/runbooks/mainnet-deploy-architecture.md` (the full operator ceremony script lives in the private operator repo).
+See `deploy/README.md` for the complete runbook and `deploy/runbooks/v1-mainnet-ceremony.md` for the mainnet ceremony procedure. The operator-side keeper / API / frontend live in the sibling repo [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference).
 
 ## Bug Bounty
 

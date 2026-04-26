@@ -21,7 +21,7 @@ OptiVaults V1 拆成兩個 repo(見 `README-zh-TW.md §「兩層架構」`):
 2. `contracts/` 裡 `aiken check` 必須全綠(194 個 test / 689 個隨機化 check / 0 error)。
 3. 合約改動需要附一個 regression test 在 `lib/vault/tests/`。
 4. 規格 / 文件改動請確認內部交叉引用還接得上(validator 名稱、redeemer tag、欄位數)。
-5. 不要 commit secret、mainnet signer PKH、或真的 Blockfrost key。這些屬於 `private/`(gitignored)或 operator 的 `.env`,絕對不進 repo。
+5. 不要 commit secret、mainnet signer PKH、或真的 Blockfrost key。這些屬於 operator 的 `.env`(gitignored),絕對不進 repo。
 6. **安全性相關的發現請寄到 `optivaults@gmail.com`(PGP key 在 optivaults.app/security),不要開公開 issue。** 詳見下方 §安全通報。
 
 ---
@@ -145,9 +145,9 @@ V1 的內部審計採**涵蓋區方法論**(A–F 區,見 `docs/audit-scope.md`)
 
 目前已知有開放狀態的審計發現(貢獻時請留意):
 
-- **R73 F-1 (MEDIUM)**:`vault_recall.MergeUtxo` 在 `vault_gov_emergency.EmergencyWithdraw` / `vault_admin_deploy.AdminDeployNonDeposit` 的 `valid_allocs` 不變量前有 admissibility 缺口。修補排在下一輪(見 `private/audits/r73-donation-gap.md`——僅 operator 可見)。若你動到 `vault_recall.ak` 或共用的 `verify_protocol_fields_preserved` helper,注意這個 pending 項目。
+- **R73 F-1 (MEDIUM, 已修)**:`vault_recall.MergeUtxo` admissibility 缺口已透過 `valid_merge_utxo_admissibility` predicate + 6 個 regression test(`lib/vault/tests/r73_test.ak`)關閉。完整 root-cause + 修補寫照見 [SECURITY.md](SECURITY.md) §「最近修補」。若你動到 `vault_recall.ak` 或共用的 predicate,記得把 admissibility guard 留在任何新的 state-mutation 路徑上。
 
-內部分類為 LOW 或 INFO 的發現,收錄在每輪的審計檔案裡(operator 可以在 `private/audits/` 看到),除非你改到受影響的 validator 區域,否則不會阻擋貢獻。
+內部分類為 LOW 或 INFO 的發現會在內部追蹤,除非你改到受影響的 validator 區域,否則不會阻擋貢獻;LOW 以上的發現都會在 SECURITY.md 摘錄。
 
 ---
 

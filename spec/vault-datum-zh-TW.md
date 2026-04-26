@@ -28,6 +28,8 @@ type VaultDatum {
   keeper_fee_bps: Int,            // Keeper 的績效費分成,[0, 4000]
   gov_fee_bps: Int,               // 治理簽名者池分成,[0, 1000]
                                    // Treasury 分成為推導值:10000 - keeper_fee_bps - gov_fee_bps
+  max_slippage_bps: Int,          // §5.4 P2 Tier 1 oracle 公允價邊界,[0, 500](5% 上限)
+  min_swap_peg_bps: Int,          // §5.4 P2 Tier 2 peg-floor 邊界,[9_300, 9_950]
 
   // --- 不可變的身份參數 ---
   vault_version: Int,             // V1 = 1;debug + 版本閘控鏈下工具用

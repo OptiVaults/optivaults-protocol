@@ -1,7 +1,7 @@
 # V1 Mainnet Ceremony Runbook
 
 **Purpose**: end-to-end procedure for the one-time V1 mainnet deploy ceremony.
-**Audience**: operator executing the deploy. Assumes familiarity with the parent CLAUDE.md + `spec/architecture.md` + having completed at least one full Preprod dry-run (`v1-preprod-p3` or later).
+**Audience**: operator executing the deploy. Assumes familiarity with `spec/architecture.md` + `docs/security-model.md` + having completed at least one full Preprod dry-run (`v1-preprod-p3` or later).
 **Status**: pre-launch draft. Refine with concrete TX fees + mainnet protocol parameter deltas after next Preprod ceremony passes end-to-end.
 
 ---
@@ -250,4 +250,4 @@ These are non-blocking but worth resolving at external audit handoff:
 
 Emergency contact for ceremony stalls: `optivaults@gmail.com` (PGP key on optivaults.app/security) + direct Discord to the on-duty operator.
 
-Never commit a ceremony state file or mainnet config containing real signer PKHs / Blockfrost keys / wallet addresses to the public `optivaults-protocol` repo. The `.gitignore` covers `private/`, `deploy/config/mainnet.json`, and `deploy/state/mainnet-*.json` — verify before `git push`.
+Never commit a ceremony state file or mainnet config containing real signer PKHs / Blockfrost keys / wallet addresses to the public `optivaults-protocol` repo. The `.gitignore` covers `deploy/state/*.json`, `deploy/config/preprod.json`, and `deploy/config/mainnet.json` — verify before `git push` and keep operator-only material in your local `.env` or out-of-tree storage.

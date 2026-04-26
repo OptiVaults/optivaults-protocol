@@ -58,6 +58,7 @@ import {
 } from "@lucid-evolution/lucid";
 import type { LucidEvolution, UTxO } from "@lucid-evolution/lucid";
 import { createBlockfrostProvider } from "../lib/blockfrostProvider.js";
+import { getKeyDaemonSocket } from "../lib/keyDaemon.js";
 
 type Net = "Preprod" | "Mainnet";
 
@@ -140,7 +141,7 @@ async function main() {
     : process.env.BLOCKFROST_API_KEY!;
   if (!bfKey) throw new Error("Missing Blockfrost key");
 
-  const sock = process.env.KEY_DAEMON_SOCKET || "/home/chrissoft/claude-code-docker/data/key-daemon-preprod.sock";
+  const sock = getKeyDaemonSocket();
 
   const provider = createBlockfrostProvider(bfUrl, bfKey);
   const lucid = await Lucid(provider as any, network);
