@@ -322,7 +322,7 @@ Additional per-TX cost from the A-Plain authorization pattern (keeper_auth UTXO 
 | 1M | $1,080 | $1,588 | **-$508** (still below break-even, but ~half the prior gap at 20%) |
 | 5M | $5,400 | $1,734 | **+$3,666** |
 | 10M | $10,800 | $1,810 | **+$8,990** |
-| 25M | $13,500 | $2,078 | **+$11,422** |
+| 25M | $27,000 | $2,078 | **+$24,922** |
 
 **Break-even TVL**: approximately USD 3–4M for standard-tier keeper economics. Below that, keepers operate at a loss; non-founder operators are not economically viable. Phase 4 `PermissionlessWithBond` activation is gated on TVL reaching this threshold.
 
@@ -330,7 +330,7 @@ Additional per-TX cost from the A-Plain authorization pattern (keeper_auth UTXO 
 
 ## 7C. Treasury R&D category — integration bounties and contributor program
 
-The R&D category (20% of treasury inflow) funds:
+The R&D category (25% of treasury inflow at V1 launch) funds:
 
 1. **New protocol integrations** — new DEX routes, new Liqwid markets, new lending protocols (see `docs/integration-playbook.md` when written, for the 7-step SOP)
 2. **Contributor bounties** — open-source contributions to keeper / frontend / docs (Phase 2+ formalization pending; see `docs/contributor-program.md` when written)

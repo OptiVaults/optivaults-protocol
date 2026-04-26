@@ -176,6 +176,7 @@ UpdateParams {
 - MultisigGov input 授權(與 Spend 相同)
 - **總和 10000 不變量**:`new_audit_bps + new_ops_bps + new_rd_bps + new_buffer_bps == 10_000`
 - **各類別邊界**:每個 `bps` 在 `[0, 5000]`(單一類別不得超過 inflow 的 50%)
+- **審計進帳下限**:`new_audit_bps >= treasury_audit_floor_bps`(`= 2000`,即 audit reserve 進帳比例不得低於 treasury inflow 的 20%)。此下限與 `min_audit_reserve`(USDCx 絕對餘額下限)互相獨立——進帳比例下限保護未來累積速度、餘額下限保護已累積的審計資金。
 - **Monthly cap 邊界**:每個 cap 在 `[0, 100_000_000_000]`(100k USDCx 的理性上限)
 - **180 天更新 cooldown**:`tx.validity_range.lower - last_param_update_time >= 15_552_000_000`
 - MultisigGov 側的 update timelock:**14 天**(比標準 7 天 timelock 長,反映此變更的系統性)

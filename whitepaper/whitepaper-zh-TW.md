@@ -444,16 +444,16 @@ V1 處於**啟動期（bootstrapping phase）**，直到 TVL 達到自給區間�
 
 ### 4.2 Treasury 模型
 
-Treasury 累積 80% 的績效費（V1 啟動時的分拆比例，3-way split 後續 phase 見 §2.4），資產以 **USDCx** 計價。啟動時的類別分配：
+Treasury 在 V1 啟動時累積 60% 的績效費（3-way 拆分:keeper 40% / gov pool 0%(關閉) / treasury 60%；後續 phase 啟用對照表見 §2.4），資產以 **USDCx** 計價。啟動時的類別分配：
 
-- **審計儲備 30% 進帳分配**——用於資助未來審計與未來安全研究者計畫（V1 上線採用「責任揭露政策 + ex gratia 認可框架」，而非固定結構化 bounty tier，詳見 `docs/audit-scope.md §6`；結構化 bounty 計畫啟用前提於 §6.3 說明）。有兩條獨立的治理硬下限保護：
+- **審計儲備 40% 進帳分配**——用於資助未來審計與未來安全研究者計畫（V1 上線採用「責任揭露政策 + ex gratia 認可框架」，而非固定結構化 bounty tier，詳見 `docs/audit-scope.md §6`；結構化 bounty 計畫啟用前提於 §6.3 說明）。審計比例從歷史的 30% 上調至 40%，是為了在較小的 60% treasury 份額下，仍維持「總 fee 的 24% 進審計儲備」這個累積速度（60% × 40% = 24%，與舊 80% × 30% 同）。有兩條獨立的治理硬下限保護：
   - **進帳比例下限**：`audit_bps ≥ 2000`（每次 Compound 的手續費流入必須有 20% 進審計類別）——由 `treasury.ak` 在 `UpdateParams` 時強制；治理無法把審計的進帳比例調降到 20% 以下。
   - **餘額下限**：`audit_reserve_balance ≥ min_audit_reserve`——`min_audit_reserve` 是部署當下設定的**不可變** datum 欄位（V1 啟動值為 0，也就是一開始沒有約束力）。若未來的 `UpdateParams` 把 floor 拉高，就不可再調低。任何治理動作都不能把餘額花到低於當前的 `min_audit_reserve`。
-- **營運 40%**——基礎設施費用（VPS、監控、Blockfrost key）以及 keeper 冗餘。
-- **研發 20%**——V2+ 開發、新整合。
+- **營運 25%**——平台層基礎設施（前端 / landing / API 的 VPS、Blockfrost 平台查詢、監控、網域、CDN）。**個別 keeper 的基礎設施成本**（單一 keeper 的 VPS、Blockfrost key、監控）改由每筆 Compound 的 40% keeper 份額直接吸收，不再從此 bucket 出——這也是 ops 從舊 40% 縮成 25% 的結構性原因。
+- **研發 25%**——V2+ 開發、新整合、貢獻者 bounty（post-audit + TVL-scale）。
 - **緩衝 10%**——應付突發狀況的自由儲備。
 
-30 / 40 / 20 / 10 這個分配是**每一類內部可軟調整**的——治理可透過 `UpdateTreasuryParams`（14 天 timelock + 180 天冷卻期，每類別範圍落在 [審計下限 20%, 上限 50%]）調整進帳比例。實際的支出則走 `TreasurySpend`（7 天 timelock），每類別還有「每月上限」與「24 小時冷卻」兩道閥。
+40 / 25 / 25 / 10 這個分配是**每一類內部可軟調整**的——治理可透過 `UpdateTreasuryParams`（14 天 timelock + 180 天冷卻期，每類別範圍落在 [審計下限 20%, 上限 50%]）調整進帳比例。實際的支出則走 `TreasurySpend`（7 天 timelock），每類別還有「每月上限」與「24 小時冷卻」兩道閥。
 
 唯一有硬下限的是審計儲備（進帳比例 20% + 餘額不可變下限）。營運 / 研發 / 緩衝三者的進帳比例上下界在 [0%, 50%] 之間，但餘額無下限。
 
@@ -465,23 +465,23 @@ Treasury 的每筆支出都要經過 `TreasurySpend` 治理動作加 7 天 timel
 
 V1 啟動時由創辦人擔任 keeper。在 100K TVL 下，對其他營運者而言是賠本生意：
 
-- 100K 下 keeper 份額 = $60–96/年
+- 100K 下 keeper 份額 = ~$108/年（在 6% reference APY × 4.5% × 40% keeper 份額下；見 `docs/economics.md` §2）
 - Keeper VPS + 監控成本 = $400–1,000/年
-- **淨虧損：$340–940/年**（非創辦人 keeper）
+- **淨虧損：$292–892/年**（非創辦人 keeper）
 
-**在實際的 Phase 1 TVL 區間**（§8.2 講的 **$500–$25K**，不是 100K 上限）下，keeper 份額的數學會更不利——一整年 keeper share 大概還不到 $20。所以 Phase 1 的 founder-keeper 安排是**由啟動資金補貼的 bootstrapping 設計，不是商業平衡點**。Phase 1 的 keeper 運作本來就是要由 §4.1 那筆 18 個月啟動資金的 runway 承擔的明確支出項，不對外宣稱「啟動 TVL 下能自給」。
+**在實際的 Phase 1 TVL 區間**（§8.2 講的 **$500–$25K**，不是 100K 上限）下，keeper 份額的數學會更不利——一整年 keeper share 大概還不到 $30。所以 Phase 1 的 founder-keeper 安排是**由啟動資金補貼的 bootstrapping 設計，不是商業平衡點**。Phase 1 的 keeper 運作本來就是要由 §4.1 那筆 18 個月啟動資金的 runway 承擔的明確支出項，不對外宣稱「啟動 TVL 下能自給」。
 
-**什麼時候開放 keeper 註冊才合理：** 要等到 TVL 達約 $5–10M，keeper 份額達到 $600–1,200/年，才接近低成本營運者的損益平衡點。V1 的 `keeper_stake_script` 已經支援 `PermissionlessWithBond` 模式，但啟動時**暫時停用**（`RegistrationMode = GovernanceOnly`）。要啟用需要兩件事：治理執行 `UpdateKeeperAuth` 動作，以及老實說——TVL 真的成長到讓開放有經濟意義為止。這是 Phase 3+ 的事，不是 Phase 1 / Phase 2 要處理的。
+**什麼時候開放 keeper 註冊才合理：** 要等到 TVL 達約 $2.5–5M（pessimistic 1–2% APY 假設下），keeper 份額才達到 $600–1,200/年，接近低成本營運者的損益平衡點。V1 的 `keeper_stake_script` 已經支援 `PermissionlessWithBond` 模式，但啟動時**暫時停用**（`RegistrationMode = GovernanceOnly`）。要啟用需要兩件事：治理執行 `UpdateKeeperAuth` 動作，以及老實說——TVL 真的成長到讓開放有經濟意義為止。這是 Phase 3+ 的事，不是 Phase 1 / Phase 2 要處理的。
 
-**三層自給 threshold —— 誠實拆解。** V1 其實有三個獨立的 self-sustainability threshold，不是單一數字；不同的 APY 假設下彼此差距達一個數量級。Keeper 份額每年 = `TVL × 毛 APY × 0.009`（4.5% 績效費的 20%）。
+**三層自給 threshold —— 誠實拆解。** V1 其實有三個獨立的 self-sustainability threshold，不是單一數字；不同的 APY 假設下彼此差距達一個數量級。Keeper 份額每年 = `TVL × 毛 APY × 0.018`（V1 啟動 keeper 份額 40% × 績效費 4.5%）。
 
 | 層級 | 覆蓋範圍 | 年度成本 | 6% current APY 的損益平衡 TVL | 2% pessimistic APY 的損益平衡 TVL |
 |------|---------|--------:|---------------------------:|------------------------------:|
-| (a) Founder-keeper 邊際運作 | Bootstrapping 階段；創辦人吸收自己的時間成本並共用現有 infra | $100–$300 | $185K – $555K | $555K – $1.67M |
-| (b) Non-founder 專業 keeper | 獨立營運者、獨立 VPS + monitoring | $400–$800 | $740K – $1.48M | $2.22M – $4.44M |
+| (a) Founder-keeper 邊際運作 | Bootstrapping 階段；創辦人吸收自己的時間成本並共用現有 infra | $100–$300 | $93K – $278K | $278K – $833K |
+| (b) Non-founder 專業 keeper | 獨立營運者、獨立 VPS + monitoring | $400–$800 | $370K – $740K | $1.11M – $2.22M |
 | (c) 機構級 ops + 審計儲備累積 | 含未來每 18–24 個月一次 $30–50K 審計成本預提的完整協議自給 | $1,500–$3,000 ops + 攤提審計 | $20M+ | $50M+ |
 
-本節前述的 $5–10M 數字對應 **pessimistic 1–2% APY** 下的 tier (b)（keeper 份額 = TVL × APY × 0.009）。在 current reference 6% APY 條件下，tier (b) 在 $740K–$1.48M 就成立。開頭幾段用保守數字是刻意的——V1 必須在 Liqwid 利率被壓縮的壞情境下仍能維持 keeper 運作，不只是 current reference 情境下 viable 即可。
+本節前述的 $2.5–5M 數字對應 **pessimistic 1–2% APY** 下的 tier (b)（keeper 份額 = TVL × APY × 0.018）。在 current reference 6% APY 條件下，tier (b) 在 $370K–$740K 就成立。開頭幾段用保守數字是刻意的——V1 必須在 Liqwid 利率被壓縮的壞情境下仍能維持 keeper 運作，不只是 current reference 情境下 viable 即可。注意：tier (c) 的 breakeven **由審計儲備累積主導**（audit 攤提需 $15–33K/年,ops 只需 $1.5–3K/年），而審計儲備的累積軌跡在 E2 下與舊版完全相同（60% × 40% = 24% 總 fee，與舊 80% × 30% 一致）——所以 tier (c) 的 $20M+ / $50M+ 不論 keeper 份額是 20% 或 40% 都不變。
 
 **三維度 self-sustain 區分（讀表前先理解）。** 上表的 tier (a)/(b)/(c) 計算基於「keeper share 覆蓋 keeper ops cost」breakeven，這是 protocol 自給**三個不同維度中的第一維**：
 

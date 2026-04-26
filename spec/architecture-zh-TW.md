@@ -55,9 +55,9 @@ Vault NFT 提供**編譯時信任錨點**:`vault_proxy`、`vusdcx`、`order` 三
 
 | 桶 | Inflow 份額 | 用途 | 支出閘控 |
 |----|-----------|------|---------|
-| Audit reserve | 30% | 累積以覆蓋定期第三方審計 | 治理閘控;提案需帶 `audit_invoice_ref` |
-| Operations | 40% | 代管基礎設施成本(VPS、Blockfrost、監控、網域) | 治理閘控、各類別 24h cooldown |
-| R&D | 20% | 協議開發、未來的 bounty 計畫(post-audit + TVL-scale,依 `docs/audit-scope.md §6.3`)、生態補助 | 治理閘控、各類別 24h cooldown |
+| Audit reserve | 40% | 累積以覆蓋定期第三方審計 | 治理閘控;提案需帶 `audit_invoice_ref` |
+| Operations | 25% | 平台層基礎設施(前端 / landing / API 用 VPS、Blockfrost 平台查詢、監控、網域、CDN);個別 keeper 自己的基礎設施改由每筆 Compound 的 40% keeper 份額直接吸收,不再走這個 bucket | 治理閘控、各類別 24h cooldown |
+| R&D | 25% | 協議開發、未來的 bounty 計畫(post-audit + TVL-scale,依 `docs/audit-scope.md §6.3`)、生態補助 | 治理閘控、各類別 24h cooldown |
 | Buffer | 10% | 預期外支出、法律、事件應變 | 治理閘控、各類別 24h cooldown |
 
 類別比例**治理可調**(每類別在 [0%, 50%]、總和剛好 100%、更新 cooldown 180 天)。

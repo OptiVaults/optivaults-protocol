@@ -346,7 +346,7 @@ type StrategyPayload {
 
 ### 4.11 UpdateTreasuryParams
 
-**用途**:改類別比例(預設 30/40/20/10,對 audit/ops/R&D/buffer)。
+**用途**:改類別比例(V1 啟動預設 40/25/25/10,對 audit/ops/R&D/buffer)。
 
 **不變量**:
 - 所有類別比例加總 == 10000 bps(100%)

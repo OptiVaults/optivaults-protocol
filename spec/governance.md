@@ -346,7 +346,7 @@ After triggering, any vUSDCx holder can drive Recall → Swap → Withdraw witho
 
 ### 4.11 UpdateTreasuryParams
 
-**Purpose:** Change category ratios (default 30/40/20/10 for audit/ops/R&D/buffer).
+**Purpose:** Change category ratios (V1 launch default 40/25/25/10 for audit/ops/R&D/buffer).
 
 **Invariants:**
 - Sum of all category ratios == 10000 bps (100%)

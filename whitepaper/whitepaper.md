@@ -447,16 +447,16 @@ See `docs/economics.md` for detailed math and TVL-tier projections.
 
 ### 4.2 Treasury model
 
-Treasury accumulates 80% of performance fees in **USDCx** (V1 launch split; see §2.4 for the 3-way fee split phases). Category allocation at launch:
+Treasury accumulates 60% of performance fees in **USDCx** at V1 launch (3-way fee split: keeper 40% / gov pool 0% disabled / treasury 60% — see §2.4 for the phase activation table). Category allocation at launch:
 
-- **Audit reserve: 30% of inflow** — funds future audits + future security researcher programs (V1 launches with a Responsible Disclosure Policy + ex gratia recognition framework rather than a structured bounty — see `docs/audit-scope.md §6` and §6.3 for preconditions under which a structured bounty would be introduced). Governance-hard-floored by two independent mechanisms:
+- **Audit reserve: 40% of inflow** — funds future audits + future security researcher programs (V1 launches with a Responsible Disclosure Policy + ex gratia recognition framework rather than a structured bounty — see `docs/audit-scope.md §6` and §6.3 for preconditions under which a structured bounty would be introduced). Audit allocation was raised from the historical 30% to maintain audit-reserve accumulation at 24% of total fee under the smaller 60% treasury share (60% × 40% = 24%, identical to the prior 80% × 30%). Governance-hard-floored by two independent mechanisms:
   - **Inflow-ratio floor**: `audit_bps ≥ 2000` (20% of every Compound's fee inflow) — enforced by `treasury.ak` on `UpdateParams`; governance cannot set the audit inflow ratio below 20%.
   - **Balance floor**: `audit_reserve_balance ≥ min_audit_reserve` — `min_audit_reserve` is an **immutable** datum field set at deploy (V1 launch value: 0, i.e., non-binding at start). Once a future `UpdateParams` raises the floor, it cannot be lowered. No governance action can spend below the current `min_audit_reserve`.
-- **Operations: 40%** — infrastructure (VPS, monitoring, Blockfrost keys), keeper redundancy.
-- **R&D: 20%** — V2+ development, new integrations.
+- **Operations: 25%** — platform-layer infrastructure (frontend / landing / API VPS, Blockfrost platform queries, monitoring, domains, CDN). Per-keeper infra (individual keeper VPS, Blockfrost key, monitoring) is funded directly via the 40% keeper share at every Compound, not from this bucket — that's the structural reason ops shrank from the prior 40% to 25%.
+- **R&D: 25%** — V2+ development, new integrations, contributor bounties (post-audit + TVL-scale).
 - **Buffer: 10%** — discretionary reserve for emergencies.
 
-The 30 / 40 / 20 / 10 launch split is **soft per-category** — governance can adjust the inflow ratios via `UpdateTreasuryParams` (14-day timelock + 180-day cooldown, each category bounded at [audit floor 20%, hard ceiling 50%]). Outflows happen per-category through `TreasurySpend` (7-day timelock), subject to monthly per-category cap + 24-hour per-category cooldown.
+The 40 / 25 / 25 / 10 launch split is **soft per-category** — governance can adjust the inflow ratios via `UpdateTreasuryParams` (14-day timelock + 180-day cooldown, each category bounded at [audit floor 20%, hard ceiling 50%]). Outflows happen per-category through `TreasurySpend` (7-day timelock), subject to monthly per-category cap + 24-hour per-category cooldown.
 
 The only category with a hard floor is audit reserve (20% inflow + immutable balance floor). Operations / R&D / Buffer have inflow bounds [0%, 50%] but no balance floor.
 
@@ -467,23 +467,23 @@ Treasury spending requires a governance `TreasurySpend` action with 7-day timelo
 ### 4.3 Keeper economics
 
 At V1 launch, the founder operates the keeper. Other operators are not economically viable at 100K TVL:
-- Keeper share at 100K = $60-96/year.
+- Keeper share at 100K = ~$108/year (at 6% reference APY × 4.5% × 40% keeper share; see `docs/economics.md` §2).
 - Keeper VPS + monitoring = $400-1000/year.
-- **Net loss: $340-940/year** for a non-founder keeper.
+- **Net loss: $292-892/year** for a non-founder keeper.
 
-**At the realistic Phase 1 TVL range** (**$500-$25K** over the first 6-12 months per §8.2, not the 100K cap), the keeper-share math is even more lopsided — annualised keeper share is effectively **under $20/year**. The Phase 1 founder-keeper arrangement is therefore **a bootstrapping design choice subsidised by founding capital, not a commercial equilibrium**. Phase 1 keeper operation is an explicit cost centre funded through the 18-month founding-capital runway (§4.1); it is not framed as self-sustaining at launch TVL.
+**At the realistic Phase 1 TVL range** (**$500-$25K** over the first 6-12 months per §8.2, not the 100K cap), the keeper-share math is even more lopsided — annualised keeper share is effectively **under $30/year**. The Phase 1 founder-keeper arrangement is therefore **a bootstrapping design choice subsidised by founding capital, not a commercial equilibrium**. Phase 1 keeper operation is an explicit cost centre funded through the 18-month founding-capital runway (§4.1); it is not framed as self-sustaining at launch TVL.
 
-**Path to opening keeper registration:** at ~$5-10M TVL, keeper share becomes $600-1200/year, approaching break-even for a low-cost operator. V1's `keeper_stake_script` already supports `PermissionlessWithBond` mode but it is **disabled at launch** (`RegistrationMode = GovernanceOnly`). Activation requires a governance `UpdateKeeperAuth` action and, honestly, TVL growth that makes it economically rational — a Phase 3+ event, not a Phase 1 / Phase 2 concern.
+**Path to opening keeper registration:** at ~$2.5-5M TVL under pessimistic 1-2% APY, keeper share becomes $600-1200/year, approaching break-even for a low-cost operator. V1's `keeper_stake_script` already supports `PermissionlessWithBond` mode but it is **disabled at launch** (`RegistrationMode = GovernanceOnly`). Activation requires a governance `UpdateKeeperAuth` action and, honestly, TVL growth that makes it economically rational — a Phase 3+ event, not a Phase 1 / Phase 2 concern.
 
-**Three-tier self-sustain thresholds — an honest breakdown.** V1 has three distinct self-sustainability thresholds, not a single number, and they differ by an order of magnitude depending on APY assumptions. Keeper share per year = `TVL × gross_APY × 0.009` (20% of 4.5% performance fee).
+**Three-tier self-sustain thresholds — an honest breakdown.** V1 has three distinct self-sustainability thresholds, not a single number, and they differ by an order of magnitude depending on APY assumptions. Keeper share per year = `TVL × gross_APY × 0.018` (40% of 4.5% performance fee at V1 launch).
 
 | Tier | What it covers | Annual cost | Breakeven TVL (6% current APY) | Breakeven TVL (2% pessimistic APY) |
 |------|---------------|------------:|------------------------------:|------------------------------------:|
-| (a) Founder-keeper marginal ops | Bootstrapping only; founder absorbs own labor and shares existing infra | $100–$300 | $185K – $555K | $555K – $1.67M |
-| (b) Non-founder professional keeper | Independent operator, dedicated VPS + monitoring | $400–$800 | $740K – $1.48M | $2.22M – $4.44M |
+| (a) Founder-keeper marginal ops | Bootstrapping only; founder absorbs own labor and shares existing infra | $100–$300 | $93K – $278K | $278K – $833K |
+| (b) Non-founder professional keeper | Independent operator, dedicated VPS + monitoring | $400–$800 | $370K – $740K | $1.11M – $2.22M |
 | (c) Institutional-grade ops + audit-reserve accrual | Full protocol self-sustain including future audit-cost accrual ($30–50K every 18–24 months) | $1,500–$3,000 ops + amortised audit | $20M+ | $50M+ |
 
-The "$5–10M" figure earlier in this section corresponds to tier (b) under **pessimistic 1–2% APY** assumptions (keeper share = TVL × APY × 0.009). Under current reference 6% APY conditions, tier (b) resolves at $740K–$1.48M. The conservative framing in the opening paragraphs is deliberate — V1 should remain resilient to compressed Liqwid rate environments, not just viable under current reference conditions.
+The "$2.5–5M" figure earlier in this section corresponds to tier (b) under **pessimistic 1–2% APY** assumptions (keeper share = TVL × APY × 0.018). Under current reference 6% APY conditions, tier (b) resolves at $370K–$740K. The conservative framing in the opening paragraphs is deliberate — V1 should remain resilient to compressed Liqwid rate environments, not just viable under current reference conditions. Note: tier (c)'s breakeven is **dominated by audit-reserve accrual** (audit needs $15-33K/yr amortised vs. $1.5-3K/yr ops), and the audit-reserve trajectory is unchanged under E2 (60% × 40% = 24% of total fee, identical to the prior 80% × 30%) — so tier (c) at $20M+ / $50M+ is the same number whether keeper share is 20% or 40%.
 
 **Three dimensions of self-sustain — read before the table.** The tier (a)/(b)/(c) breakevens above are computed on "keeper share covers keeper ops cost." That is **one of three distinct self-sustain dimensions**:
 

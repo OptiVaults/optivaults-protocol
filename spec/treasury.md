@@ -176,6 +176,7 @@ UpdateParams {
 - MultisigGov input authorization (same as Spend)
 - **Sum-to-10000 invariant**: `new_audit_bps + new_ops_bps + new_rd_bps + new_buffer_bps == 10_000`
 - **Per-category bounds**: each `bps` value in `[0, 5000]` (no single category may exceed 50% of inflow)
+- **Audit-inflow floor**: `new_audit_bps >= treasury_audit_floor_bps` (`= 2000`, i.e., audit reserve cannot receive less than 20% of treasury inflow). Independent of `min_audit_reserve` (the absolute USDCx balance floor); the inflow-ratio floor protects future audit-reserve accumulation rate, the balance floor protects already-accumulated audit funds.
 - **Monthly cap bounds**: each cap in `[0, 100_000_000_000]` (100k USDCx upper sanity bound)
 - **180-day update cooldown**: `tx.validity_range.lower - last_param_update_time >= 15_552_000_000`
 - Update timelock on the MultisigGov side: 14 days (longer than the standard 7-day timelock, reflecting the systemic nature of the change)

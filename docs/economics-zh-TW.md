@@ -330,7 +330,7 @@ A-Plain 授權模式(每筆 keeper TX 都要 spend 一次 keeper_auth UTXO)帶�
 
 ## 7C. Treasury R&D 類別——整合 bounty 與貢獻者計畫
 
-R&D 類別(treasury 入帳的 20%)資助:
+R&D 類別(V1 啟動時為 treasury 入帳的 25%)資助:
 
 1. **新協議整合**——新 DEX 路徑、新 Liqwid 市場、新借貸協議(寫好後見 `docs/integration-playbook.md` 的 7 步 SOP)
 2. **貢獻者 bounty**——keeper / frontend / 文件的開源貢獻(Phase 2+ 形式化尚待落地;見 `docs/contributor-program.md`)
