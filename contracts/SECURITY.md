@@ -144,17 +144,135 @@ Comprehensive automated test suite covering all components.
 | 67-68 | R68 hardening | 3 | vusdcx source hash update, additional regression tests |
 | 69-70 | R70 yield cycle + reverse swap | 10+ | Liqwid V2 integration, keeper CML builders, Discord notify, ref script reclaim |
 | 71 | V10 deploy pipeline audit | 3 | **M-1 MEDIUM** Registry `keeper_pkh` immutability on UpdateRegistry; **L-1 LOW** DeployToProtocol 10-USDCx minimum per-TX floor (anti-dust); **L-2 LOW** Registry KeeperToggleMarket no-op rejection |
-| **Total** | **All components** | **268+** | |
+| 72 | Post-Phase-77d hacker-mindset | 2 | **F-1 MEDIUM** vault_keeper_hot Compound gov_share cross-validator binding (R72 F-1 — verify gov input redeemer is `ReceiveCompoundShare`); **F-3 LOW** registry asset_oracles upper-bound caps (max_disagreement_bps ≤ 1000, max_staleness_ms ≤ 1h) |
+| 73 | MergeUtxo donation admissibility | 1 | **F-1 LOW** vault_recall.MergeUtxo deposit-token donation could push `idle_buffer` past `total_deposited + non_deposit_value + Σ liqwid_principal`, breaking the allocation invariant required by 7 downstream redeemers — `valid_merge_utxo_admissibility` guard added |
+| 74 | Minswap V2 LP-name decoder | 1 | **F-1 HIGH** pre-mainnet blocker — Minswap V2 `lp_asset` is a single LP token identifier, not a 2-asset pair; SwapAdapter Variant B branch crashed on every real Minswap V2 order. Rewrote redeemer to commit a `hop_chain` + on-chain `compute_lp_asset_name` (sha3-256 canonical pair hash) re-verification |
+| 75 | External audit-0426 | 4 | **C-1 CRITICAL** vault_user.CommunitySunset vUSDCx caller check used `""` instead of `vusdcx_token_name` → dead-man-switch permanently un-invokable; **L-1 LOW** sunset trigger `last_compound_time only` (was `max(last_compound, last_realloc)` — keeper zero-yield heartbeat spam could brick the dead-man-switch); **M-2 MEDIUM** order.Process `tip_output_idx ≠ payout_output_index` (prevent payout-as-tip aliasing); **L-4 LOW** vault_proxy NoDatum branch enforces `withdrawal_count == 1` (defense-in-depth symmetry with primary branch). 7 other findings (M-3 / L-2 / L-3 / L-5 / I-1 / I-2 / I-3) accepted defense-in-depth or already-mitigated — see "audit-0426 Disposition" section below |
+| **Total** | **All components** | **280+** | |
 
-Full audit details in `docs/audit-report.md`.
+Full audit details in `docs/audit-report.md` and `audit-0426.md`.
 
 ## Audit Status
 
 - Comprehensive automated test suite
-- 1,600 Aiken unit + 2,500 property-based fuzz + 607 keeper + 113 API + 428 frontend + 19 Preprod E2E = 5,267+ regression checks
-- 71 audit rounds (R1-R71), 268+ fixes
+- 1,625+ Aiken unit + 2,500 property-based fuzz + 607 keeper + 113 API + 428 frontend + 19 Preprod E2E = 5,290+ regression checks
+- 75 audit rounds (R1-R75), 280+ fixes
 - Internal findings addressed; **Q2-Q3 2027 third-party audit pending** (pre-audit 100K USDCx TVL cap enforced until external review completes)
 - Community audit: contributions welcome
+
+## audit-0426 Disposition (R75)
+
+External audit `audit-0426.md` (2026-04-26) flagged 11 findings:
+1 CRITICAL (C-1), 2 MEDIUM (M-2 / M-3), 5 LOW (L-1 through L-5),
+3 INFO (I-1 / I-2 / I-3). 4 received code fixes (C-1 / L-1 / M-2 /
+L-4). The remaining 7 are documented below with the rationale for
+NOT changing the code, and each comes with a future-revisit trigger.
+
+**M-3 LOW (was filed Medium) — Phantom-vault detection relies on CBOR type-matching: ACCEPTED defense-in-depth.**
+The `vault_proxy::no_foreign_vault_datum` check uses Aiken's
+`is VaultDatum {..}` pattern which matches any datum with the same
+Constr tag + field count. The audit correctly flags that this is
+not a strict structural check. **Real defense:** the compile-time
+`vault_nft_policy` parameter on `vault_proxy` (R55 fix) — the Vault
+NFT one-shot minting policy guarantees exactly one Vault NFT exists
+in the universe, and `has_vault_nft` on the primary input enforces
+that the spent UTXO carries it. An attacker would have to forge the
+Vault NFT (impossible by the one-shot UTXO-ref policy) to reach a
+state where the phantom check matters. The CBOR-shape check is a
+secondary signal, not the primary gate. The `vault_version >= 0`
+tautology in the inner check is intentional: it forces the
+type-cast `is VaultDatum` to actually evaluate (rather than being
+optimised away), thereby triggering the field-count match check.
+Removing it would weaken the secondary signal further with no
+upside. **Future-revisit trigger:** if R55 compile-time NFT anchor
+is ever weakened, OR if a multi-Vault-NFT future emerges (V2 with
+isolated vault tenants sharing the proxy script), revisit and
+upgrade the check to a strict structural validation against a
+sentinel field value.
+
+**L-2 LOW — MergeUtxo doesn't enforce total_deposited increase: ALREADY MITIGATED by R73 F-1 admissibility guard.**
+MergeUtxo accepts deposit-token donations into `idle_buffer`
+without bumping `total_deposited` (the latter represents
+share-claim, not physical token presence). The audit correctly
+notes that this could let `idle_buffer > total_deposited` if an
+attacker donates large amounts. **Mitigation:** `valid_merge_utxo_
+admissibility` (R73 F-1 / `lib/vault/validation.ak::valid_merge_
+utxo_admissibility`) explicitly enforces `alloc_sum + idle_buffer
+<= total_deposited + non_deposit_value + Σ liqwid_principal`. So
+donations can grow `idle_buffer` only up to the bound where the
+total-fund accounting still closes — donations beyond that are
+rejected at MergeUtxo time, not later when downstream redeemers
+might choke. **Future-revisit trigger:** none — the invariant is
+proven sufficient.
+
+**L-3 LOW — ReceiveCompoundShare has no signer requirement: ACCEPTED, cross-validator binding via R72 F-1.**
+`multisig_gov::ReceiveCompoundShare` (the gov input spend handler
+that accepts the gov-share USDCx delta from a Compound) does not
+require any governance signer signature. **Cross-validator gate:**
+`vault_keeper_hot::Compound::valid_gov_share` (post-R72 F-1) reads
+the gov input's spend redeemer via `pairs.get_first(tx.redeemers,
+Spend(gi.output_reference))` and `expect`s it to be specifically
+`ReceiveCompoundShare`. Pairing Compound with any other GovRedeemer
+(Heartbeat / QueueAction / etc.) would physically move gov_share
+USDCx but leave `signer_compensation_pool` un-credited — and
+post-R72 that pairing is rejected. So `ReceiveCompoundShare` is
+only ever invoked atomically with a valid keeper-authorised
+Compound, which is itself gated by `vault_keeper_hot`'s full math.
+A standalone `ReceiveCompoundShare` invocation would still need
+to satisfy the gov-output continuity check (NFT in continuing
+output + datum preservation + nonce bump + delta-derived USDCx
+increment) but cannot extract value because the only mover of
+USDCx into the gov UTXO is the Compound TX itself, and that
+requires keeper authorisation + valid vault math. **Future-revisit
+trigger:** if vault_keeper_hot's R72 F-1 binding is ever weakened
+or removed, this lib must add a signer requirement.
+
+**L-5 LOW — Preprod timelock overrides in `constants.ak`: OPERATIONAL — must-revert flagged on mainnet ceremony pre-flight.**
+11 governance-action timelocks are set to 60 seconds for Preprod
+testing (Phase 84+ session-bounded H-path E2E) instead of the
+production 7d / 14d / 21d / 37d values. Plus
+`timelock_deregister_stake_ms` is overridden to 1 hour from 14d.
+Plus `timelock_update_slippage_policy_ms` is 60s vs 48h.
+**Mitigation in code:** every overridden constant carries a
+`/// PREPROD OVERRIDE` comment block + `MUST revert before any
+mainnet build` warning + the production value is recorded inline.
+**Mitigation in process:** `deploy/runbooks/v1-mainnet-ceremony.md`
+pre-flight checklist requires verifying every constant against the
+spec file (`spec/governance.md` + `spec/keeper-auth.md`).
+**Future-revisit trigger:** mainnet ceremony pre-flight run will
+revert these and re-build. Audit re-verification on the
+production-hash artefacts is REQUIRED before mainnet deployment.
+
+**I-1 INFO — `vault_gov_policy` fail message says wrong validator name: SELF-CORRECTED in audit.**
+The audit initially flagged this then verified it correct.
+`vault_gov_policy.ak:306` correctly says
+`"vault_gov_policy: unsupported purpose"`. No change.
+
+**I-2 INFO — Full-drain NFT discovery scans by token name, not compile-time policy: ACCEPTED.**
+`vault_user.ak::Withdraw` full-drain branch scans `own_input.value`
+for any token entry with `name == vault_nft_token_name && qty == 1`
+and uses the discovered policy as the burn target. The
+discovered-policy approach is necessary because the Vault NFT
+policy isn't directly available as a compile-time parameter at the
+vault_user level (only at the proxy level). **Defense-in-depth:**
+`opti_vault_count == 1` enforces uniqueness, so even if multiple
+NFT entries with the canonical name existed (impossible under the
+one-shot policy), the burn would be ambiguous and fail. The
+compile-time `vault_nft_policy` anchor is enforced at the proxy
+layer, which is the gating layer for all vault spends. **Future-
+revisit trigger:** if vault_user is ever made directly responsible
+for NFT validation (e.g. via a future architecture refactor),
+parameterise it on `vault_nft_policy` and use compile-time anchor.
+
+**I-3 INFO — BatchProcess integer division truncation favors vault: ACCEPTED — correct bias.**
+`vault_batcher.ak::BatchProcess` and `vault_user.ak::Deposit`
+share `fair_shares = od.amount * old_total_shares /
+old_total_deposited`. Aiken integer division floors towards zero,
+so the output rounds DOWN. This favours the vault (existing
+shareholders) over new depositors — the standard ERC-4626
+convention and the correct bias for share-pricing in a vault. The
+sub-1-unit dust per order accumulates in the vault as bonus value
+for remaining holders. No change.
 
 ## Design Decisions (Documented)
 
