@@ -404,12 +404,22 @@ validator vault_user(
 
         // 90-day inactivity threshold — see
         // validate_community_sunset_trigger_time docs.
+        //
+        // R75 L-1 fix (audit-0426): pre-fix this passed
+        // `last_realloc_time` as a co-anchor with `last_compound_time`,
+        // letting a compromised keeper spam zero-yield heartbeats every
+        // 10min (`zero_yield_cooldown_ms`) to keep `last_realloc_time`
+        // fresh and brick the dead-man-switch indefinitely. Post-fix
+        // sunset trigger reads ONLY `last_compound_time` so the
+        // liveness signal aligns with `Withdraw::keeper_inactive`'s
+        // 7-day fallback (also reading `last_compound_time`). Both
+        // user-recovery paths now share the same "real productive
+        // Compound activity" anchor.
         let inactivity_satisfied =
           when tx.validity_range.lower_bound.bound_type is {
             Finite(now) ->
               validate_community_sunset_trigger_time(
                 old_datum.last_compound_time,
-                old_datum.last_realloc_time,
                 now,
               )
             _ -> False

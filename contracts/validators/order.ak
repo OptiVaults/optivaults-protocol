@@ -285,9 +285,28 @@ validator order(vault_hash: ByteArray, vault_nft_policy: ByteArray) {
 
         // Tip cap: if keeper claims a tip, validate it against
         // `max_batcher_tip`. tip_output_idx == -1 means "no tip".
+        //
+        // R75 M-2 fix (audit-0426): tip_output_idx must NOT alias
+        // payout_output_index. Pre-fix the keeper could point both
+        // at the same output, double-counting the payout (which is
+        // already required to satisfy the order's payout in vUSDCx
+        // / deposit-token) as the lovelace tip — extracting up to
+        // `max_batcher_tip` extra ADA from a payout the user already
+        // signed for. The per-order `max_batcher_tip` cap still
+        // bounded the damage at the user's stated maximum, but
+        // distinct outputs is the hygienic invariant: the tip
+        // belongs to the keeper, the payout belongs to the user,
+        // they should not be the same UTxO. (Cross-order uniqueness
+        // — preventing two orders pointing the same tip output —
+        // is intentionally NOT enforced here: each order's
+        // `max_batcher_tip` is the user's own ceiling, and the
+        // batcher rationally aggregates tips into a single output
+        // per batch as long as no individual cap is exceeded.)
         let tip_ok =
           if tip_output_idx < 0 {
             True
+          } else if tip_output_idx == payout_output_index {
+            False
           } else {
             when output_at_index(tx.outputs, tip_output_idx) is {
               Some(tip_out) -> lovelace_of(tip_out.value) <= ord.max_batcher_tip

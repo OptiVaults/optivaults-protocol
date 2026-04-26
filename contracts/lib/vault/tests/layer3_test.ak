@@ -40,53 +40,39 @@ const ref_now = 1_780_000_000_000  // 2026-05-29
 
 // ─────────────────────────────────────────────────────────────────────
 // Trigger-time threshold tests
+//
+// Post R75 L-1 (audit-0426): helper takes only `(last_compound_time,
+// now)`. `last_realloc_time` is no longer load-bearing — zero-yield
+// heartbeats cannot extend the 90-day sunset window. Pre-R75 tests
+// that varied `last_realloc_time` independently of `last_compound_time`
+// have been replaced by the heartbeat-spam regression below.
 // ─────────────────────────────────────────────────────────────────────
 
 test layer3_trigger_time_accepts_exact_90d_inactivity() {
   let last_compound = ref_now - inactivity_ms
-  let last_realloc = ref_now - inactivity_ms
-  validate_community_sunset_trigger_time(last_compound, last_realloc, ref_now)
+  validate_community_sunset_trigger_time(last_compound, ref_now)
 }
 
 test layer3_trigger_time_accepts_more_than_90d_inactivity() {
   let last_compound = ref_now - inactivity_ms - 30 * day_ms  // 120d ago
-  let last_realloc = ref_now - inactivity_ms - 30 * day_ms
-  validate_community_sunset_trigger_time(last_compound, last_realloc, ref_now)
+  validate_community_sunset_trigger_time(last_compound, ref_now)
 }
 
 test layer3_trigger_time_rejects_89d_inactivity() {
   let last_compound = ref_now - 89 * day_ms
-  let last_realloc = ref_now - 89 * day_ms
-  !validate_community_sunset_trigger_time(last_compound, last_realloc, ref_now)
+  !validate_community_sunset_trigger_time(last_compound, ref_now)
 }
 
 test layer3_trigger_time_rejects_one_day_short() {
   // 89 days, 23 hours
   let last_compound = ref_now - inactivity_ms + day_ms
-  let last_realloc = ref_now - inactivity_ms + day_ms
-  !validate_community_sunset_trigger_time(last_compound, last_realloc, ref_now)
+  !validate_community_sunset_trigger_time(last_compound, ref_now)
 }
 
-test layer3_trigger_time_uses_max_anchor_realloc_recent() {
-  // last_compound 100d ago, last_realloc 30d ago → max = realloc = 30d
-  // → 30d < 90d → reject (recent activity)
-  let last_compound = ref_now - 100 * day_ms
-  let last_realloc = ref_now - 30 * day_ms
-  !validate_community_sunset_trigger_time(last_compound, last_realloc, ref_now)
-}
-
-test layer3_trigger_time_uses_max_anchor_compound_recent() {
-  // Symmetric: last_compound 5d ago, last_realloc 200d ago → max = compound
+test layer3_trigger_time_rejects_recent_compound() {
+  // last_compound 5d ago → 5d < 90d → reject (keeper alive).
   let last_compound = ref_now - 5 * day_ms
-  let last_realloc = ref_now - 200 * day_ms
-  !validate_community_sunset_trigger_time(last_compound, last_realloc, ref_now)
-}
-
-test layer3_trigger_time_both_old_accepts() {
-  let last_compound = ref_now - 100 * day_ms
-  let last_realloc = ref_now - 95 * day_ms
-  // max = realloc = 95d > 90d → accept
-  validate_community_sunset_trigger_time(last_compound, last_realloc, ref_now)
+  !validate_community_sunset_trigger_time(last_compound, ref_now)
 }
 
 test layer3_trigger_time_rejects_zero_baseline() {
@@ -94,16 +80,68 @@ test layer3_trigger_time_rejects_zero_baseline() {
   // TX trigger sunset prematurely. Sanity bound 1_700_000_000_000
   // (2023-11-14) catches this.
   let last_compound = 0
-  let last_realloc = 0
-  !validate_community_sunset_trigger_time(last_compound, last_realloc, ref_now)
+  !validate_community_sunset_trigger_time(last_compound, ref_now)
 }
 
 test layer3_trigger_time_rejects_pre_2023_baseline() {
   // Any timestamp before 2023-11-14 should be rejected as obviously
   // invalid (V1 launches well after this date).
   let last_compound = 1_500_000_000_000  // 2017-07
-  let last_realloc = 1_500_000_000_000
-  !validate_community_sunset_trigger_time(last_compound, last_realloc, ref_now)
+  !validate_community_sunset_trigger_time(last_compound, ref_now)
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// R75 L-1 regression — heartbeat-spam cannot brick sunset
+// ─────────────────────────────────────────────────────────────────────
+//
+// Pre-R75 L-1 the helper signature was `(last_compound, last_realloc,
+// now) -> last_activity = max(...)`. A compromised keeper that lost
+// the productive-yield path could send zero-yield Compound TXs every
+// `zero_yield_cooldown_ms` (10 min) which advance `last_realloc_time`
+// without bumping `last_compound_time`. Pre-fix the sunset window
+// would be reset every 10 min and never fire — a permanent brick on
+// the dead-man-switch by an attacker that controls the keeper key.
+//
+// Post-fix the helper reads ONLY `last_compound_time`. These tests
+// pin the new behaviour: even if `last_realloc_time` looks fresh
+// (synthesised by a hostile heartbeat stream), as long as
+// `last_compound_time` is older than 90 days the dead-man-switch
+// fires and any vUSDCx holder can drive the recovery chain.
+
+test r75_l1_heartbeat_spam_does_not_extend_sunset_window() {
+  // Scenario: real productive Compound stopped 100 days ago. The
+  // attacker / dead-but-running keeper has been spamming zero-yield
+  // heartbeats every 10 min for the entire window, so on-chain
+  // `last_realloc_time` is "fresh" (e.g. 30 min ago). Pre-R75 this
+  // would reject; post-R75 it accepts because last_compound is the
+  // sole anchor.
+  let last_compound = ref_now - 100 * day_ms
+  // Note: `last_realloc_time` is no longer a parameter to the helper.
+  // The fact that a fresh `last_realloc_time` would have changed the
+  // outcome pre-R75 is the whole point of this regression — the new
+  // signature makes that input impossible to express.
+  validate_community_sunset_trigger_time(last_compound, ref_now)
+}
+
+test r75_l1_recent_real_compound_still_blocks_sunset() {
+  // Symmetric / sanity: when `last_compound_time` is recent (real
+  // productive activity), sunset must STILL be blocked. The fix only
+  // removes the heartbeat-spam loophole, not the underlying liveness
+  // signal.
+  let last_compound = ref_now - 30 * day_ms
+  !validate_community_sunset_trigger_time(last_compound, ref_now)
+}
+
+test r75_l1_aligned_with_keeper_inactive_window() {
+  // Cross-check: vault_user.Withdraw's `keeper_inactive_ms` (7 days)
+  // also reads ONLY `last_compound_time`. After R75 L-1 these two
+  // fallback paths share the same anchor, just at different
+  // thresholds (7d for early-fee waiver, 90d for permissionless
+  // recovery). 30d > 7d but < 90d → Withdraw fee-waiver fires while
+  // sunset stays blocked, exactly the intended phased response.
+  let last_compound = ref_now - 30 * day_ms
+  // sunset 90d threshold not yet met
+  !validate_community_sunset_trigger_time(last_compound, ref_now)
 }
 
 // ─────────────────────────────────────────────────────────────────────

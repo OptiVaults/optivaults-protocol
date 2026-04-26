@@ -706,45 +706,50 @@ pub fn validate_deploy_frozen_gate(
   }
 }
 
-/// Phase 1 governance safety — Layer 3 / Dead-man-switch (2026-04-25):
+/// Phase 1 governance safety — Layer 3 / Dead-man-switch (2026-04-25,
+/// hardened R75 L-1 audit-0426):
 /// CommunitySunset trigger threshold.
 ///
-/// Returns true when the vault has been operationally inactive for at
-/// least 90 days, measured by:
-///   `now >= max(last_compound_time, last_realloc_time) + 90 days`
+/// Returns true when the vault has not received a productive Compound
+/// in at least 90 days:
+///   `now >= last_compound_time + 90 days`
 ///
-/// Both timestamps are updated by the keeper:
-///   - `last_compound_time` advances on every productive Compound
-///     (real-yield harvest path).
-///   - `last_realloc_time` advances on every zero-yield heartbeat
-///     Compound (5-day cadence by default — see vault_keeper_hot.ak +
-///     spec/keeper-auth.md).
+/// Original (pre-R75 L-1) version used `max(last_compound_time,
+/// last_realloc_time)`, which meant a zero-yield heartbeat
+/// (`zero_yield_cooldown_ms = 600_000` = 10 minutes) could keep the
+/// `last_realloc_time` anchor fresh indefinitely and the dead-man
+/// switch would never fire even if real yield was permanently zero.
+/// audit-0426 L-1 flagged this: a compromised keeper that lost the
+/// real-yield path (e.g. all Liqwid markets removed from the registry)
+/// could spam zero-yield heartbeats forever, locking out the
+/// permissionless recovery path while users earn nothing.
 ///
-/// Either one moving means the keeper is alive, even if real yield is
-/// zero. The 90-day threshold ≈ 18 missed heartbeats ≈ keeper has been
-/// fully dead for 90+ days. This is the "founder failure" condition
-/// where neither keeper nor governance is responding to operational
-/// upkeep.
+/// Switching to `last_compound_time` only matches the existing
+/// 7-day `keeper_inactive` window in `vault_user.Withdraw` (which
+/// also reads `last_compound_time`), so both fallback paths share
+/// the same liveness signal: real productive Compound activity. A
+/// keeper that stops harvesting is treated as dead by both Withdraw
+/// (after 7d, waives early-fee) and CommunitySunset (after 90d, opens
+/// permissionless Recall + swap + Withdraw chain).
+///
+/// `last_realloc_time` is still preserved + still advances on
+/// zero-yield heartbeats — it is just no longer load-bearing for
+/// sunset. Other consumers (e.g. operator dashboards monitoring
+/// keeper liveness ahead of the sunset threshold) can still inspect
+/// it for soft / advance-warning signals.
 ///
 /// `min_valid_timestamp_ms` (sanity lower bound, 2023-11-14) protects
 /// against unset / corrupt timestamps that would let any TX trigger
 /// sunset prematurely.
 pub fn validate_community_sunset_trigger_time(
   last_compound_time: Int,
-  last_realloc_time: Int,
   now: Int,
 ) -> Bool {
-  let last_activity =
-    if last_realloc_time > last_compound_time {
-      last_realloc_time
-    } else {
-      last_compound_time
-    }
   // 90 days = 90 * 86_400 * 1_000 ms
   let inactive_threshold_ms = 90 * 86_400 * 1_000
   and {
-    last_activity > 1_700_000_000_000,
-    now >= last_activity + inactive_threshold_ms,
+    last_compound_time > 1_700_000_000_000,
+    now >= last_compound_time + inactive_threshold_ms,
   }
 }
 
