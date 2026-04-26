@@ -56,7 +56,7 @@
 
 - **共用的驗證與 helper 函式庫**:
   - `contracts/lib/vault/constants.ak`
-  - `contracts/lib/vault/types.ak`——VaultDatum(28 欄位)/ GovDatum / RegistryDatum / TreasuryDatum / OrderDatum 等
+  - `contracts/lib/vault/types.ak`——VaultDatum(29 欄位)/ GovDatum / RegistryDatum / TreasuryDatum / OrderDatum 等
   - `contracts/lib/vault/validation.ak`——逐 redeemer 的 datum 轉移斷言
   - `contracts/lib/vault/helpers.ak`——`is_gov_authorized` / `find_vault_utxo` / token 保留 / payload hash
   - `contracts/lib/vault/oracle.ak`——雙源 oracle 讀取器(§5.4 P3)
@@ -115,9 +115,9 @@
 
 | 類別 | 測試數 | 狀態 |
 |-----|------:|------|
-| Aiken 單元測試(含 `minswap_v2_adapter` 內 24 個 inline) | 136 | 全過 |
+| Aiken 單元測試(含 `minswap_v2_adapter` 內 24 個 inline) | 186 | 全過 |
 | Aiken property-based fuzz(`aiken/fuzz` v2.2.0) | 8 × ≤100 iter | 全過 |
-| 透過 `aiken check` 的總數 | 144 個 test / 639 個隨機化 check | 全過 |
+| 透過 `aiken check` 的總數 | 194 個 test / 689 個隨機化 check | 全過 |
 | Preprod E2E 腳本(`tests/preprod/`) | 16 個腳本 | 見 `EXECUTION-ORDER.md`——Phase B/C/D 覆蓋;E/F/H/I/J 尚未 |
 | Keeper vitest | 0(實作尚未開始) | — |
 | API vitest | 0(不在 V1 scope) | — |

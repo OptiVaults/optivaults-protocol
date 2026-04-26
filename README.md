@@ -3,8 +3,8 @@
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![Aiken](https://img.shields.io/badge/aiken-v1.1.x-red)
 [![CI](https://github.com/OptiVaults/optivaults-protocol/actions/workflows/aiken-check.yml/badge.svg?branch=v1)](https://github.com/OptiVaults/optivaults-protocol/actions/workflows/aiken-check.yml)
-![Tests](https://img.shields.io/badge/tests-144%20passing-brightgreen)
-![Checks](https://img.shields.io/badge/randomized%20checks-639-brightgreen)
+![Tests](https://img.shields.io/badge/tests-194%20passing-brightgreen)
+![Checks](https://img.shields.io/badge/randomized%20checks-689-brightgreen)
 ![Audit Status](https://img.shields.io/badge/audit-RFP%20in%20progress-yellow)
 ![Mainnet](https://img.shields.io/badge/mainnet-pre--launch-orange)
 
@@ -71,13 +71,13 @@ OptiVaults V1 is characterized by the following architectural decisions. Each is
 │   ├── ada-swap.md             SwapAda redeemer + dual-feed oracle reader
 │   ├── vault-nft.md            Vault Identity NFT one-shot mint pattern
 │   └── swap-adapter.md         SwapAdapter interface + B@launch=1 post-launch DEX addition lifecycle
-├── contracts/                  V1 Aiken PlutusV3 source — 17 logic validators + 4 NFT mint policies + 1 DEX adapter; 144 unit + property tests / 639 randomized checks; `aiken check` clean
-├── keeper/                     V1 keeper reference implementation (pending)
+├── contracts/                  V1 Aiken PlutusV3 source — 17 logic validators + 4 NFT mint policies + 1 DEX adapter; 194 unit + property tests / 689 randomized checks; `aiken check` clean
 ├── deploy/                     Deploy pipeline
+│   ├── README.md               Deploy pipeline overview + checklist
 │   ├── deploy.ts               Single-command ceremony orchestrator (idempotent + resumable)
 │   ├── compile.ts              Offline hash derivation (applyParams across 22 artefacts)
-│   ├── lib/                    blockfrostProvider + config loader + state file + datum builders + phase helpers
-│   ├── config/                 preprod.json (real) + mainnet.example.json (template) + preprod-mock.json
+│   ├── lib/                    blockfrostProvider + config loader + state file + datum builders + ref-script deploy + phase helpers
+│   ├── config/                 preprod.example.json + mainnet.example.json (templates) + preprod-mock.json (operator-supplied real configs are gitignored)
 │   ├── state/                  Ceremony state checkpoints (gitignored — per-releaseTag JSON)
 │   ├── tools/                  Operator CLI
 │   │   ├── deregister-stakes.ts        Legacy (pre-A2)
@@ -105,27 +105,7 @@ OptiVaults V1 is characterized by the following architectural decisions. Each is
 │   ├── integration-playbook.md Operator SOP for adding new DEX routes / Liqwid markets
 │   └── contributor-program.md  Open-source contributor rewards (Phase 2+ activation)
 ├── tests/
-│   ├── preprod-e2e-plan.md     Specification-level scenario catalog (100+)
-│   └── preprod/                Executable TS scripts (16 scripts — Phase B + C + D coverage;
-│                                  Phase E/F/H/I/J pending)
-│       ├── 00-ceremony-health.ts
-│       ├── 10-deposit-direct.ts
-│       ├── 11-withdraw-direct-partial.ts
-│       ├── 12-withdraw-full-drain.ts
-│       ├── 13-queue-deposit-order.ts
-│       ├── 14-batch-process-single.ts
-│       ├── 15-batch-multi-order.ts
-│       ├── 16-order-cancel.ts
-│       ├── 17-order-expire.ts
-│       ├── 18-withdraw-queue-batch.ts
-│       ├── 20-compound-zero-yield.ts
-│       ├── 30-merge-ada-donation.ts
-│       ├── 31-merge-deposit-token.ts
-│       ├── 32-merge-multi-secondary.ts
-│       ├── 33-merge-reject-datum.ts              (NEGATIVE path)
-│       ├── 34-merge-reject-garbage-token.ts      (NEGATIVE path)
-│       ├── helpers.ts
-│       └── EXECUTION-ORDER.md
+│   └── preprod-e2e-plan.md     Specification-level scenario catalog (100+); executable TS scripts live in `optivaults-reference` (operator repo)
 └── whitepaper/
     ├── whitepaper.md           V1 public whitepaper (EN)
     └── whitepaper-zh-TW.md     V1 public whitepaper (繁體中文)
@@ -149,14 +129,14 @@ V1 is in **early implementation phase**:
 
 - ✅ Spec / docs / whitepaper complete (15 markdown files under `spec/` + `docs/` + `whitepaper/`).
 - ✅ All 17 Aiken logic validators + 4 NFT mint policies + 1 DEX adapter (`minswap_v2_adapter`, §B@launch=1 SwapAdapter) implemented and `aiken check` passes (`contracts/`). Partitioning rationale documented in `spec/architecture.md` §4.1. `UpdateSlippagePolicy` + 2 VaultDatum fields (§5.4 Phase 2) and ref-script SwapAdapter dispatch + `minswap_v2_adapter` + Registry `swap_adapter_hashes` (§B@launch=1) all on-chain.
-- ✅ Unit + property test suite — **144 tests passing, 639 total checks per `aiken check` run** (8 property tests × up to 100 iterations + deterministic cases including R72 + R73 + R74 regression coverage; R74 adds 24 inline tests in `minswap_v2_adapter` plus `tests/r74_test.ak` with 10 structural tests).
+- ✅ Unit + property test suite — **194 tests passing, 689 total checks per `aiken check` run** (8 property tests × up to 100 iterations + deterministic cases including R72 + R73 + R74 regression coverage; R74 adds 24 inline tests in `minswap_v2_adapter` plus `tests/r74_test.ak` with 10 structural tests).
 - ✅ Preprod E2E test plan drafted (`tests/preprod-e2e-plan.md`) with 100+ scenarios across all vault validators + 4 NFT one-shot policies + cross-validator integration flows.
-- ✅ Preprod E2E test scripts (`tests/preprod/*.ts`) — 16 scripts covering ceremony health + Phase B (Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw) + Phase C (zero-yield Compound) + Phase D (MergeUtxo donation paths including 2 negative-path rejections). Phase E (real Minswap V2) / Phase F (mock Liqwid stack) / Phase H (governance state machine) pending.
+- ✅ Preprod E2E test scripts — 16 executable TS scripts covering ceremony health + Phase B (Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw) + Phase C (zero-yield Compound) + Phase D (MergeUtxo donation paths including 2 negative-path rejections), published in `optivaults-reference` (operator repo). Phase E (real Minswap V2) / Phase F (mock Liqwid stack) / Phase H (governance state machine) pending.
 - ✅ Two Preprod ceremonies executed — see "Preprod deploy status" below. 38 TX per ceremony, all phases verified on-chain.
 - ✅ A2 governance-gated stake deregister tools (`deploy/tools/a2-{queue,execute,cancel}-deregister.ts`) with idempotency + CBOR-Constr payload encoding.
 - ✅ Mainnet ceremony runbook drafted (`deploy/runbooks/v1-mainnet-ceremony.md`, 501 lines) — capital budget + pre-flight + phase-by-phase + partial-failure handling + post-ceremony backfill + sunset path.
 - ✅ Off-chain byte-for-byte decoder `deploy/tools/verify-minswap-v2-decode.ts` exposes the Minswap V2 adapter's decode logic for pre-mainnet decode verification against historical on-chain TXs without re-submitting.
-- ⏳ Keeper reference implementation (`keeper/`) — not started.
+- ⏳ Keeper reference implementation — lives in `optivaults-reference` (operator repo), not started.
 - ⏳ Internal audit rounds (coverage areas A-F, see `docs/audit-scope.md`) — R72 (post-Phase-77d, 1 MEDIUM + 3 LOW fixed), R73 (`valid_allocs × MergeUtxo` donation gap, 1 MEDIUM fixed), and R74 (pre-mainnet Minswap V2 decoder `lp_asset` format mismatch, 1 HIGH fixed — see `SECURITY.md §"Recently fixed"`) complete; areas A-F walkthrough pending.
 - ⏳ External audit engagement — target Q2-Q3 2027, firm not yet selected.
 
@@ -204,7 +184,7 @@ See [docs/audit-scope.md](docs/audit-scope.md) for the development / audit / lau
 
 ## License
 
-OptiVaults V1 is released under the **Apache License, Version 2.0**. This applies to the entire repository — smart contracts, keeper reference implementation, API server, frontend, CLI tools, and documentation. Any team may fork, specialize, or integrate V1's architecture into derivative products consistent with the Apache 2.0 terms (see [LICENSE](../LICENSE)).
+OptiVaults V1 is released under the **Apache License, Version 2.0**. This repo (`optivaults-protocol`) covers the protocol layer — smart contracts, deploy pipeline, CLI tools, and documentation. The operator layer (keeper reference implementation, API server, frontend, preprod E2E scripts) lives in the sibling repo [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference) under the same Apache 2.0 license. Any team may fork, specialize, or integrate V1's architecture into derivative products consistent with the Apache 2.0 terms (see [LICENSE](../LICENSE)).
 
 The permissive license choice is deliberate: V1's success metric explicitly includes the architecture being forked and specialized by other Cardano teams (see whitepaper §1 "Why we do this"). Restricting reuse during a pre-audit validation phase would contradict that contribution-oriented posture.
 

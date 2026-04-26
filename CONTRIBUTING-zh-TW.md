@@ -18,7 +18,7 @@ OptiVaults V1 拆成兩個 repo(見 `README-zh-TW.md §「兩層架構」`):
 ## TL;DR——開 PR 前先看這幾點
 
 1. 讀過 `README.md` + `whitepaper/whitepaper.md`(或 `whitepaper-zh-TW.md`),先理解定位與信任模型。
-2. `contracts/` 裡 `aiken check` 必須全綠(104 個 test / 599 個隨機化 check / 0 error)。
+2. `contracts/` 裡 `aiken check` 必須全綠(194 個 test / 689 個隨機化 check / 0 error)。
 3. 合約改動需要附一個 regression test 在 `lib/vault/tests/`。
 4. 規格 / 文件改動請確認內部交叉引用還接得上(validator 名稱、redeemer tag、欄位數)。
 5. 不要 commit secret、mainnet signer PKH、或真的 Blockfrost key。這些屬於 `private/`(gitignored)或 operator 的 `.env`,絕對不進 repo。
@@ -41,7 +41,7 @@ OptiVaults V1 拆成兩個 repo(見 `README-zh-TW.md §「兩層架構」`):
 cd contracts
 rm -rf build plutus.json
 aiken build                       # 重新產生 plutus.json
-aiken check                       # 跑 104 個 test + 599 個隨機化 check
+aiken check                       # 跑 194 個 test + 689 個隨機化 check
 ```
 
 開 PR 前,分支上的 `aiken check` 必須全綠。新增 test 請放在 `lib/vault/tests/`,命名遵守現有慣例(`<feature>_test.ak`)。
@@ -73,7 +73,7 @@ tsx deploy/deploy.ts --network Preprod --releaseTag <your-test-tag> --dryRun
 - **新增治理 action kind**(`ActionKind` 新增 enum)。每個新 action 都多一層審計面 + timelock 表條目 + payload hash helper。先說明為什麼不能沿用現有的。
 - **新增 SwapAdapter 整合**(例如 SundaeSwap V3、Splash V2)。這走 `spec/swap-adapter.md §7` 的流程——先做規格討論,再做 adapter 實作 + 審計,最後送治理白名單提案。
 - **經濟參數變更**(費用上限、buffer 目標、oracle 容忍度)。治理用 `UpdateStrategy` / `UpdateFee` / `UpdateSlippagePolicy` 在 runtime 調整實際值——如果 PR 要改的是寫死在合約裡的**上限常數**,那是政策層級的變更,需要社群討論。
-- **VaultDatum 欄位的 breaking change**。28 欄位的結構在 V1 上線時鎖定;任何 schema 變更都會觸發 V2,並且打掉 sunset / migration 路徑。
+- **VaultDatum 欄位的 breaking change**。29 欄位的結構在 V1 上線時鎖定;任何 schema 變更都會觸發 V2,並且打掉 sunset / migration 路徑。
 
 ### 不接受
 
@@ -99,7 +99,7 @@ tsx deploy/deploy.ts --network Preprod --releaseTag <your-test-tag> --dryRun
 - 引用觸發這次工作的 issue 或 Discord 討論(如果有)。
 - 總結**做了什麼**與**為什麼**。
 - 合約變更:列出 hash delta(用 `git show HEAD:contracts/plutus.json | jq '.validators[]|{title,hash}'` 或等效的鏈下 diff)。
-- 新增測試:標出測試數差異(例如 `104 → 108 tests`)。
+- 新增測試:標出測試數差異(例如 `194 → 198 tests`)。
 - 規格 / 文件變更:確認跨文件的一致性(例如 validator 數、欄位數、size 表)。
 
 ### 審視

@@ -29,9 +29,9 @@ V1 separates authority across six distinct key-controlled identities. No single 
 | # | Identity | Layer | Role | On-Chain Artifact | Rotation Path |
 |---|----------|-------|------|-------------------|---------------|
 | 1 | **Keeper** | Operator | Compound, rebalance, batch, swap, Liqwid supply/recall | Authorized via `keeper_stake_script` zero-withdraw pattern — `keeper_stake_hash` is a compile-time param of `vault_user` / `vault_keeper_hot` / `vault_protocol` / `vault_recall` / `vault_liqwid`; the actual authorized PKH set lives in the stake-script's own datum (governance-mutable) | `UpdateKeeperAuth` via governance (14-day timelock) updates the stake-script datum |
-| 2 | **Governance Signer A** | Instance governance | 1-of-3 quorum member | pubkey in `GovDatum.signers` | `RotateSigners` 14d timelock |
-| 3 | **Governance Signer B** | Instance governance | 1-of-3 quorum member | pubkey in `GovDatum.signers` | `RotateSigners` 14d timelock |
-| 4 | **Governance Signer C** | Instance governance | 1-of-3 quorum member | pubkey in `GovDatum.signers` | `RotateSigners` 14d timelock |
+| 2 | **Governance Signer A** | Instance governance | Member of 3-of-3 quorum | pubkey in `GovDatum.signers` | `RotateSigners` 14d timelock |
+| 3 | **Governance Signer B** | Instance governance | Member of 3-of-3 quorum | pubkey in `GovDatum.signers` | `RotateSigners` 14d timelock |
+| 4 | **Governance Signer C** | Instance governance | Member of 3-of-3 quorum | pubkey in `GovDatum.signers` | `RotateSigners` 14d timelock |
 | 5 | **Ref-script deployer** | Operator | Deploys validator reference scripts, holds deployer wallet UTXOs | Deploy wallet pubkey (off-chain identity, anchored via TX history) | Retirement after V1 deploy completes (ref scripts are immutable) |
 | 6 | **Founder subsidy wallet** | Operator | Holds personal runway funding the vault until break-even | Personal Cardano wallet | Retirement or public hand-off per §9.2 of whitepaper |
 

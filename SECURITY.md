@@ -56,7 +56,7 @@ If you discover a security vulnerability in OptiVaults V1 smart contracts, deplo
 
 - **Shared validation + helper libraries**:
   - `contracts/lib/vault/constants.ak`
-  - `contracts/lib/vault/types.ak` — VaultDatum (28 fields) / GovDatum / RegistryDatum / TreasuryDatum / OrderDatum / etc.
+  - `contracts/lib/vault/types.ak` — VaultDatum (29 fields) / GovDatum / RegistryDatum / TreasuryDatum / OrderDatum / etc.
   - `contracts/lib/vault/validation.ak` — per-redeemer datum-transition predicates
   - `contracts/lib/vault/helpers.ak` — `is_gov_authorized` / `find_vault_utxo` / token preservation / payload hashing
   - `contracts/lib/vault/oracle.ak` — dual-feed oracle reader (§5.4 P3)
@@ -115,9 +115,9 @@ The following depositor-facing promises depend on external infrastructure remain
 
 | Category | Tests | Status |
 |----------|------:|--------|
-| Aiken unit tests (including 24 inline in `minswap_v2_adapter`) | 136 | All pass |
+| Aiken unit tests (including 24 inline in `minswap_v2_adapter`) | 186 | All pass |
 | Aiken property-based fuzz (`aiken/fuzz` v2.2.0) | 8 × ≤100 iter | All pass |
-| Total via `aiken check` | 144 tests / 639 randomized checks | All pass |
+| Total via `aiken check` | 194 tests / 689 randomized checks | All pass |
 | Preprod E2E scripts (`tests/preprod/`) | 16 scripts | See `EXECUTION-ORDER.md` — Phase B/C/D covered; E/F/H/I/J pending |
 | Keeper vitest | 0 (implementation pending) | — |
 | API vitest | 0 (not in V1 scope) | — |

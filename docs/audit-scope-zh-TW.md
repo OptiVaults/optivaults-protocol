@@ -127,7 +127,7 @@ V1 validator 集合從內部驗證期設計繼承下列架構不變量,作為 V1
 
 Fuzz 總跑量從 2,500 → 3,000(每次 build)。
 
-**跨引(測試計數度量)。** 本文件的「30 個 property × 100 iter = 3,000 fuzz runs」是**一個特定的度量**,只講 property-based fuzz 覆蓋。白皮書 §5.4 的「144 個 unit + property test / 每次 `aiken check` 跑 639 個隨機化 check」講的是**完整 Aiken 測試套件**(「639 checks」是 `aiken check` 的 summary 行輸出,把每個確定性案例 + `aiken/fuzz` 的每次 property 呼叫都算一個 check)。兩個數字不是互相矛盾——它們描述不同層(本文聚焦在 `aiken/fuzz` 的隨機化迭代;白皮書是總計)。本文 3,000 fuzz-runs 的數字是在「每個 property 都跑滿 100 iter」的上限假設下;實務上 early-exit on first failure 代表有些 property 可能會少跑。
+**跨引(測試計數度量)。** 本文件的「30 個 property × 100 iter = 3,000 fuzz runs」是**一個特定的度量**,只講 property-based fuzz 覆蓋。白皮書 §5.4 的「194 個 unit + property test / 每次 `aiken check` 跑 689 個隨機化 check」講的是**完整 Aiken 測試套件**(「689 checks」是 `aiken check` 的 summary 行輸出,把每個確定性案例 + `aiken/fuzz` 的每次 property 呼叫都算一個 check)。兩個數字不是互相矛盾——它們描述不同層(本文聚焦在 `aiken/fuzz` 的隨機化迭代;白皮書是總計)。本文 3,000 fuzz-runs 的數字是在「每個 property 都跑滿 100 iter」的上限假設下;實務上 early-exit on first failure 代表有些 property 可能會少跑。
 
 ---
 

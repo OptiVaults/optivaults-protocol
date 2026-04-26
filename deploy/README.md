@@ -29,7 +29,7 @@ deploy/
 - ✅ Config loader + validation (`lib/config.ts`) — supports `keyDaemonSocket` + env-var Blockfrost key (no secrets in the JSON).
 - ✅ State checkpoint manager (`lib/state.ts`) — tracks mints, ref scripts, stake registrations, and state UTXOs.
 - ✅ Offline compile step (`compile.ts`) — applies parameters to all **22 artefacts** (17 logic validators + 4 NFT mint policies + 1 DEX adapter) per the dependency graph, outputs `state/<network>-hashes.json` with every on-chain hash the ceremony will produce.
-- ✅ Datum builders (`lib/datumBuilders.ts`) — pure, testable Constr builders for RegistryDatum (9 fields post §5.4 P3 + B@launch=1) / TreasuryDatum / KeeperAuthDatum / GovDatum / VaultDatum (28-field V1 schema post §5.4 P2 slippage caps).
+- ✅ Datum builders (`lib/datumBuilders.ts`) — pure, testable Constr builders for RegistryDatum (9 fields post §5.4 P3 + B@launch=1) / TreasuryDatum / KeeperAuthDatum / GovDatum / VaultDatum (29-field V1 schema post §5.4 P2 slippage caps + Phase 1 dead-man-switch).
 - ✅ Phase functions (`lib/phases.ts`) — idempotent PHASE 2 (3 NFT mints + minswap_v2_adapter), PHASE 3 (**18 ref scripts**), PHASE 4a (**12 stake credential registrations**), PHASE 4b (5 state UTXO inits).
 - ✅ Ceremony orchestrator (`deploy.ts`) — wires PHASE 0 → 4b end-to-end with resume-after-failure semantics per step.
 - ⚠️ **Preprod verification status**: An earlier v1-a2-preprod ceremony was captured on a smaller validator topology and is STALE relative to the current 12-staking-credential / 18-ref-script set. Full re-verification required on the current topology before mainnet — see §11 in README.md Troubleshooting.

@@ -2,8 +2,8 @@
 
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![Aiken](https://img.shields.io/badge/aiken-v1.1.x-red)
-![Tests](https://img.shields.io/badge/tests-144%20passing-brightgreen)
-![Checks](https://img.shields.io/badge/randomized%20checks-639-brightgreen)
+![Tests](https://img.shields.io/badge/tests-194%20passing-brightgreen)
+![Checks](https://img.shields.io/badge/randomized%20checks-689-brightgreen)
 ![Audit Status](https://img.shields.io/badge/audit-RFP%20in%20progress-yellow)
 ![Mainnet](https://img.shields.io/badge/mainnet-pre--launch-orange)
 
@@ -70,13 +70,13 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 │   ├── ada-swap.md             SwapAda redeemer + dual-feed 預言機讀取器
 │   ├── vault-nft.md            Vault Identity NFT one-shot mint 模式
 │   └── swap-adapter.md         SwapAdapter 介面 + B@launch=1 上線後新增 DEX 流程
-├── contracts/                  V1 Aiken PlutusV3 原始碼——17 個 logic validator + 4 個 NFT mint policy + 1 個 DEX adapter;104 個 unit + property test / 599 個隨機化 check;`aiken check` 全綠
-├── keeper/                     V1 keeper 參考實作(尚未開始)
+├── contracts/                  V1 Aiken PlutusV3 原始碼——17 個 logic validator + 4 個 NFT mint policy + 1 個 DEX adapter;194 個 unit + property test / 689 個隨機化 check;`aiken check` 全綠
 ├── deploy/                     部署流程
+│   ├── README.md               Deploy pipeline 總覽 + checklist
 │   ├── deploy.ts               單指令 ceremony 指揮(冪等 + 可續跑)
 │   ├── compile.ts              離線 hash 推導(跨 22 個 artefact 做 applyParams)
-│   ├── lib/                    blockfrostProvider + 設定載入 + 狀態檔 + datum 建構 + 階段助手
-│   ├── config/                 preprod.json(實用) + mainnet.example.json(樣板) + preprod-mock.json
+│   ├── lib/                    blockfrostProvider + 設定載入 + 狀態檔 + datum 建構 + ref-script 部署 + 階段助手
+│   ├── config/                 preprod.example.json + mainnet.example.json(樣板)+ preprod-mock.json(operator 自備的實用設定為 gitignored)
 │   ├── state/                  Ceremony 狀態 checkpoint(gitignored——依 releaseTag 分 JSON)
 │   ├── tools/                  Operator CLI
 │   │   ├── deregister-stakes.ts        舊版(pre-A2)
@@ -103,32 +103,8 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 │   ├── audit-scope.md          Pre-audit 內部輪次計畫 + 外部審計範圍
 │   ├── integration-playbook.md 新增 DEX 路徑 / Liqwid market 的 operator SOP
 │   └── contributor-program.md  開源貢獻者回饋(Phase 2+ 啟用)
-├── private/                    Operator-only(gitignored)——審計報告、狀態檔案保存、敏感設定
-│   ├── audits/                 內部審計輪次報告(R72、R73、Minswap 靜態審視)
-│   ├── state/                  Ceremony 狀態保存 + recovery-verification 筆記
-│   └── preprod-deploy-config.json    實用的 Blockfrost keys + signer PKHs
 ├── tests/
-│   ├── preprod-e2e-plan.md     規格層級的情境目錄(100+)
-│   └── preprod/                可執行的 TS 腳本(16 個——Phase B + C + D 覆蓋;
-│                                  Phase E/F/H/I/J 尚未動)
-│       ├── 00-ceremony-health.ts
-│       ├── 10-deposit-direct.ts
-│       ├── 11-withdraw-direct-partial.ts
-│       ├── 12-withdraw-full-drain.ts
-│       ├── 13-queue-deposit-order.ts
-│       ├── 14-batch-process-single.ts
-│       ├── 15-batch-multi-order.ts
-│       ├── 16-order-cancel.ts
-│       ├── 17-order-expire.ts
-│       ├── 18-withdraw-queue-batch.ts
-│       ├── 20-compound-zero-yield.ts
-│       ├── 30-merge-ada-donation.ts
-│       ├── 31-merge-deposit-token.ts
-│       ├── 32-merge-multi-secondary.ts
-│       ├── 33-merge-reject-datum.ts              (NEGATIVE path)
-│       ├── 34-merge-reject-garbage-token.ts      (NEGATIVE path)
-│       ├── helpers.ts
-│       └── EXECUTION-ORDER.md
+│   └── preprod-e2e-plan.md     規格層級的情境目錄(100+);可執行的 TS 腳本放在 `optivaults-reference`(operator repo)
 └── whitepaper/
     ├── whitepaper.md           V1 公開白皮書(EN)
     └── whitepaper-zh-TW.md     V1 公開白皮書(繁體中文)
@@ -152,14 +128,14 @@ V1 目前處於**實作早期**:
 
 - ✅ 規格 / 文件 / 白皮書完成(`spec/` + `docs/` + `whitepaper/` 共 15 份 markdown)。
 - ✅ 全部 17 個 Aiken logic validator + 4 個 NFT mint policy + 1 個 DEX adapter(`minswap_v2_adapter`,§B@launch=1 SwapAdapter)都已實作,`aiken check` 全綠(`contracts/`)。切分理由見 `spec/architecture.md` §4.1。`UpdateSlippagePolicy` + 2 個 VaultDatum 欄位(§5.4 Phase 2)以及 ref-script SwapAdapter dispatch + `minswap_v2_adapter` + Registry `swap_adapter_hashes`(§B@launch=1)全部上鏈。
-- ✅ 單元 + property 測試套件——**144 個 test 全部通過,每次 `aiken check` 會跑 639 個 check**(8 個 property test × 最多 100 iter + 其他確定性案例,含 R72 + R73 + R74 regression 覆蓋;R74 在 `minswap_v2_adapter` 內加 24 個 inline test,另在 `tests/r74_test.ak` 加 10 個結構性 test)。
+- ✅ 單元 + property 測試套件——**194 個 test 全部通過,每次 `aiken check` 會跑 689 個 check**(8 個 property test × 最多 100 iter + 其他確定性案例,含 R72 + R73 + R74 regression 覆蓋;R74 在 `minswap_v2_adapter` 內加 24 個 inline test,另在 `tests/r74_test.ak` 加 10 個結構性 test)。
 - ✅ Preprod E2E 測試計畫已草擬(`tests/preprod-e2e-plan.md`),涵蓋全部 vault validator + 4 個 NFT one-shot policy + 跨 validator 整合流程,共 100+ 個情境。
-- ✅ Preprod E2E 測試腳本(`tests/preprod/*.ts`)——16 個腳本,覆蓋 ceremony health + Phase B(Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw)+ Phase C(zero-yield Compound)+ Phase D(MergeUtxo 捐贈路徑,含 2 條負測路徑)。Phase E(真實 Minswap V2)/ Phase F(mock Liqwid stack)/ Phase H(治理狀態機)尚未動。
+- ✅ Preprod E2E 測試腳本——16 個可執行 TS 腳本,覆蓋 ceremony health + Phase B(Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw)+ Phase C(zero-yield Compound)+ Phase D(MergeUtxo 捐贈路徑,含 2 條負測路徑),發布在 `optivaults-reference`(operator repo)。Phase E(真實 Minswap V2)/ Phase F(mock Liqwid stack)/ Phase H(治理狀態機)尚未動。
 - ✅ 兩次 Preprod ceremony 已執行完成——見下方「Preprod deploy 狀態」表。每次 38 筆 TX,所有階段鏈上驗證通過。
 - ✅ A2 治理閘控 stake deregister 工具(`deploy/tools/a2-{queue,execute,cancel}-deregister.ts`),帶冪等性 + CBOR-Constr payload 編碼。
 - ✅ Mainnet ceremony runbook 已草擬(`deploy/runbooks/v1-mainnet-ceremony.md`,501 行)——資金預算 + pre-flight + 逐階段 + 部分失敗處理 + 儀式後補登 + sunset 路徑。
 - ✅ 鏈下 byte-for-byte decoder `deploy/tools/verify-minswap-v2-decode.ts` 把 Minswap V2 adapter 的 decode 邏輯暴露出來,讓 pre-mainnet 可以對歷史鏈上 TX 做 decode 驗證而不用重送一次。
-- ⏳ Keeper 參考實作(`keeper/`)——尚未開始。
+- ⏳ Keeper 參考實作——放在 `optivaults-reference`(operator repo),尚未開始。
 - ⏳ 內部審計輪次(涵蓋區 A-F,見 `docs/audit-scope.md`)——R72(post-Phase-77d,1 MEDIUM + 3 LOW 已修)、R73(`valid_allocs × MergeUtxo` 捐贈缺口,1 MEDIUM 已修)、以及 R74(pre-mainnet Minswap V2 decoder `lp_asset` 格式不相符,1 HIGH 已修——見 `SECURITY.md §「最近修補」`)已完成;A-F 區域逐一走讀尚未展開。
 - ⏳ 外部審計接洽——目標 Q2-Q3 2027,事務所尚未選定。
 
@@ -207,7 +183,7 @@ V1 目前處於**實作早期**:
 
 ## 授權
 
-OptiVaults V1 以 **Apache License 2.0** 釋出。授權範圍涵蓋整個 repo——智能合約、keeper 參考實作、API server、frontend、CLI 工具、以及文件。任何團隊都可以在 Apache 2.0 條款範圍內 fork、特化或把 V1 架構整合進衍生產品(見 [LICENSE](../LICENSE))。
+OptiVaults V1 以 **Apache License 2.0** 釋出。本 repo(`optivaults-protocol`)涵蓋協議層——智能合約、部署流程、CLI 工具、以及文件。Operator 層(keeper 參考實作、API server、frontend、preprod E2E 腳本)放在姊妹 repo [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference),同樣以 Apache 2.0 授權。任何團隊都可以在 Apache 2.0 條款範圍內 fork、特化或把 V1 架構整合進衍生產品(見 [LICENSE](../LICENSE))。
 
 選這麼寬鬆的授權是刻意的:V1 的成功指標明確包含「架構被其他 Cardano 團隊 fork + 特化」這一條(見白皮書 §1「我們為什麼要做這件事」)。在 pre-audit 的驗證期做重用限制,會跟這個貢獻導向的姿態互相矛盾。
 

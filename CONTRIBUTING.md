@@ -18,7 +18,7 @@ When in doubt, open the PR here — maintainers will move it if it's in the wron
 ## TL;DR — before you open a PR
 
 1. Read `README.md` + `whitepaper/whitepaper.md` (or `whitepaper-zh-TW.md`) for positioning and trust model.
-2. `aiken check` in `contracts/` must pass (104 tests / 599 randomized checks / 0 errors).
+2. `aiken check` in `contracts/` must pass (194 tests / 689 randomized checks / 0 errors).
 3. For contract changes, include a regression test in `lib/vault/tests/`.
 4. For spec / doc changes, ensure internal cross-references still work (validator names, redeemer tags, field counts).
 5. Don't commit secrets, mainnet signer PKHs, or real Blockfrost keys. They belong in operator `.env` (gitignored), never in the repo.
@@ -41,7 +41,7 @@ When in doubt, open the PR here — maintainers will move it if it's in the wron
 cd contracts
 rm -rf build plutus.json
 aiken build                       # regenerates plutus.json
-aiken check                       # runs 104 tests + 599 randomized checks
+aiken check                       # runs 194 tests + 689 randomized checks
 ```
 
 `aiken check` must be clean on the branch before a PR is opened. If you add new tests, put them under `lib/vault/tests/` and ensure they fit the existing naming pattern (`<feature>_test.ak`).
@@ -73,7 +73,7 @@ Dry-run validates config parsing + compile step without submitting TXs.
 - **New governance action kinds** (`ActionKind` enum additions). Every new action adds an audit-surface + a timelock-table entry + a payload-hash helper. Discuss why the new action is necessary vs using an existing one.
 - **New SwapAdapter integrations** (e.g. SundaeSwap V3, Splash V2). These follow the `spec/swap-adapter.md §7` lifecycle — start with a spec discussion, then adapter impl + audit, then governance whitelist proposal.
 - **Economic parameter changes** (fee caps, buffer targets, oracle disagreement tolerances). Governance chooses actual runtime values via `UpdateStrategy` / `UpdateFee` / `UpdateSlippagePolicy` — if a PR wants to change the constant-enforced CAP, that's a policy change requiring community discussion.
-- **Breaking VaultDatum field changes**. The 28-field layout is frozen at V1 launch; any schema change triggers V2 and breaks the sunset / migration path.
+- **Breaking VaultDatum field changes**. The 29-field layout is frozen at V1 launch; any schema change triggers V2 and breaks the sunset / migration path.
 
 ### Not accepted
 
@@ -99,7 +99,7 @@ Dry-run validates config parsing + compile step without submitting TXs.
 - Reference the issue or Discord discussion that initiated the work (if any).
 - Summarize WHAT changed and WHY.
 - For contract changes: list any hash deltas (use `git show HEAD:contracts/plutus.json | jq '.validators[]|{title,hash}'` or equivalent off-chain diff).
-- For test additions: note the test count delta (e.g., "104 → 108 tests").
+- For test additions: note the test count delta (e.g., "194 → 198 tests").
 - For spec / doc changes: confirm cross-doc consistency (e.g., validator count, field count, size table).
 
 ### Review

@@ -1,7 +1,7 @@
 /// V1 type definitions — VaultDatum, redeemers, supporting types.
 ///
 /// Cross-references:
-///   - spec/vault-datum.md  (28 fields, 13 immutable)
+///   - spec/vault-datum.md  (29 fields, 9 immutable)
 ///   - spec/order-batch.md  (OrderDatum + OrderRedeemer)
 ///   - spec/governance.md   (GovDatum + GovRedeemer + ActionKind)
 ///   - spec/treasury.md     (TreasuryDatum + TreasuryRedeemer)
@@ -33,7 +33,7 @@ pub type LiqwidPosition {
   supplied_value: Int,
 }
 
-/// 28 fields — see spec/vault-datum.md §1.
+/// 29 fields — see spec/vault-datum.md §1.
 ///
 /// Mutability classes:
 ///   - Accounting state (10): mutated by user/keeper redeemers

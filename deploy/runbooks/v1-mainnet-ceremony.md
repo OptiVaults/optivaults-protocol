@@ -18,7 +18,7 @@ Do NOT start this ceremony if any of these are false:
 - [ ] Deploy wallet has ≥ 15 USDCx (`1f3aec8b…` policy; actual mainnet deposit token) for the vault seed. Verified not-frozen on Circle side.
 - [ ] Blockfrost Mainnet quota: ≥ 2,000 requests headroom (ceremony consumes ~400–600 requests over 10–15 min).
 - [ ] Key daemon running on the deploy host with the mainnet deploy wallet seed unlocked. Socket path canonicalized.
-- [ ] `git status` clean on the working tree. `aiken check` in `contracts/` passes 104 tests / 599 checks / 0 errors.
+- [ ] `git status` clean on the working tree. `aiken check` in `contracts/` passes 194 tests / 689 checks / 0 errors.
 - [ ] `deploy/state/mainnet-<releaseTag>.json` does NOT exist (or is archived). Starting fresh.
 
 ---
@@ -45,7 +45,7 @@ Mainnet wallet budget recommendation: **≥ 1,000 ADA** (as above, with headroom
 cd contracts
 rm -rf build plutus.json
 aiken build
-aiken check                      # 104 tests / 599 checks / 0 failed
+aiken check                      # 194 tests / 689 checks / 0 failed
 ```
 
 Record the 22 artefact hashes for cross-check. Compare against the post-audit baseline (same commit SHA as audit report references).
