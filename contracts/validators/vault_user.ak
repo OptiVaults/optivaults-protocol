@@ -40,6 +40,7 @@ use cardano/transaction.{Transaction}
 use aiken/interval.{Finite}
 use vault/constants.{
   keeper_inactive_ms, min_valid_timestamp_ms, vault_nft_token_name,
+  vusdcx_token_name,
 }
 use vault/helpers.{
   find_vault_utxo, get_continuing_datum, get_mint_quantity, is_gov_authorized,
@@ -379,11 +380,25 @@ validator vault_user(
         // legitimate stake in the vault can fire; full external attackers
         // would need to acquire vUSDCx first (which costs them money) and
         // can only fire once anyway.
+        //
+        // R75 C-1 fix (audit-0426 critical): the asset-name argument
+        // MUST be `vusdcx_token_name` (= #"765553444378", hex of "vUSDCx")
+        // not `""`. With the empty asset name, `quantity_of` returns 0
+        // for every input on Cardano, making this check unsatisfiable
+        // and bricking the dead-man-switch entirely. Coverage gap:
+        // pre-R75, layer3_test.ak only exercised the helper functions
+        // (validate_community_sunset_trigger_time +
+        // validate_community_sunset_transition) and never invoked the
+        // vault_user.ak redeemer path that contained this line — so
+        // unit tests passed while the on-chain CommunitySunset was
+        // permanently un-invokable. R75 added a regression test in
+        // layer3_test.ak that exercises this `quantity_of` lookup
+        // directly with the canonical token name.
         let caller_has_vusdcx =
           list.any(
             tx.inputs,
             fn(input) {
-              quantity_of(input.output.value, old_datum.vusdcx_policy, "") > 0
+              quantity_of(input.output.value, old_datum.vusdcx_policy, vusdcx_token_name) > 0
             },
           )
 

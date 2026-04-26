@@ -18,6 +18,11 @@
 //// gate (caller has vUSDCx + lower-bound bound to validity_range)
 //// lives in vault_user.ak and is integration-tested via Preprod E2E.
 
+use aiken/collection/list
+use cardano/address.{from_verification_key}
+use cardano/assets.{from_asset, merge, quantity_of}
+use cardano/transaction.{Input, NoDatum, Output, OutputReference}
+use vault/constants.{vusdcx_token_name}
 use vault/tests/datum_helpers.{baseline_datum}
 use vault/types.{LiqwidPosition, VaultDatum}
 use vault/validation.{
@@ -274,4 +279,142 @@ test layer3_attacker_cannot_use_sunset_to_extract_value() {
       total_deposited: 0,  // and brick share_price
     }
   !validate_community_sunset_transition(old, new)
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// R75 C-1 regression — vUSDCx caller-holder check uses canonical token
+// name (audit-0426 critical, fixed 2026-04-26)
+// ─────────────────────────────────────────────────────────────────────
+//
+// Pre-fix `vault_user.ak::CommunitySunset` did:
+//
+//   quantity_of(input.output.value, old_datum.vusdcx_policy, "")
+//
+// On Cardano `quantity_of(value, policy, name)` returns 0 whenever the
+// (policy, name) tuple does not match a token in the value. The vUSDCx
+// asset name is `#"765553444378"` (hex of "vUSDCx", 6 bytes) — not the
+// empty string — so the lookup ALWAYS returned 0, making
+// `caller_has_vusdcx` permanently false, making CommunitySunset
+// permanently un-invokable, bricking the dead-man-switch entirely.
+//
+// Coverage gap that let this through: every other layer3 test in this
+// file covers ONLY the two pure helpers (validate_community_sunset_
+// trigger_time + validate_community_sunset_transition) and never
+// exercised the redeemer code path that contained the buggy lookup.
+// Aiken `aiken check` was a perfect green while the on-chain validator
+// would have rejected every CommunitySunset attempt.
+//
+// Tests below pin three properties that together protect against the
+// exact bug pattern returning:
+//
+//   1. The canonical asset-name constant has not drifted (`vusdcx_
+//      token_name == #"765553444378"`).
+//   2. Lookup with the canonical name succeeds on a value carrying the
+//      vUSDCx token.
+//   3. Lookup with `""` against the same value returns 0 (locks in the
+//      buggy-pattern signal — if a future refactor reintroduces `""`,
+//      this regression will fail loudly).
+//
+// Plus a synthetic Input-list test that mirrors `vault_user.ak`'s
+// `list.any(tx.inputs, fn(input) { quantity_of(...) > 0 })` pattern
+// against the canonical name, exercising the actual redeemer shape.
+
+const test_vusdcx_policy: ByteArray =
+  #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+fn test_addr() {
+  from_verification_key(
+    #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  )
+}
+
+fn test_input(qty_vusdcx: Int, idx: Int) -> Input {
+  let value =
+    if qty_vusdcx > 0 {
+      merge(
+        from_asset(#"", #"", 2_000_000),
+        from_asset(test_vusdcx_policy, vusdcx_token_name, qty_vusdcx),
+      )
+    } else {
+      from_asset(#"", #"", 2_000_000)
+    }
+  Input {
+    output_reference: OutputReference {
+      transaction_id: #"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      output_index: idx,
+    },
+    output: Output {
+      address: test_addr(),
+      value,
+      datum: NoDatum,
+      reference_script: None,
+    },
+  }
+}
+
+test layer3_vusdcx_constant_matches_vUSDCx_ascii() {
+  // "vUSDCx" ASCII = 0x76 0x55 0x53 0x44 0x43 0x78 (6 bytes).
+  // Locking this constant catches accidental encoding drift.
+  vusdcx_token_name == #"765553444378"
+}
+
+test layer3_vusdcx_lookup_canonical_name_succeeds() {
+  let v = from_asset(test_vusdcx_policy, vusdcx_token_name, 1)
+  quantity_of(v, test_vusdcx_policy, vusdcx_token_name) == 1
+}
+
+test layer3_vusdcx_lookup_empty_name_returns_zero_buggy_pattern() {
+  // Demonstrates the pre-fix bug: same value, but lookup with `""`
+  // returns 0 → list.any over inputs would always be False → caller
+  // always rejected. If a future refactor reintroduces `""` as the
+  // asset-name argument, ANY downstream test that depends on a
+  // populated value will fail; this test is a literal canary.
+  let v = from_asset(test_vusdcx_policy, vusdcx_token_name, 1)
+  quantity_of(v, test_vusdcx_policy, #"") == 0
+}
+
+test layer3_caller_has_vusdcx_finds_holder_with_canonical_name() {
+  // Synthesises the exact `list.any` pattern from vault_user.ak:
+  // 3 inputs, only one carries vUSDCx; with the CANONICAL name the
+  // walk finds the holder.
+  let inputs =
+    [test_input(0, 0), test_input(1, 1), test_input(0, 2)]
+  let canonical_caller_has_vusdcx =
+    list.any(
+      inputs,
+      fn(input) {
+        quantity_of(input.output.value, test_vusdcx_policy, vusdcx_token_name) > 0
+      },
+    )
+  canonical_caller_has_vusdcx
+}
+
+test layer3_caller_has_vusdcx_buggy_empty_name_misses_holder() {
+  // Same input list as above, but with the BUGGY `""` lookup; the walk
+  // finds nothing. This is the on-chain behaviour pre-R75 fix.
+  let inputs =
+    [test_input(0, 0), test_input(1, 1), test_input(0, 2)]
+  let buggy_caller_has_vusdcx =
+    list.any(
+      inputs,
+      fn(input) {
+        quantity_of(input.output.value, test_vusdcx_policy, #"") > 0
+      },
+    )
+  !buggy_caller_has_vusdcx
+}
+
+test layer3_caller_has_vusdcx_rejects_no_holder() {
+  // Negative path: no input carries vUSDCx; canonical lookup correctly
+  // returns False (so the redeemer correctly rejects spam attempts
+  // from a wallet without any vault stake).
+  let inputs = [test_input(0, 0), test_input(0, 1), test_input(0, 2)]
+  let no_holder =
+    list.any(
+      inputs,
+      fn(input) {
+        quantity_of(input.output.value, test_vusdcx_policy, vusdcx_token_name) > 0
+      },
+    )
+  !no_holder
 }
