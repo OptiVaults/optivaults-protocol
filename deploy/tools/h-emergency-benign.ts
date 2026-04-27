@@ -90,14 +90,24 @@ function cborSerialiseInt(n: bigint): Buffer {
 /**
  * payload_hash_emergency_withdraw(loss, freeze) = blake2b_256(cbor.serialise((loss, freeze)))
  *
- * Aiken tuples at the Plutus Data level are Constr(0, [a, b]) — NOT plain
- * CBOR 2-arrays. Canonical bytes: `d879 9f <cbor(a)> <cbor(b)> ff`
- * (tag 121 + indefinite-length list). Let Lucid produce the exact CBOR via
- * `Data.to` to avoid hand-rolling the tag layout.
+ * Aiken `cbor.serialise((Int, Int))` for a 2-tuple emits an indefinite-length
+ * CBOR list at the Plutus Data level — NOT a Constr-wrapped array. Canonical
+ * bytes: `9f <cbor(loss)> <cbor(freeze)> ff`. The naive `Data.to(Constr(0, [a,b]))`
+ * encoding (`d8799f<a><b>ff`) is wrong and causes payload_hash mismatch when
+ * the on-chain `is_gov_authorized` recomputes via `cbor.serialise(tuple)`,
+ * surfacing as a generic governance-authorization rejection at Execute time.
+ *
+ * Verified via `aiken check` dump: cbor.serialise((0, 1)) = 0x9F0001FF.
+ * Each tuple element is encoded canonically (cborSerialiseInt for Int).
  */
 function payloadHashEmergencyWithdraw(loss: bigint, freeze: bigint): string {
-  const cborHex = Data.to(new Constr(0, [loss, freeze]) as unknown as never);
-  return blake2b256Hex(Buffer.from(cborHex, "hex"));
+  const bytes = Buffer.concat([
+    Buffer.from([0x9f]),
+    cborSerialiseInt(loss),
+    cborSerialiseInt(freeze),
+    Buffer.from([0xff]),
+  ]);
+  return blake2b256Hex(bytes);
 }
 
 async function deriveSignerAccountIndices(mnemonic: string, signers: string[]): Promise<number[]> {
