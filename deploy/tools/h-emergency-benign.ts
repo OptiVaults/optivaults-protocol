@@ -359,7 +359,13 @@ async function main() {
 
   // Redeemers
   const redeemerExec = Data.to(new Constr(2, [actionId]) as unknown as Data);
-  const emergencyRedeemer = Data.to(new Constr(14, [lossAmount, freezeFlag]) as unknown as Data);
+  // VaultRedeemer.EmergencyWithdraw at Constr index 15. The CommunitySunset
+  // variant was inserted at index 3 in `lib/vault/types.ak::VaultRedeemer`,
+  // shifting every later variant by +1. Counted from the type declaration:
+  // 0 Deposit, 1 Withdraw, 2 BatchProcess, 3 CommunitySunset, 4 Compound, …,
+  // 11 UpdateStrategy, 12 UpdateFee, 13 UpdateFeeSplit, 14 UpdateSlippagePolicy,
+  // 15 EmergencyWithdraw, 16 SupplyToLiqwid, 17 RecallFromLiqwid.
+  const emergencyRedeemer = Data.to(new Constr(15, [lossAmount, freezeFlag]) as unknown as Data);
   const proxyRedeemer = Data.to(new Constr(7, []) as unknown as Data); // UseGovEmergency
 
   // Ref inputs
