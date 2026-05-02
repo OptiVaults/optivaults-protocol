@@ -54,6 +54,14 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 
 ---
 
+## 延伸閱讀
+
+[`docs/articles/`](docs/articles/) 目錄收錄 V1 設計決策的長篇敘事解說,與 `spec/` 的形式規格互補,說明特定決策背後的「為什麼」。第一個系列 — [架構系列(共 4 篇)](docs/articles/architecture/) — 涵蓋 eUTXO 上的四個設計約束、Withdraw-Zero Forwarding Pattern、17 個驗證器的拆分,以及編譯期 Vault NFT 錨點。總閱讀時間約 25 分鐘。
+
+文章同步發佈於 Medium,canonical URL 指回本 repository。
+
+---
+
 ## 目錄結構
 
 ```
@@ -103,7 +111,8 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 │   ├── security-model.md       信任邊界、威脅模型、已知殘餘風險
 │   ├── audit-scope.md          Pre-audit 內部輪次計畫 + 外部審計範圍
 │   ├── integration-playbook.md 新增 DEX 路徑 / Liqwid market 的 operator SOP
-│   └── contributor-program.md  開源貢獻者回饋(Phase 2+ 啟用)
+│   ├── contributor-program.md  開源貢獻者回饋(Phase 2+ 啟用)
+│   └── articles/               長篇敘事架構解說(4 篇系列,雙語)
 ├── tests/
 │   └── preprod-e2e-plan.md     規格層級的情境目錄(100+);可執行的 TS 腳本放在 `optivaults-reference`(operator repo)
 └── whitepaper/

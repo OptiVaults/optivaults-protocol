@@ -54,6 +54,14 @@ OptiVaults V1 is characterized by the following architectural decisions. Each is
 
 ---
 
+## Further reading
+
+The [`docs/articles/`](docs/articles/) directory contains long-form narrative explanations of V1's design choices, complementing the formal spec in `spec/` with the *why* behind specific decisions. The first series — [Architecture (4 parts)](docs/articles/architecture/) — covers the four eUTXO design constraints, the Withdraw-Zero Forwarding Pattern, the 17-validator split, and the compile-time Vault NFT anchor. ~25 min total reading time.
+
+Articles are mirrored on Medium with canonical URLs pointing back to this repository.
+
+---
+
 ## Directory layout
 
 ```
@@ -103,7 +111,8 @@ OptiVaults V1 is characterized by the following architectural decisions. Each is
 │   ├── security-model.md       Trust boundaries, threat model, known residual risks
 │   ├── audit-scope.md          Pre-audit internal round plan + external audit scope
 │   ├── integration-playbook.md Operator SOP for adding new DEX routes / Liqwid markets
-│   └── contributor-program.md  Open-source contributor rewards (Phase 2+ activation)
+│   ├── contributor-program.md  Open-source contributor rewards (Phase 2+ activation)
+│   └── articles/               Long-form narrative architecture walkthrough (4-part series, bilingual)
 ├── tests/
 │   └── preprod-e2e-plan.md     Specification-level scenario catalog (100+); executable TS scripts live in `optivaults-reference` (operator repo)
 └── whitepaper/
