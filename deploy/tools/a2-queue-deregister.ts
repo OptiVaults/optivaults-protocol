@@ -6,8 +6,8 @@
  * 3 governance keys derived from the operator's single Preprod mnemonic
  * (CIP-1852 accountIndex 0/1).
  *
- * After this runs, wait `timelock_deregister_stake_ms` (1h in Preprod
- * override; 14d in production), then call `a2-execute-deregister.ts`.
+ * After this runs, wait `timelock_deregister_stake_ms` (14d in production),
+ * then call `a2-execute-deregister.ts`.
  *
  * Usage:
  *   TARGET=vaultAdmin npx tsx deploy/tools/a2-queue-deregister.ts \
@@ -183,7 +183,12 @@ async function main() {
   console.log(`payload_hash:              ${payloadHashHex}`);
 
   // QueueAction redeemer: Constr(0, [action_kind, target_script, target_tx_hash, payload_hash, timelock_ms, ttl_ms])
-  const timelockMs = 60 * 60 * 1_000;         // 1h (Preprod override matches constants)
+  // timelockMs must satisfy contracts/lib/vault/constants.ak::timelock_deregister_stake_ms.
+  // Production value: 14 days (= 14 * 86_400 * 1_000). Operator must override
+  // here to a smaller value ONLY if constants.ak has been temporarily shrunk
+  // for Preprod E2E iteration (see git history) — and only after rebuilding
+  // contracts to match.
+  const timelockMs = 14 * 86_400 * 1_000;     // 14 days (matches production constants)
   const ttlMs = 86_400_000;                    // 1d (spec minimum)
   const redeemerQueue = Data.to(new Constr(0, [
     new Constr(ACTION_KIND_DEREGISTER, []),    // action_kind = ActDeregisterStake
