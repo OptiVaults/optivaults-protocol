@@ -153,12 +153,12 @@ V1 is in **early implementation phase**:
 
 | Release tag | Date | Vault address | Vault NFT policy | Notes |
 |-------------|------|---------------|------------------|-------|
-| `v1-preprod-p3` | 2026-04-23 | `addr_test1wz87t7qnkpk3cgy2057rsrnsz6px88ks23y3ktd46q0jzfg5zfddz` | `7a0eea53cfa90b949009729bd0eaa73e3cb9f2f8056cc235d57218c5` | Current. Ceremony after timelock constants shrunk to 60s for Preprod E2E iteration speed. B1 Deposit + B2 Partial Withdraw + A2 Queue on vault_user all verified on-chain. |
-| `v1-postphase77d-preprod` | 2026-04-22 | `addr_test1wqca8hpe87tcfx0r0q7ju3uxf2thpr4jjcyjg44cc8kpvngysgja2` | — | Pre-timelock-shrink ceremony. Phase 84 E2E B1-B9 + D1/D2/D4/D5/D6 + C1 + H1-H5 Queue/Cancel verified on-chain. |
+| `v1-preprod-p3` | 2026-04-23 | `addr_test1wz87t7qnkpk3cgy2057rsrnsz6px88ks23y3ktd46q0jzfg5zfddz` | `7a0eea53cfa90b949009729bd0eaa73e3cb9f2f8056cc235d57218c5` | Preprod E2E ceremony built with shortened timelocks for iteration speed (constants subsequently restored to production values). B1 Deposit + B2 Partial Withdraw + A2 Queue on vault_user verified on-chain. |
+| `v1-postphase77d-preprod` | 2026-04-22 | `addr_test1wqca8hpe87tcfx0r0q7ju3uxf2thpr4jjcyjg44cc8kpvngysgja2` | — | Earlier Preprod ceremony covering B1-B9 user flow + D1/D2/D4/D5/D6 MergeUtxo + C1 Compound zero-yield + H1-H5 governance Queue/Cancel verified on-chain. |
 
-Both ceremonies' stake-registration deposits (12 × 2 ADA = 24 ADA per ceremony) + ref-script min-ADA lockups (~870 ADA per ceremony) are reclaimable via `deploy/tools/a2-{queue,execute}-deregister.ts` + `deploy/tools/reclaim-refs.ts`, contingent on the A2 governance flow (14d production timelock; 1h Preprod override for ceremony iteration).
+Both ceremonies' stake-registration deposits (12 × 2 ADA = 24 ADA per ceremony) + ref-script min-ADA lockups (~870 ADA per ceremony) are reclaimable via `deploy/tools/a2-{queue,execute}-deregister.ts` + `deploy/tools/reclaim-refs.ts`, contingent on the A2 governance flow (14d production timelock).
 
-Compiled validator sizes (all under the 16 KB PlutusV3 limit, sorted largest → smallest). Measured from the **current** `v1-preprod-p3` build; `timelock_*_ms` constants currently at Preprod override 60s for 11 action kinds (all governance paths except `timelock_emergency_ms=0`, `timelock_fast_update_markets_ms=1h`, `timelock_deregister_stake_ms=1h`). Production timelocks (7-21d) MUST be restored before any mainnet build — see `constants.ak` header note + `deploy/runbooks/v1-mainnet-ceremony.md` §0.
+Compiled validator sizes (all under the 16 KB PlutusV3 limit, sorted largest → smallest). Measured from the `v1-preprod-p3` build. Constants have since been reverted to production timelock values (see `contracts/lib/vault/constants.ak` git history); the production build differs only at `multisig_gov` (and consequently at the `vault_proxy` applied form), the 21 other validators are byte-identical. Mainnet hash preview at `deploy/state/mainnet-hash-preview.txt` (operator-only, gitignored).
 
 | Validator | Size (bytes) | Headroom |
 |-----------|-------------:|---------:|

@@ -227,21 +227,21 @@ requires keeper authorisation + valid vault math. **Future-revisit
 trigger:** if vault_keeper_hot's R72 F-1 binding is ever weakened
 or removed, this lib must add a signer requirement.
 
-**L-5 LOW — Preprod timelock overrides in `constants.ak`: OPERATIONAL — must-revert flagged on mainnet ceremony pre-flight.**
-11 governance-action timelocks are set to 60 seconds for Preprod
-testing (Phase 84+ session-bounded H-path E2E) instead of the
-production 7d / 14d / 21d / 37d values. Plus
-`timelock_deregister_stake_ms` is overridden to 1 hour from 14d.
-Plus `timelock_update_slippage_policy_ms` is 60s vs 48h.
-**Mitigation in code:** every overridden constant carries a
-`/// PREPROD OVERRIDE` comment block + `MUST revert before any
-mainnet build` warning + the production value is recorded inline.
-**Mitigation in process:** `deploy/runbooks/v1-mainnet-ceremony.md`
-pre-flight checklist requires verifying every constant against the
-spec file (`spec/governance.md` + `spec/keeper-auth.md`).
-**Future-revisit trigger:** mainnet ceremony pre-flight run will
-revert these and re-build. Audit re-verification on the
-production-hash artefacts is REQUIRED before mainnet deployment.
+**L-5 LOW — Preprod timelock overrides in `constants.ak`: RESOLVED.**
+During the session-bounded H-path E2E iteration phase, 11
+governance-action timelocks were temporarily set to 60 seconds and
+`timelock_deregister_stake_ms` to 1 hour to fit the full Queue +
+wait + Execute matrix into a single Preprod session. Those overrides
+have been reverted to their production values
+(7d / 14d / 21d / 48h for the governance actions, 14d for
+deregister stake) on the mainnet-candidate build (see
+`contracts/lib/vault/constants.ak` git history). Mainnet build
+hashes preview is at `deploy/state/mainnet-hash-preview.txt`
+(operator-only, gitignored). Hash impact: only `multisig_gov` and
+the `vault_proxy` applied form changed; the 21 other validators are
+byte-identical to the Preprod-override snapshot. Pre-mainnet
+re-validation strategy (numeric verification + datum-backdate) is
+documented in `deploy/runbooks/v1-mainnet-ceremony.md §2.5`.
 
 **I-1 INFO — `vault_gov_policy` fail message says wrong validator name: SELF-CORRECTED in audit.**
 The audit initially flagged this then verified it correct.

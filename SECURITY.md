@@ -124,8 +124,8 @@ The following depositor-facing promises depend on external infrastructure remain
 | Frontend vitest | 0 (not in V1 scope) | — |
 
 Preprod E2E verification state:
-- **`v1-preprod-p3`** (2026-04-23, current): B1 Direct Deposit + B2 Partial Withdraw + A2 Queue on vault_user verified on-chain.
-- **`v1-postphase77d-preprod`** (2026-04-22): B1-B9 + D1/D2/D4/D5/D6 + C1 + H1-H5 Queue/Cancel verified (Phase 84 session).
+- **`v1-preprod-p3`** (2026-04-23): B1 Direct Deposit + B2 Partial Withdraw + A2 Queue on vault_user verified on-chain.
+- **`v1-postphase77d-preprod`** (2026-04-22): B1-B9 user flow + D1/D2/D4/D5/D6 MergeUtxo + C1 Compound zero-yield + H1-H5 governance Queue/Cancel verified on-chain.
 
 ---
 

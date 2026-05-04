@@ -240,7 +240,7 @@ type StrategyPayload {
 - `0 <= new_max_slippage_bps <= max_slippage_bps_cap`(`max_slippage_bps_cap = 500` → 絕對上限 5%)
 - `min_swap_peg_bps_floor <= new_min_swap_peg_bps <= min_swap_peg_bps_ceiling`(9_300..9_950 → 介於 93% 與 99.5% peg)
 
-**Timelock**:48 小時(`timelock_update_slippage_policy_ms`)。比費用類動作短,理由:(a) 這個變更**加強**或**放鬆**安全邊界,而非重導資金流;(b) 市場狀況(例如短暫 depeg)可能需要即時調整。Production timelock = 48 小時;Preprod 為了 ceremony 迭代速度覆寫成 60 秒。
+**Timelock**:48 小時(`timelock_update_slippage_policy_ms`)。比費用類動作短,理由:(a) 這個變更**加強**或**放鬆**安全邊界,而非重導資金流;(b) 市場狀況(例如短暫 depeg)可能需要即時調整。
 
 **Payload-hash 綁定**:`payload_hash_update_slippage_policy(new_max_slippage_bps, new_min_swap_peg_bps)`(見 `lib/vault/helpers.ak`)。Payload 在 queue 時即固定,execute 不能換值。
 

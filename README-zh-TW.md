@@ -54,14 +54,6 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 
 ---
 
-## 延伸閱讀
-
-[`docs/articles/`](docs/articles/) 目錄收錄 V1 設計決策的長篇敘事解說,與 `spec/` 的形式規格互補,說明特定決策背後的「為什麼」。第一個系列 — [架構系列(共 4 篇)](docs/articles/architecture/) — 涵蓋 eUTXO 上的四個設計約束、Withdraw-Zero Forwarding Pattern、17 個驗證器的拆分,以及編譯期 Vault NFT 錨點。總閱讀時間約 25 分鐘。
-
-文章同步發佈於 Medium,canonical URL 指回本 repository。
-
----
-
 ## 目錄結構
 
 ```
@@ -111,8 +103,7 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 │   ├── security-model.md       信任邊界、威脅模型、已知殘餘風險
 │   ├── audit-scope.md          Pre-audit 內部輪次計畫 + 外部審計範圍
 │   ├── integration-playbook.md 新增 DEX 路徑 / Liqwid market 的 operator SOP
-│   ├── contributor-program.md  開源貢獻者回饋(Phase 2+ 啟用)
-│   └── articles/               長篇敘事架構解說(4 篇系列,雙語)
+│   └── contributor-program.md  開源貢獻者回饋(Phase 2+ 啟用)
 ├── tests/
 │   └── preprod-e2e-plan.md     規格層級的情境目錄(100+);可執行的 TS 腳本放在 `optivaults-reference`(operator repo)
 └── whitepaper/
@@ -153,12 +144,12 @@ V1 目前處於**實作早期**:
 
 | Release tag | 日期 | Vault 地址 | Vault NFT policy | 備註 |
 |-------------|------|-----------|------------------|------|
-| `v1-preprod-p3` | 2026-04-23 | `addr_test1wz87t7qnkpk3cgy2057rsrnsz6px88ks23y3ktd46q0jzfg5zfddz` | `7a0eea53cfa90b949009729bd0eaa73e3cb9f2f8056cc235d57218c5` | 目前這一版。把 timelock 常數縮到 60 秒之後的 ceremony,方便加速 Preprod E2E 迭代。B1 Deposit + B2 Partial Withdraw + vault_user 的 A2 Queue 都已鏈上驗證通過。 |
-| `v1-postphase77d-preprod` | 2026-04-22 | `addr_test1wqca8hpe87tcfx0r0q7ju3uxf2thpr4jjcyjg44cc8kpvngysgja2` | — | 縮 timelock 前的 ceremony。Phase 84 跑過的 E2E 範圍:B1-B9 + D1/D2/D4/D5/D6 + C1 + H1-H5 Queue/Cancel,全部鏈上驗證通過。 |
+| `v1-preprod-p3` | 2026-04-23 | `addr_test1wz87t7qnkpk3cgy2057rsrnsz6px88ks23y3ktd46q0jzfg5zfddz` | `7a0eea53cfa90b949009729bd0eaa73e3cb9f2f8056cc235d57218c5` | 把 timelock 常數縮短後做的 Preprod E2E ceremony(便於迭代;常數後續已還原為 production 值)。B1 Deposit + B2 Partial Withdraw + vault_user 的 A2 Queue 都已鏈上驗證通過。 |
+| `v1-postphase77d-preprod` | 2026-04-22 | `addr_test1wqca8hpe87tcfx0r0q7ju3uxf2thpr4jjcyjg44cc8kpvngysgja2` | — | 較早的 Preprod ceremony,涵蓋 B1-B9 用戶流程 + D1/D2/D4/D5/D6 MergeUtxo + C1 Compound zero-yield + H1-H5 治理 Queue/Cancel,全部鏈上驗證通過。 |
 
-這兩次 ceremony 的 stake-registration 押金(每次 12 × 2 ADA = 24 ADA)+ ref-script min-ADA 鎖定(每次約 870 ADA)在 sunset 時都可以透過 `deploy/tools/a2-{queue,execute}-deregister.ts` + `deploy/tools/reclaim-refs.ts` 回收,前提是走 A2 治理流程(mainnet 14 天 timelock;Preprod 為了迭代速度暫時覆寫為 1 小時)。
+這兩次 ceremony 的 stake-registration 押金(每次 12 × 2 ADA = 24 ADA)+ ref-script min-ADA 鎖定(每次約 870 ADA)在 sunset 時都可以透過 `deploy/tools/a2-{queue,execute}-deregister.ts` + `deploy/tools/reclaim-refs.ts` 回收,前提是走 A2 治理流程(14 天 production timelock)。
 
-編譯後 validator 大小(全部在 16 KB PlutusV3 上限以下,由大到小排序)。取自目前 `v1-preprod-p3` build;`timelock_*_ms` 常數目前為 Preprod 覆寫值 60 秒,共影響 11 個 action kind(所有治理路徑,除了 `timelock_emergency_ms=0`、`timelock_fast_update_markets_ms=1h`、`timelock_deregister_stake_ms=1h`)。進入任何 mainnet build 之前,production timelock(7-21 天)**必須**還原——見 `constants.ak` 檔頭註解與 `deploy/runbooks/v1-mainnet-ceremony.md §0`。
+編譯後 validator 大小(全部在 16 KB PlutusV3 上限以下,由大到小排序)。取自 `v1-preprod-p3` build。常數後續已還原為 production timelock 值(見 `contracts/lib/vault/constants.ak` 的 git 紀錄);production build 與下表的差異只在 `multisig_gov`(以及連帶影響到 `vault_proxy` 的 applied form),其他 21 個 validator 的 hash 維持 byte-identical。Mainnet hash preview 在 `deploy/state/mainnet-hash-preview.txt`(operator-only,gitignored)。
 
 | Validator | 大小(bytes) | 剩餘空間 |
 |-----------|-------------:|---------:|
@@ -185,7 +176,7 @@ V1 目前處於**實作早期**:
 | governance_nft | 319 | 16,065 B |
 | registry_auth_nft | 319 | 16,065 B |
 
-最緊的是 `vault_liqwid`——剩 2,992 B(距上限 18.3%)。若改回 production timelock 重建,`multisig_gov` 會往上長 ~100-200 B(常數 const-inline 後編出來比較大),其他 validator 的 hash 不會變。
+最緊的是 `vault_liqwid`——剩 2,992 B(距上限 18.3%)。production timelock 還原後,`multisig_gov` 會往上長 ~100-200 B(常數 const-inline 後編出來比較大),其他 validator 的 hash 維持不變。
 
 開發 / 審計 / 上線時程見 [docs/audit-scope.md](docs/audit-scope.md)。
 

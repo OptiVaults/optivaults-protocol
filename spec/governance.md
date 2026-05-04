@@ -240,7 +240,7 @@ Governance cannot raise these caps — they are protocol constants in `lib/vault
 - `0 <= new_max_slippage_bps <= max_slippage_bps_cap` (`max_slippage_bps_cap = 500` → 5% absolute ceiling)
 - `min_swap_peg_bps_floor <= new_min_swap_peg_bps <= min_swap_peg_bps_ceiling` (9_300..9_950 → between 93% and 99.5% peg)
 
-**Timelock:** 48 hours (`timelock_update_slippage_policy_ms`). Set short relative to fee actions because (a) the change strengthens or relaxes a safety bound rather than redirecting funds, and (b) market conditions (e.g., a brief depeg event) may require timely re-tuning. Production timelock = 48h; Preprod override = 60s for ceremony iteration.
+**Timelock:** 48 hours (`timelock_update_slippage_policy_ms`). Set short relative to fee actions because (a) the change strengthens or relaxes a safety bound rather than redirecting funds, and (b) market conditions (e.g., a brief depeg event) may require timely re-tuning.
 
 **Payload-hash binding:** `payload_hash_update_slippage_policy(new_max_slippage_bps, new_min_swap_peg_bps)` (see `lib/vault/helpers.ak`). Payload bound at queue time; execute cannot swap the values.
 
