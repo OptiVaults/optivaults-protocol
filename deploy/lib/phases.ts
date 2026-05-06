@@ -643,12 +643,21 @@ export async function runPhase4bStateUtxos(
     //   - compoundMs: 91 days → bypasses 90d community_sunset threshold
     //     (Phase L3 dead-man-switch). Set via env BACKDATE_COMPOUND_DAYS;
     //     unset = 0 = no backdate. See tests/preprod/TIME-MACHINE.md.
+    //   - adaSwapMs: backdates last_ada_swap_time so SwapAda's 1h cooldown
+    //     is satisfied at deploy time. Without this, SwapAda E2E tests
+    //     wait 1h after vault init before they can execute, because every
+    //     redeemer EXCEPT SwapAda itself preserves last_ada_swap_time —
+    //     leaving no off-chain way to advance it. Set via env
+    //     BACKDATE_ADA_SWAP_HOURS (default 0 = no backdate). 2 hours is
+    //     enough headroom for a multi-test session.
     const backdate =
       cfg.network === "Preprod"
         ? {
             feeMs: 8 * 86_400_000,
             compoundMs:
               parseInt(process.env.BACKDATE_COMPOUND_DAYS ?? "0", 10) * 86_400_000,
+            adaSwapMs:
+              parseInt(process.env.BACKDATE_ADA_SWAP_HOURS ?? "0", 10) * 3_600_000,
           }
         : {};
     if (cfg.network === "Mainnet" && Object.keys(backdate).length > 0) {
@@ -659,6 +668,13 @@ export async function runPhase4bStateUtxos(
         "INFO",
         `  ⏰ Preprod backdate: last_compound_time/last_realloc_time -${backdate.compoundMs / 86_400_000}d ` +
           `(L3 sunset E2E enabled)`,
+      );
+    }
+    if (backdate.adaSwapMs && backdate.adaSwapMs > 0) {
+      log(
+        "INFO",
+        `  ⏰ Preprod backdate: last_ada_swap_time -${backdate.adaSwapMs / 3_600_000}h ` +
+          `(SwapAda 1h cooldown bypass for E2E tests)`,
       );
     }
     const datum = buildVaultDatum(cfg, hashes, nowMs, backdate);

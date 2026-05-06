@@ -110,6 +110,19 @@ export interface DeployConfig {
      * `UpdateRegistry` (14d timelock + 1-of-n cancel).
      */
     swapAdapterHashes?: string[];
+    /**
+     * §5.4 P3 — initial `asset_oracles` whitelist (Preprod E2E only).
+     * If omitted, buildRegistryDatum defaults to `[]` (the V1 mainnet
+     * launch state — Charli3+Orcfax dual-feed coverage is added post-
+     * launch via `UpdateRegistry` 14d timelock). Setting this on
+     * Preprod ceremonies lets E2E tests exercise oracle-dependent
+     * paths (SwapAda hard-fail / Tier 1 bound applies / stale / cross-
+     * feed disagreement) without waiting on the 14d action timelock.
+     *
+     * Mainnet: this MUST stay omitted. The V1 mainnet ceremony deploys
+     * with `asset_oracles = []` and oracles come online via governance.
+     */
+    assetOracles?: AssetOracleEntry[];
   };
   ceremonyOptions: {
     refScriptMinAdaMultiplier: number;
@@ -125,6 +138,35 @@ export interface LiqwidMarketEntry {
   underlyingPolicy: string;
   underlyingName: string;
   active: boolean;
+}
+
+/**
+ * §5.4 P3 oracle feed pin — script hash + optional auth NFT (policy +
+ * name, both empty to skip NFT pin). Each `AssetOracleEntry` carries 1+
+ * feeds; `lib/vault/oracle.ak::find_feed_sample` requires the auth NFT
+ * to be present on the feed UTXO when `feed_auth_policy` is non-empty.
+ */
+export interface AssetOracleFeed {
+  feedScriptHash: string;
+  /** Empty string disables NFT pin (operator-only convenience; not recommended for production). */
+  feedAuthPolicy: string;
+  feedAuthName: string;
+}
+
+/**
+ * §5.4 P3 asset oracle entry. Caps mirrored from registry validator:
+ *   - `maxDisagreementBps` ∈ (0, 1000] (≤ 10%)
+ *   - `maxStalenessMs` ∈ (0, 3_600_000] (≤ 1 hour)
+ *   - `minFeeds` ∈ [1, feeds.length]
+ */
+export interface AssetOracleEntry {
+  /** Asset (policy, name). ADA convention is `("", "")`. */
+  assetPolicy: string;
+  assetName: string;
+  feeds: AssetOracleFeed[];
+  maxDisagreementBps: number;
+  maxStalenessMs: number;
+  minFeeds: number;
 }
 
 const PLACEHOLDER_PATTERNS = [

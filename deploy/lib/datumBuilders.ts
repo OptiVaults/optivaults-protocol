@@ -83,6 +83,52 @@ export function buildRegistryDatum(
       // minswap_v2_adapter. Caller can override via config.
       hashes.minswapV2AdapterHash,
     ];
+
+  // §5.4 P3 (Preprod E2E only) — optional pre-load of `asset_oracles` at
+  // ceremony deploy time. Mainnet MUST omit this so V1 launches with
+  // `[]` and oracles come online via governance UpdateRegistry only.
+  // The Preprod path is necessary because the production action timelock
+  // (14d) blocks runtime UpdateRegistry tests within a single E2E session.
+  const cfgAssetOracles = cfg.registryInitialParams.assetOracles ?? [];
+  if (cfg.network === "Mainnet" && cfgAssetOracles.length > 0) {
+    throw new Error(
+      "[buildRegistryDatum] cfg.registryInitialParams.assetOracles is non-empty " +
+      "but network=Mainnet — V1 mainnet MUST launch with `asset_oracles = []` " +
+      "and add oracle entries via governance UpdateRegistry only. Refusing.",
+    );
+  }
+  const initialAssetOracles = cfgAssetOracles.map((e) => {
+    // Client-side cap pre-check (the registry validator re-checks).
+    if (e.maxDisagreementBps <= 0 || e.maxDisagreementBps > 1_000) {
+      throw new Error(
+        `[buildRegistryDatum] asset_oracle ${e.assetPolicy}.${e.assetName} ` +
+        `maxDisagreementBps=${e.maxDisagreementBps} out of (0, 1000] cap`,
+      );
+    }
+    if (e.maxStalenessMs <= 0 || e.maxStalenessMs > 3_600_000) {
+      throw new Error(
+        `[buildRegistryDatum] asset_oracle ${e.assetPolicy}.${e.assetName} ` +
+        `maxStalenessMs=${e.maxStalenessMs} out of (0, 3_600_000] cap`,
+      );
+    }
+    if (e.minFeeds < 1 || e.minFeeds > e.feeds.length) {
+      throw new Error(
+        `[buildRegistryDatum] asset_oracle ${e.assetPolicy}.${e.assetName} ` +
+        `minFeeds=${e.minFeeds} out of [1, feeds.length=${e.feeds.length}]`,
+      );
+    }
+    return new Constr(0, [
+      e.assetPolicy,
+      e.assetName,
+      e.feeds.map(
+        (f) => new Constr(0, [f.feedScriptHash, f.feedAuthPolicy, f.feedAuthName]),
+      ),
+      BigInt(e.maxDisagreementBps),
+      BigInt(e.maxStalenessMs),
+      BigInt(e.minFeeds),
+    ]);
+  });
+
   const data = new Constr(0, [
     hashes.governanceNftPolicy,        // 0: governance_policy
     hashes.governanceNftName,          // 1: governance_name
@@ -101,7 +147,7 @@ export function buildRegistryDatum(
           m.active ? new Constr(1, []) : new Constr(0, []),
         ]),
     ),
-    [],                                // 5: asset_oracles (§5.4 P3, empty at launch)
+    initialAssetOracles,               // 5: asset_oracles (§5.4 P3, empty at launch on mainnet)
     initialAdapters,                   // 6: swap_adapter_hashes (§B@launch=1)
     BigInt(nowMs),                     // 7: last_update_time
     cfg.registryInitialParams.keeperPkh, // 8: keeper_pkh
