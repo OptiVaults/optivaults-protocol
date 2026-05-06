@@ -105,6 +105,19 @@ validator vault_swap_ada(
         // Read ADA fair price via dual-feed oracle (§5.4 P5). Returns
         // price_bps in USDCx-per-ADA × 10_000. Example: ada_price_bps ==
         // 5_000 means 1 ADA = 0.5 USDCx.
+        //
+        // Divisor is 10_000 (= 10^4). Dimensional analysis:
+        //   amount_ada is in lovelace (ADA × 10^6);
+        //   ada_price_bps is dimensionless × 10^4 (oracle.ak convention);
+        //   target output is microUSDCx (USDCx × 10^6).
+        //   amount_ada × ada_price_bps / 10^4
+        //     = (ADA × 10^6) × (dimensionless × 10^4) / 10^4
+        //     = ADA × dimensionless × 10^6
+        //     = USDCx × 10^6 = microUSDCx ✓
+        // Both ADA and USDCx have 6 decimals, so the microunit-to-
+        // whole-unit ratios cancel cleanly. This formula MUST stay
+        // synchronised with `oracle.ak::check_tier1_bound`, which uses
+        // the same /10^4 divisor on the same `read_fair_price` return.
         expect old_datum.registry_auth_policy != #""
         let (_, _, _, _, asset_oracles_list, _) =
           read_registry_datum_full(
@@ -114,7 +127,7 @@ validator vault_swap_ada(
           )
         expect Some(ada_entry) = find_asset_oracle(asset_oracles_list, #"", #"")
         expect Some(ada_price_bps) = read_fair_price(tx, ada_entry)
-        let usdcx_out_expected = amount_ada * ada_price_bps / 10_000_000
+        let usdcx_out_expected = amount_ada * ada_price_bps / 10_000
 
         let usdcx_in_input =
           quantity_of(

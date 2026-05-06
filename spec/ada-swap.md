@@ -66,11 +66,16 @@ SwapAda { amount_ada, keeper_output_idx } -> {
   let ada_added = out_lovelace == own_lovelace + amount_ada
 
   // 5. Fair USDCx output (via oracle-read rate)
-  //    ada_price_bps = USDCx per 1 ADA × 10^4; V1 MVP reads first Int
-  //    reference input (Charli3+Orcfax consensus off-chain). Full dual-
-  //    feed enforcement is V1.x candidate (see §5).
+  //    ada_price_bps = USDCx per 1 ADA × 10^4; e.g. 5_000 ⇔ 1 ADA = 0.5 USDCx.
+  //    Full dual-feed enforcement runs through `oracle.read_fair_price`
+  //    (§5.4 P5) which returns the midpoint of Charli3+Orcfax samples.
+  //    Divisor MUST be 10_000 (= 10^4), matching the bps scaling of the
+  //    price input. Dimensional analysis: amount_ada (lovelace = ADA×10^6)
+  //    × ada_price_bps (×10^4) / 10^4 = microUSDCx (USDCx×10^6, since both
+  //    have 6 decimals). Synchronised with oracle.check_tier1_bound which
+  //    uses the same /10_000 divisor on the same read_fair_price return.
   let ada_price_bps = read_ada_price_oracle(tx)
-  let usdcx_out_expected = amount_ada * ada_price_bps / 10_000_000
+  let usdcx_out_expected = amount_ada * ada_price_bps / 10_000
 
   let own_usdcx = quantity_of(
     own_input.output.value,
@@ -209,7 +214,7 @@ The off-chain oracle operator is responsible for reading Charli3 + Orcfax native
 ```aiken
 expect Some(ada_entry) = find_asset_oracle(asset_oracles, #"", #"")
 expect Some(ada_price_bps) = read_fair_price(tx, ada_entry)
-let usdcx_out_expected = amount_ada * ada_price_bps / 10_000_000
+let usdcx_out_expected = amount_ada * ada_price_bps / 10_000
 ```
 
 `read_fair_price` is defined in `lib/vault/oracle.ak` and enforces:
