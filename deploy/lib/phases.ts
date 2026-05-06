@@ -37,6 +37,7 @@ import {
   buildTreasuryDatum,
   buildVaultDatum,
 } from "./datumBuilders.js";
+import { buildPrequeueActions } from "./govPrequeue.js";
 
 // ---------------------------------------------------------------------
 // Logging + helpers
@@ -613,7 +614,44 @@ export async function runPhase4bStateUtxos(
   // --- Step 4: Governance (multisig_gov, locks gov NFT) ---
   if (!state.stateUtxos.governance) {
     log("INFO", `  Governance at ${multisigGovAddr.slice(0, 40)}…`);
-    const datum = buildGovDatum(cfg, nowMs);
+
+    // Phase B (datum-backdate) pre-queue support — Preprod only.
+    // Reads BACKDATE_FEE_DAYS / BACKDATE_STRATEGY_DAYS / BACKDATE_FEE_SPLIT_DAYS /
+    // BACKDATE_REGISTRY_DAYS env vars (unset = 0 = no pre-queue).
+    // Builds QueuedAction records with backdated queued_at_ms so production
+    // timelocks have effectively elapsed by deploy completion. Live h-* tools
+    // hit idempotency-skip on Queue + go straight to Execute.
+    let prequeue: ReturnType<typeof buildPrequeueActions> = [];
+    if (cfg.network === "Preprod") {
+      const env = {
+        feeDays:        parseInt(process.env.BACKDATE_FEE_DAYS        ?? "0", 10) || undefined,
+        strategyDays:   parseInt(process.env.BACKDATE_STRATEGY_DAYS   ?? "0", 10) || undefined,
+        feeSplitDays:   parseInt(process.env.BACKDATE_FEE_SPLIT_DAYS  ?? "0", 10) || undefined,
+        registryDays:   parseInt(process.env.BACKDATE_REGISTRY_DAYS   ?? "0", 10) || undefined,
+        deregisterDays: parseInt(process.env.BACKDATE_DEREGISTER_DAYS ?? "0", 10) || undefined,
+      };
+      const targets = {
+        govPolicyStakeHash: state.hashes.govPolicyStakeHash,
+        registryHash: state.hashes.registryHash,
+        userStakeHash: state.hashes.userStakeHash,
+      };
+      prequeue = buildPrequeueActions(env, targets, nowMs);
+      if (prequeue.length > 0) {
+        log("INFO", `  ⏰ Pre-queueing ${prequeue.length} gov action(s) with backdated queued_at_ms:`);
+        for (const a of prequeue) {
+          log("INFO", `      kind=${a.actionKindIdx} queued_at=${a.queuedAtMs} executable_at=${a.executableAtMs} action_id=${a.actionId.slice(0, 16)}…`);
+        }
+      }
+    } else if (
+      process.env.BACKDATE_FEE_DAYS ||
+      process.env.BACKDATE_STRATEGY_DAYS ||
+      process.env.BACKDATE_FEE_SPLIT_DAYS ||
+      process.env.BACKDATE_REGISTRY_DAYS ||
+      process.env.BACKDATE_DEREGISTER_DAYS
+    ) {
+      throw new Error("buildGovDatum: Mainnet ceremony refuses BACKDATE_*_DAYS pre-queue flags");
+    }
+    const datum = buildGovDatum(cfg, nowMs, prequeue);
     const tx = await lucid
       .newTx()
       .pay.ToAddressWithData(

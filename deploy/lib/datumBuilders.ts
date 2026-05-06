@@ -226,26 +226,93 @@ export function buildKeeperAuthDatum(
 }
 
 /**
+ * QueuedAction — 8 fields. See types.ak::QueuedAction (used by GovDatum).
+ *
+ * Constr fields:
+ *   0: action_id (32-byte hex)
+ *   1: action_kind (Constr<ActionKind>)
+ *   2: target_script (28-byte hex)
+ *   3: target_tx_hash (empty or 32-byte hex)
+ *   4: payload_hash (32-byte hex)
+ *   5: queued_at_ms (Int)
+ *   6: executable_at_ms (Int)
+ *   7: expires_at_ms (Int)
+ */
+export interface PrequeuedAction {
+  /** Already-computed action_id (hex32). Use computeActionIdHex below. */
+  actionId: string;
+  /** Aiken ActionKind Constr index (0..13). */
+  actionKindIdx: number;
+  /** 28-byte target script hash hex. */
+  targetScript: string;
+  /** Pre-image queued_at_ms (POSIX ms). Validator stores this for action_id check downstream. */
+  queuedAtMs: bigint;
+  /** Pre-image executable_at_ms = queued_at_ms + production_timelock_ms. */
+  executableAtMs: bigint;
+  /** Pre-image expires_at_ms = executable_at_ms + ttl_ms. */
+  expiresAtMs: bigint;
+  /** payload_hash (hex32). */
+  payloadHash: string;
+}
+
+function buildQueuedActionConstr(q: PrequeuedAction): Constr<unknown> {
+  return new Constr(0, [
+    q.actionId,
+    new Constr(q.actionKindIdx, []),
+    q.targetScript,
+    "", // target_tx_hash empty
+    q.payloadHash,
+    q.queuedAtMs,
+    q.executableAtMs,
+    q.expiresAtMs,
+  ]);
+}
+
+/**
  * GovDatum — 9 fields. See types.ak:229.
  *
  * The `signer_joined_at_ms` and `signer_last_qualified_ms` parallel lists
  * are pre-seeded with the deploy time for every initial signer, so the
  * compensation-distribution logic has a valid non-zero baseline.
+ *
+ * `prequeue` (Preprod-only convenience): list of QueuedAction records to
+ * write directly into GovDatum.queued at deploy time. Bypasses normal
+ * QueueAction validator path — only valid because GovInit creates the gov
+ * UTxO from scratch (no validator runs at mint+send). Used by Phase B
+ * datum-backdate ceremonies to enable Queue→Execute end-to-end on Preprod
+ * with production timelock values: pre-queued actions have backdated
+ * queued_at_ms so executable_at_ms is reachable immediately after deploy.
+ *
+ * `nonce` is auto-set to `prequeue.length` so the next live QueueAction
+ * computes its action_id with a nonce that doesn't collide with any
+ * pre-queued action_id (each pre-queued action used a distinct nonce
+ * value 0..N-1 when its action_id was computed).
+ *
+ * Mainnet refuses any prequeue (programmatic guard in phases.ts).
  */
-export function buildGovDatum(cfg: DeployConfig, nowMs: number): string {
+export function buildGovDatum(
+  cfg: DeployConfig,
+  nowMs: number,
+  prequeue: PrequeuedAction[] = [],
+): string {
   const signers = cfg.governance.signers;
   const joinedAt = signers.map(() => BigInt(nowMs));
   const lastQualified = signers.map(() => BigInt(nowMs));
+  // Aiken's `list.push` prepends → newest-queued at front. Pre-queued
+  // actions don't have a meaningful order, but we mirror the validator's
+  // shape (newest first by queued_at descending).
+  const queuedSorted = [...prequeue].sort((a, b) => Number(b.queuedAtMs - a.queuedAtMs));
+  const queuedConstrs = queuedSorted.map(buildQueuedActionConstr);
   const data = new Constr(0, [
     signers,                   // 0: signers
     joinedAt,                  // 1: signer_joined_at_ms
     lastQualified,             // 2: signer_last_qualified_ms
     BigInt(cfg.governance.threshold), // 3: threshold
-    [],                        // 4: queued
+    queuedConstrs,             // 4: queued
     0n,                        // 5: signer_compensation_pool
     BigInt(nowMs),             // 6: last_distribute_ms
     BigInt(cfg.governance.distributePeriodMs), // 7: distribute_period_ms
-    0n,                        // 8: nonce
+    BigInt(prequeue.length),   // 8: nonce (= number of pre-queued actions)
   ]);
   return Data.to(data as unknown as Data);
 }

@@ -90,15 +90,13 @@ function cborSerialiseInt(n: bigint): Buffer {
 /**
  * payload_hash_emergency_withdraw(loss, freeze) = blake2b_256(cbor.serialise((loss, freeze)))
  *
- * Aiken `cbor.serialise((Int, Int))` for a 2-tuple emits an indefinite-length
- * CBOR list at the Plutus Data level — NOT a Constr-wrapped array. Canonical
- * bytes: `9f <cbor(loss)> <cbor(freeze)> ff`. The naive `Data.to(Constr(0, [a,b]))`
- * encoding (`d8799f<a><b>ff`) is wrong and causes payload_hash mismatch when
- * the on-chain `is_gov_authorized` recomputes via `cbor.serialise(tuple)`,
- * surfacing as a generic governance-authorization rejection at Execute time.
- *
- * Verified via `aiken check` dump: cbor.serialise((0, 1)) = 0x9F0001FF.
- * Each tuple element is encoded canonically (cborSerialiseInt for Int).
+ * Aiken `cbor.serialise((Int, Int))` emits an indefinite-length CBOR list
+ * at the Plutus Data level — NOT a Constr-wrapped array. Canonical bytes:
+ * `9f <cbor(loss)> <cbor(freeze)> ff`. Each tuple element is encoded
+ * canonically (cborSerialiseInt for Int). The naive `Data.to(Constr(0,
+ * [a,b]))` encoding (`d8799f<a><b>ff`) is wrong and produces a different
+ * hash than Aiken's on-chain recompute, surfacing as a generic
+ * governance-authorization rejection at Execute time.
  */
 function payloadHashEmergencyWithdraw(loss: bigint, freeze: bigint): string {
   const bytes = Buffer.concat([
@@ -298,9 +296,14 @@ async function main() {
     await new Promise((r) => setTimeout(r, 5_000));
 
     // Ensure wall-clock >= executable_at_ms (= upperMsQueue since timelock=0)
-    const waitMs = Number(upperMsQueue - BigInt(Date.now()) + 2000n);
+    // + 300s lag buffer so Preprod relay's slot catches up to lower bound.
+    // A shorter 2s buffer hits OutsideValidityIntervalUTxO when chain lag
+    // exceeds a few seconds (Preprod relay propagation is non-deterministic
+    // in the 30-120s range, with occasional spikes that exceed shorter
+    // buffers).
+    const waitMs = Number(upperMsQueue - BigInt(Date.now()) + 300_000n);
     if (waitMs > 0) {
-      console.log(`  sleeping ${waitMs}ms until executable_at_ms + 2s buffer...`);
+      console.log(`  sleeping ${waitMs}ms until executable_at_ms + 300s lag buffer...`);
       await new Promise((r) => setTimeout(r, waitMs));
     }
   }
@@ -329,10 +332,14 @@ async function main() {
   if (!vaultUtxo) throw new Error(`vault UTxO with NFT not found`);
   console.log(`  vault UTxO: ${vaultUtxo.txHash.slice(0, 16)}…#${vaultUtxo.outputIndex}`);
 
-  // Validity range: max(Date.now(), execExecutableAt + 1s) ≤ lower ≤ upper < execExpiresAt, width ≤ 1h.
+  // Validity range: max(Date.now() - 180s past margin, execExecutableAt + 1s)
+  //                  ≤ lower ≤ upper < execExpiresAt, width ≤ 1h.
+  // Past margin absorbs Preprod relay's 30-120s slot lag — without it,
+  // submit hits OutsideValidityIntervalUTxO because chain's currentSlot
+  // is still < lower when Blockfrost forwards the TX.
   const slotAlign = (ms: bigint) => (ms / 1000n) * 1000n;
-  const nowMs = BigInt(Date.now());
-  const lowerRaw = nowMs > execExecutableAt + 1000n ? nowMs : execExecutableAt + 1000n;
+  const nowPastMargin = BigInt(Date.now()) - 180_000n;
+  const lowerRaw = nowPastMargin > execExecutableAt + 1000n ? nowPastMargin : execExecutableAt + 1000n;
   const lowerMsExec = slotAlign(lowerRaw);
   let upperMsExec = slotAlign(lowerMsExec + BigInt(30 * 60_000));
   if (upperMsExec >= execExpiresAt) {
@@ -359,12 +366,11 @@ async function main() {
 
   // Redeemers
   const redeemerExec = Data.to(new Constr(2, [actionId]) as unknown as Data);
-  // VaultRedeemer.EmergencyWithdraw at Constr index 15. The CommunitySunset
-  // variant was inserted at index 3 in `lib/vault/types.ak::VaultRedeemer`,
-  // shifting every later variant by +1. Counted from the type declaration:
-  // 0 Deposit, 1 Withdraw, 2 BatchProcess, 3 CommunitySunset, 4 Compound, …,
-  // 11 UpdateStrategy, 12 UpdateFee, 13 UpdateFeeSplit, 14 UpdateSlippagePolicy,
-  // 15 EmergencyWithdraw, 16 SupplyToLiqwid, 17 RecallFromLiqwid.
+  // EmergencyWithdraw is at VaultRedeemer Constr index 15. Off-chain
+  // redeemer index numbering must mirror Aiken declaration order in
+  // `lib/vault/types.ak::VaultRedeemer`; insertions to that enum shift
+  // every later variant by +1 and any TS callsite hand-building
+  // `Constr(N, [...])` for a vault redeemer must update in lockstep.
   const emergencyRedeemer = Data.to(new Constr(15, [lossAmount, freezeFlag]) as unknown as Data);
   const proxyRedeemer = Data.to(new Constr(7, []) as unknown as Data); // UseGovEmergency
 

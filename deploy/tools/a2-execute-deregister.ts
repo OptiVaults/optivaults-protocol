@@ -225,13 +225,22 @@ async function main() {
   // Validity range constraints enforced by multisig_gov.ExecuteAction:
   //   lower >= action.executable_at_ms
   //   upper < action.expires_at_ms
-  //   upper - lower <= 1 hour (internal-verification width cap)
-  // Lower bound: use executable_at_ms + 1s buffer; upper: lower + 30 min.
+  //   upper - lower <= 1 hour (validity-range width cap)
+  // Lower bound: max(now - 180s past margin, executable_at_ms + 1s).
+  // The past-margin branch absorbs Preprod chain-tip lag (~30-120s); the
+  // executable_at+1s branch covers normal post-timelock execution. When
+  // a pre-queued action's executable_at is already in the past (Phase B
+  // datum-backdate scenario, see govPrequeue.ts), the now-past-margin
+  // branch wins and keeps the validity range bracket-aligned with the
+  // chain's current slot.
   // Slot-align both to 1000 ms (Preprod slot length) so Lucid's ms↔slot
-  // round-trip is lossless — same fix as the Queue TX learned the hard
-  // way (feedback_aiken_lucid_encoding.md #3).
+  // round-trip is lossless. Cardano `validity_range.upper_bound` is
+  // converted ms → slot → ms by Lucid; non-aligned ms inputs lose
+  // sub-slot precision and break action_id matching downstream.
   const slotAlign = (ms: bigint) => (ms / 1000n) * 1000n;
-  const rawLower = BigInt(executableAtMs) + 1000n;
+  const nowPastMargin = BigInt(Date.now()) - 180_000n;
+  const execPlus1s = BigInt(executableAtMs) + 1000n;
+  const rawLower = nowPastMargin > execPlus1s ? nowPastMargin : execPlus1s;
   const lowerMs = slotAlign(rawLower);
   const rawUpper = lowerMs + BigInt(30 * 60_000);
   const upperMs = slotAlign(rawUpper);
