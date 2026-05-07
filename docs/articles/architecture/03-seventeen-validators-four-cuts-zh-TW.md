@@ -59,7 +59,7 @@ UpdateFeeSplit 的 21 天 timelock（V1 中所有治理動作裡最長）也有�
 
 如果它跟 Compound / RebalanceBuffer 留在同一個 validator，Compound 每次跑都要把這 4–5 KB 也載入。拆掉之後，`vault_keeper_hot` 縮到 ~10.5 KB，`vault_swap_ada` 獨立成 12.2 KB；Compound TX 完全不載入 SwapAda 邏輯。
 
-**`vault_admin_deploy` 從 `vault_gov_emergency` 拆出**：AdminDeployNonDeposit 包含 SwapAdapter 分派 + destination-whitelist 檢查 + 6-tuple registry 讀取，是治理路徑中最重的 redeemer。拆掉之後 `vault_gov_emergency` 縮到 ~12.6 KB，把 EmergencyWithdraw 保持在 tight 的 validator 內。
+**`vault_admin_deploy` 從 `vault_gov_emergency` 拆出**：AdminDeployNonDeposit 包含 SwapAdapter 分派 + destination-whitelist 檢查 + 6-tuple registry 讀取，是治理路徑中最重的 redeemer。拆掉之後 `vault_gov_emergency` 縮到 ~12.6 KB，把 EmergencyWithdraw 保持在精簡的 validator 內。
 
 **`vault_batcher` 從 `vault_user` 拆出**：BatchProcess 有四個獨立的 fold 迴圈（驗證每筆訂單的 owner / sums / vUSDCx 不外洩 / payout 唯一性）+ anti-leak 不變量，bytecode 規模 11.5 KB。它把 vault_user 從 keeper 授權編譯期參數中解放——deposit / withdraw 完全不需要關心 keeper 授權邏輯。
 

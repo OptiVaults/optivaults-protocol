@@ -50,7 +50,7 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 8. **Withdraw-Zero forwarding pattern**——單一 vault UTxO 透過 `vault_proxy` 委派給 10 個 staking validator(`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`),以滿足大小限制並做乾淨的角色分離。切分理由(四條正交軸線:授權邊界、治理反應延遲、bytecode 成本集中點、size 修正)整理於 `spec/architecture.md §4.1`。每個 stake credential(10 個 Withdraw-Zero 委派的 validator + `keeper_stake_script` + `minswap_v2_adapter` SwapAdapter,共 12 個)都各自帶有自己的 A2 `publish` handler,所以這 12 份 stake-registration 押金都可以在 sunset 時透過治理回收。
 9. **編譯時信任錨點**——Vault Identity NFT、governance NFT policy、treasury script、keeper stake script 都在部署時燒進 validator script hash,而不是放在 datum 欄位。
 10. **Pre-audit TVL 上限**——Operator 自律執行的 100K USDCx 上限,一直到 Q2-Q3 2027 第三方審計完成為止;post-audit 的上限調整計畫會與審計報告一併公開。
-11. **公共財定位**——V1 被定位為**非商業**的公共財參考實作。4.5% 績效費用於覆蓋營運 + audit reserve + 長期 runway,不是創辦人或投資人的收益。Apache 2.0 授權讓 fork 與特化變得可行(不同穩定幣組合、不同風險姿態、區域變體)。V1 可能就是最終狀態,也可能是其他 Cardano DeFi 團隊改造的基礎——這兩個結局都是可接受的。存入者進場時應有的心態是「**貢獻公共財 + 擔任早期驗證者**」,不是購買商業服務。完整含意見白皮書 §12 免責聲明。
+11. **公共財定位**——V1 被定位為**非商業**的公共財參考實作。4.5% 績效費用於覆蓋營運 + audit reserve + 長期 runway,不是創辦人或投資人的收益。Apache 2.0 授權讓 fork 與特化變得可行(不同穩定幣組合、不同風險姿態、區域變體)。V1 可能就是最終狀態,也可能是其他 Cardano DeFi 團隊改造的基礎——這兩個結局都是可接受的。存入者參與時應抱持的心態是「**貢獻公共財 + 擔任早期驗證者**」,不是購買商業服務。完整含意見白皮書 §12 免責聲明。
 
 ---
 

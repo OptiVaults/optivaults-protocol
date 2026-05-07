@@ -222,7 +222,7 @@ V1 對任何 finding **不**承諾固定金額。儘管如此,嚴肅的安全研
 結構化 bounty tier 計畫是 **post-audit + post-scale** 的考量,不是 Phase 1 的承諾。啟用前的前提條件:
 
 - 外部審計順利完成(目標 Q2-Q3 2027——見 §5)。
-- TVL 成長到自給區間(見 `docs/economics.md §6.3`,約 $500K+ TVL),讓 treasury audit-reserve 的累積足以承擔 bounty、不用再動到創辦人資金。
+- TVL 成長到自給規模(見 `docs/economics.md §6.3`,約 $500K+ TVL),讓 treasury audit-reserve 的累積足以承擔 bounty、不用再動到創辦人資金。
 - 治理 m-of-n 門檻依白皮書 §6.1 Phase 2+ 路線圖調整(至少 1 位簽名者在執行 quorum 之外),讓 bounty 支付的授權路徑有真正的 dissent-veto。
 
 在那些條件成立前,V1 的安全姿態建立在:多輪內部審計(§4 內部審計涵蓋區計畫)、獨立外部審計(§5 外部審計)、鏈上不變量(費用上限不可變、沒有 admin-drain redeemer、自助退場路徑),以及上述的 RDP + ex gratia 框架。

@@ -24,7 +24,7 @@
 
 **本 repo 的安全範圍是協議層**——Aiken validators、部署流程、協議規格 artefact。鏈下 operator 程式(keeper runtime、API server、frontend、CLI 工具)另有獨立 repo [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference),有自己的 [`SECURITY.md`](https://github.com/OptiVaults/optivaults-reference/blob/v1/SECURITY.md)。
 
-**不確定時,預設走本 repo 的通報管道**——若是 operator 層發現,triage 會轉派到 `optivaults-reference`。
+**不確定時,預設走本 repo 的通報管道**——若是 operator 層發現,分流時會轉派到 `optivaults-reference`。
 
 ### 在範圍內
 
