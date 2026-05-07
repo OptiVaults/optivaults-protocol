@@ -250,11 +250,11 @@ OptiVaults V1 is a pre-audit, non-custodial stablecoin vault on Cardano. **Phase
 
 No "deposit USDCx and let it auto-compound across DJED + USDM with a single-TX exit" option existed. So the founder built one. V1 is "what I was personally looking for but couldn't find."
 
-**Core user protections are contract invariants, not operational promises** — no admin can drain funds, the 4.5% fee cap is immutable, early-withdraw fee is auto-waived after 7 days of keeper inactivity. (Some protections, including successful withdrawal settling in 1:1 USDCx, additionally depend on Cardano + Liqwid + Minswap V2 + USDCx all remaining operational — see whitepaper §1.5.1 for the honest qualification.)
+**Core user protections are contract invariants, not operational promises** — no admin can drain funds, the 4.5% fee cap is immutable, early-withdraw fee is auto-waived after 7 days of keeper inactivity. (Some protections, including successful withdrawal settling in 1:1 USDCx, additionally depend on Cardano + Liqwid + Minswap V2 + USDCx all remaining operational — see whitepaper §1.6.1 for the honest qualification.)
 
 **V1 is a convenience layer, not the one right answer.** V1 does the swap + supply allocation in a single CIP-30 deposit TX and gives you a single-TX exit via vUSDCx burn — in exchange for 4.5% of realised yield. If you prefer to run those steps yourself and keep the full yield, that's a perfectly reasonable choice, especially for longer holding periods where one-time entry + exit gas amortises to a small fraction. If smart-contract risk is outside your comfort zone at any level, continuing to self-custody USDCx in your own wallet is equally reasonable.
 
-**V2 is a direction, not a committed roadmap** — whether V1 evolves into a multi-protocol, multi-strategy asset-allocation layer depends on Cardano DeFi maturing further (a second qualified lending protocol emerging, DEX liquidity deepening, etc.). Until then, evaluate V1 on what it actually offers today: auto-compounding + dual-issuer stablecoin allocation + self-serve exit guarantees + audited-and-capped fee structure. Full origin story plus the why-Cardano and why-now framing is in whitepaper §1.5.
+**V2 is a direction, not a committed roadmap** — whether V1 evolves into a multi-protocol, multi-strategy asset-allocation layer depends on Cardano DeFi maturing further (a second qualified lending protocol emerging, DEX liquidity deepening, etc.). Until then, evaluate V1 on what it actually offers today: auto-compounding + dual-issuer stablecoin allocation + self-serve exit guarantees + audited-and-capped fee structure. Full origin story plus the why-Cardano and why-now framing is in whitepaper §1.6.
 
 **Operational reality (depositor-relevant, not buried).**
 
