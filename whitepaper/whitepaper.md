@@ -1,8 +1,52 @@
 # OptiVaults V1 Whitepaper
 
-**Version 1.0 — Public Launch Candidate**
+**Version 1.1 — Public Launch Candidate**
 **Target Network: Cardano Mainnet**
 **Deposit Token: USDCx**
+
+---
+
+## 0. Project Philosophy & Phasing
+
+OptiVaults is built on a single conviction: **launching at the right moment matters more than launching first**.
+
+Cardano DeFi is in a structural transition. USDCx integration via Circle's xReserve (February 2026) introduced institutional-grade stablecoin liquidity for the first time. Pogun's BTC DeFi rollout (2026 Q2 onwards) will, if executed, introduce the borrow-side demand that has been structurally absent from Cardano stablecoin lending markets. Leios scaling and Midnight's DeFi Kernel are scheduled to mature throughout 2027.
+
+A stablecoin yield vault that launches before these catalysts is solving a problem that does not yet exist at scale. A stablecoin yield vault that launches after these catalysts is positioned to capture them.
+
+We have therefore organised the project as follows:
+
+**Pre-Catalyst Phase (2026 Q2 – 2027 Q1)**
+- Smart contracts deployed and validated on Cardano preprod testnet
+- Source code public on GitHub under Apache 2.0
+- Whitepaper, documentation, and design specifications maintained openly
+- Three-axis trigger framework (§1.5) monitored and reported monthly
+- Parallel development of complementary products (fixed-rate vault, Pogun adapter) per §1.7
+- No mainnet deployment, no pre-audit "soft launch" for narrative purposes
+
+**Activation Phase (trigger-dependent)**
+- External audit initiated when launch readiness conditions begin to align
+- Mainnet deployment staged according to §1.5 framework
+- TVL caps governed by trigger state, not by team discretion
+- Reversal conditions automatically downgrade caps if conditions deteriorate
+
+**Operational Phase**
+- Multi-product offering aligned with mature Cardano DeFi ecosystem
+- Governance transitioned to community DAO
+- Treasury self-sustaining through performance fee accrual
+
+**What we do not promise**
+- We do not commit to a calendar date for mainnet launch.
+- We do not commit to capturing first-mover narrative.
+- We do not adjust TVL caps or launch timing for marketing reasons.
+
+**What we do commit to**
+- Continuous, publicly verifiable development progress (monthly dev reports).
+- Transparent trigger conditions, monitored on a public dashboard.
+- User funds prioritised over protocol survival under any adverse condition.
+- Honest disclosure of what we do not know, including ecosystem timing risks.
+
+This document describes the V1 design as it will be deployed *when* launch conditions are met. It is not a launch announcement.
 
 ---
 
@@ -16,7 +60,7 @@ V1 launches with a 100,000 USDCx hard cap until a third-party audit completes (t
 
 **V1's positioning: a Cardano DeFi public-goods reference implementation.** V1 is a **non-commercial public-goods artifact**, not a product optimized for growth or financial return. The 4.5% performance fee covers protocol operations, audit reserve, and long-term runway — **it is not revenue to the founder or investors**; the Apache 2.0 license allows other Cardano DeFi teams to fork and specialize (alternative stablecoin mixes, risk postures, regional variants). V1 may be the terminal state, or it may become the basis on which other teams build — both are acceptable outcomes. Depositors should enter with a **"contributing to a public good + being an early validator"** mindset, not as purchasers of a commercial service (see §12 Disclosure for full implications and depositor framing).
 
-**How this product came about.** OptiVaults's founder is a Cardano self-custody user: an ADA native staker, small-BTC holder, Midnight NIGHT redeem participant, Minswap V2 ADA/NIGHT LP, and current USDCx holder (USDCx launched on Cardano via Circle's xReserve in February 2026). V1 was not born from "spotting a market opportunity" — it was built because the founder wanted a non-custodial, auto-compounding USDCx vault that returns USDCx directly on small withdrawals (rather than forcing a full recall + swap-back dance for every exit), and no such thing existed on Cardano. So the founder built one. Core user protections are **contract invariants rather than operational promises**. See §1.5 for the full origin story plus why Cardano and why now, the four USDCx options the founder considered and their friction analysis, the qualifications on "withdraw always works" (§1.5.1), and V2's design direction.
+**How this product came about.** OptiVaults's founder is a Cardano self-custody user: an ADA native staker, small-BTC holder, Midnight NIGHT redeem participant, Minswap V2 ADA/NIGHT LP, and current USDCx holder (USDCx launched on Cardano via Circle's xReserve in February 2026). V1 was not born from "spotting a market opportunity" — it was built because the founder wanted a non-custodial, auto-compounding USDCx vault that returns USDCx directly on small withdrawals (rather than forcing a full recall + swap-back dance for every exit), and no such thing existed on Cardano. So the founder built one. Core user protections are **contract invariants rather than operational promises**. See §1.6 for the full origin story plus why Cardano and why now, the four USDCx options the founder considered and their friction analysis, the qualifications on "withdraw always works" (§1.6.1), and V2's design direction.
 
 This whitepaper describes what V1 does, how it works, what trust assumptions depositors accept, and the honest limits of the launch design.
 
@@ -120,9 +164,41 @@ This is a smaller product-market than a single $40K break-even number suggests. 
 
 **Plainly**: you get Liqwid's 3-market supply yield + auto-rebalance + self-serve recovery in a single CIP-30 deposit TX. You pay 4.5% of realized yield for it. For $200–$10,000 positions, a direct-Liqwid setup costs about 1–2 % of principal in one-time entry + exit gas — V1's convenience saving is genuine, but whether it beats the 4.5% performance fee over your actual holding period still depends on your time horizon and hourly wage (see break-even table above).
 
-### 1.4 Adjacent Cardano products
+### 1.4 Cardano Stablecoin Lending Reality
 
-The Cardano DeFi landscape includes several products that overlap with some but not all of V1's functions. Depositors evaluating V1 should know what else exists.
+Understanding why V1 is structured as a single-protocol Liqwid vault requires acknowledging the current state of Cardano stablecoin lending infrastructure.
+
+#### Single mature lending venue
+
+As of 2026 Q2, Liqwid Finance is the only Cardano-native lending protocol with operational stablecoin markets at meaningful scale. Other Cardano lending protocols are either inactive, focused on non-stablecoin collateral, or operating at TVL levels that preclude meaningful integration:
+
+- **Lenfi (formerly Aada Finance)**: Following a December 2024 smart contract vulnerability incident (transparently handled by the team via white-hack recovery), TVL has declined from approximately $5M peak to around $230K. The protocol remains operational but is no longer at a scale that can serve as a viable second venue for vault diversification.
+- **Levvy**: Acquired by Angels Finance, currently in V3 development. Focused on NFT-collateralized lending, not stablecoin markets.
+- **FluidTokens**: NFT-collateralized lending only.
+- **Smaller venues** (Yamfore, Cherry Lend, others): Operating at TVL levels below $100K per market.
+
+This is not a temporary state. Cardano stablecoin borrowing demand has been structurally constrained by the absence of valuable non-stablecoin collateral at scale (no equivalent of ETH/wstETH on Ethereum). Pogun's BTC DeFi rollout in 2026–2027 may change this, but the change is prospective, not current.
+
+#### Implications for V1 design
+
+The "multi-stablecoin diversification" provided by V1 (USDCx / USDM / DJED) operates at the **asset layer** but not at the **smart contract layer**. All three markets share a single set of Liqwid smart contracts. A critical Liqwid bug would affect all three positions simultaneously.
+
+V1 does not present this as a chosen tradeoff; it is a constraint imposed by ecosystem maturity. We document this constraint explicitly because:
+- Future depositors deserve to understand the actual risk topology, not a marketed version.
+- The V2 roadmap (§1.6.3) is conditioned on this constraint changing, with explicit external triggers.
+- The Launch Readiness Framework (§1.5) accounts for this in its Liqwid-specific monitoring axis.
+
+#### Oracle concentration
+
+Cardano's mature oracle infrastructure consists primarily of Charli3 and Orcfax. Both protocols are used by Liqwid, Indigo, and most production DeFi applications on Cardano. This means oracle risk on Cardano is structurally non-diversifiable at the protocol level. V1 mitigates this through dual-source oracle reading (§3.4) but cannot escape the underlying concentration. This is acknowledged as an irreducible residual risk.
+
+#### When the constraint changes
+
+The V1 single-protocol design will be re-evaluated when external conditions change. Specifically, V2 multi-protocol expansion is conditioned on the emergence of a second mature Cardano stablecoin lending venue (defined in §1.6.3). Until that emergence, additional protocols introduce attack surface without producing meaningful smart contract diversification.
+
+#### Adjacent Cardano products (for context)
+
+The Cardano DeFi landscape includes several products that overlap with some but not all of V1's functions. Depositors evaluating V1 should know what else exists:
 
 | Product | What it does | How it differs from OptiVaults V1 |
 |---------|--------------|-----------------------------------|
@@ -134,7 +210,117 @@ The Cardano DeFi landscape includes several products that overlap with some but 
 
 The honest positioning: **V1 is a convenience layer plus multi-market diversification layer over Liqwid's supply-side APY** (with Minswap V2 used as a swap router between stablecoins). A depositor who wants the absolute minimum counterparty risk and is willing to do manual allocation should use Liqwid directly. A depositor who wants diversified stablecoin yield without operating their own keeper is the fit for V1.
 
-### 1.5 V1's origin — a Cardano-native builder's own product
+### 1.5 Launch Readiness Framework
+
+V1 mainnet launch timing and TVL capacity are governed by a three-axis trigger framework. Cap levels are not adjustable by team discretion; they are determined by the framework state and enforced through governance multisig with 7-day timelock.
+
+#### Three-axis monitoring
+
+**Axis A: Pogun BTC Supply TVL**
+
+The presence of substantive Bitcoin DeFi activity on Cardano is the primary external catalyst capable of generating sustained borrow-side demand for stablecoin lending markets.
+
+| Tier | Threshold | Implication |
+|------|-----------|-------------|
+| 🔴 Red | < $5M, or Pogun mainnet not live | No launch trigger from this axis |
+| 🟡 Yellow | $5M – $15M | Catalyst forming, monitoring continues |
+| 🟢 Green | > $15M sustained 60 days | Substantive borrow demand established |
+
+Measurement: 60-day rolling average of BTC TVL supplied to Pogun lending markets, sourced from DefiLlama and verified against Pogun's official metrics.
+
+**Axis B: USDCx Circulating Supply**
+
+Vault TAM is bounded by USDCx circulating supply on Cardano. The post-subsidy organic growth trajectory (post Q1 2026 IOG bridging fee subsidy) determines whether the asset has product-market fit independent of promotional support.
+
+| Tier | Threshold | Implication |
+|------|-----------|-------------|
+| 🔴 Red | < $40M, or 30-day net outflow > 10% | Insufficient TAM, declining base |
+| 🟡 Yellow | $40M – $100M, trend stable | Adequate TAM, validates organic demand |
+| 🟢 Green | > $100M with positive 30-day net inflow | Institutional adoption confirmed |
+
+Measurement: On-chain USDCx mint/burn events tracked via Blockfrost, cross-validated against Circle's USDCx official statistics and DefiLlama Cardano stablecoin metrics.
+
+> **Threshold caveat (2026 Q2)**: Current USDCx circulation is approximately $10–$20M, well below the Red threshold. The $40M Yellow target reflects what we believe is the minimum size at which V1 can serve a non-trivial portion of organic USDCx demand without becoming a dominant share of supply. If by 2027 Q1 USDCx circulation has not reached the Yellow threshold, the threshold itself will be re-evaluated rather than the launch indefinitely deferred — see "Maximum deferral" below.
+
+**Axis C: Liqwid Blended Supply APY**
+
+This axis represents product viability. Below 5% blended yield, V1's value proposition (outsourced auto-compounding for a 4.5% performance fee) cannot be honestly justified for typical user deposit sizes.
+
+| Tier | Threshold | Implication |
+|------|-----------|-------------|
+| 🔴 Red | 90-day blended < 5% | Product economics unviable |
+| 🟡 Yellow | 5% – 7% | Marginal economics, break-even challenging |
+| 🟢 Green | > 7% sustained 60 days | Strong economics, value proposition clear |
+
+Measurement: Daily reading of Liqwid USDCx, USDM, and DJED supply APY, weighted by V1 strategy allocation (45/25/30 default), 90-day rolling average.
+
+#### Override conditions (any trigger blocks launch)
+
+Regardless of axis state, mainnet launch is blocked while any of the following hold:
+
+1. V1 external audit not yet passed.
+2. Liqwid Finance has experienced a high or critical severity smart contract incident within the past 12 months.
+3. USDCx issuer (Circle / IOG xReserve infrastructure) has experienced a material operational incident.
+4. Cardano mainnet has experienced a critical chain halt within the past 6 months.
+5. Charli3 or Orcfax oracle has experienced sustained anomaly (>24 hours) within the past 30 days.
+
+#### Stage matrix
+
+| State | A | B | C | Stage | TVL Cap |
+|-------|---|---|---|-------|---------|
+| Pre-Catalyst | 🔴 | * | * | Stage 0 — Preprod only | 0 (mainnet inactive) |
+| One-Yellow | 🟡 | * | * | Stage 1 — Closed Pilot | $10K (invitation only) |
+| Two-Yellow / One-Green | varies | varies | varies, no Red | Stage 1.5 — Open Pilot | $25K (publicly accessible, capped) |
+| Two-Green, no Red | 🟢🟢🟡 in any combination | | | Stage 2 — Soft Launch | $100K |
+| All-Green, no Red | 🟢 | 🟢 | 🟢 | Stage 3 — Full Launch | $500K initial, ramp to $2M |
+
+#### Stage 3 ramp-up schedule
+
+Following Stage 3 activation, TVL cap increases follow this schedule, contingent on continued All-Green status, zero high-severity bugs in the prior 30 days, and no governance pause proposal under review:
+
+- Month 1: $500K
+- Month 3: $1M
+- Month 6: $1.5M
+- Month 12: $2M
+
+Caps do not auto-increase based on calendar alone. Each step requires verified state at the time of increase.
+
+#### Reversal conditions
+
+Once mainnet is active, the following conditions automatically downgrade stage:
+
+| Condition | Action |
+|-----------|--------|
+| Any axis Red sustained 30 days | New deposits paused, monitoring intensified |
+| Two axes Red sustained 7 days | New deposits paused, governance 24h emergency review |
+| Liqwid high-severity incident | Immediate pause, emergency withdrawal path activated |
+| USDCx depeg event | Immediate pause, sunset protocol evaluation |
+| Internal audit finding critical bug | Immediate pause, emergency fix |
+
+In all reversal cases, existing user funds remain withdrawable. Reversals affect only new deposits.
+
+#### Public dashboard and governance binding
+
+The current state of all three axes, the active Stage, and the resulting TVL cap are published on a public dashboard updated daily. The dashboard is non-decorative: it is the canonical source of truth for the cap, and the cap value embedded in the on-chain VaultDatum must match the dashboard state.
+
+Cap changes require:
+1. Trigger state verification (cryptographic proof of dashboard state at time of change)
+2. Governance multisig approval
+3. 7-day timelock before activation
+
+This binding ensures that "we will launch when conditions are met" is a verifiable commitment, not a marketing statement.
+
+#### Maximum deferral
+
+If, by 2027 Q4, no axis has reached Yellow status, the project enters strategic re-evaluation. Possible outcomes include:
+- Extended deferral with revised triggers
+- Pivot to fixed-rate vault as primary launch product (§1.7)
+- Repurposing accumulated work for adjacent products
+- Sunset and contribution of code to the Cardano ecosystem under Apache 2.0
+
+The 2027 Q4 deadline is included to prevent indefinite deferral and ensure decision accountability.
+
+### 1.6 V1's origin — a Cardano-native builder's own product
 
 OptiVaults's founder is a Cardano self-custody user who happens to be a typical member of V1's target user segment (professional background is in §7.4, as additional context):
 
@@ -160,7 +346,7 @@ None of these was what the founder actually wanted, which was simply: **"deposit
 - Hit cancel-path edge cases firsthand — `StakeCredential::Constr(0,[])` vs `Constr(1,[])` encoding differences, pool-shard migration issues — which is why V1's integration playbook (`docs/integration-playbook.md`) treats cancel paths as mandatory reverse-engineering work, not optional.
 - Experienced impermanent loss on ADA-paired LPs — which is why V1 explicitly avoids LP positions (§2.3) and only takes supply-side Liqwid yield. That design choice is an experience-driven preference, not a theoretical risk framework.
 
-### 1.5.1 V1's user protections: what's a contract invariant, what depends on externals
+### 1.6.1 V1's user protections: what's a contract invariant, what depends on externals
 
 V1's user protections split into two layers. Depositors should understand clearly which layer they are relying on in any given scenario.
 
@@ -170,7 +356,7 @@ V1's user protections split into two layers. Depositors should understand clearl
 
 V1 is framed around **flexibility + yield ergonomics with on-chain-enforced user protection**: no AUM fee, no management fee (the only charge is a 4.5% performance fee on realized yield); self-serve exit paths (`withdraw-cli` / `emergency-withdraw`) ship alongside the main product and are a primary feature, not a fallback; the release cadence is pre-audit 100K USDCx cap + multi-round internal audit + external-audit-gated scale-up — not "launch first, audit later." V1 does not sidestep the inherent trust boundaries of DeFi (wallet private key = principal control, finalised TXs are irreversible, contract and external dependencies can both fail) — those are fully disclosed in §5.1 + §9.1 + §12.
 
-### 1.5.2 Why Cardano, why now
+### 1.6.2 Why Cardano, why now
 
 A fair skeptic asks: Aave, Compound, and Yearn shipped conceptually similar vault-aggregator patterns on Ethereum years ago. Why is OptiVaults V1 being built on Cardano in 2026, rather than earlier or on a different chain?
 
@@ -183,21 +369,124 @@ Honest answer: **the preconditions that make this product viable on Cardano have
 
 V1 is not the first auto-yield vault in DeFi history. It is the **first version of this product whose architectural preconditions are actually satisfied on Cardano**. Shipping earlier would have required either compromising on core properties or deferring primitives that did not yet exist.
 
-### 1.5.3 V1 today, V2 as a direction (not a committed roadmap)
+### 1.6.3 V2 Multi-Protocol Aggregator: Conditions
 
-V1 is the founder's first concrete implementation of the idea. **V2+ is where the same product idea goes if Phase 1 validation and the surrounding Cardano DeFi ecosystem both deliver — it is a design direction, not a promised feature roadmap.**
+V2 expansion to a multi-protocol stablecoin yield aggregator is contingent on external ecosystem conditions, not on internal team timeline. The conditions below must all be satisfied for V2 development to commence:
 
-The current V2 thinking:
+**Required conditions (all must hold)**
 
-- V1 proves the single-protocol (Liqwid), three-stablecoin (USDCx / DJED / USDM), m-of-n-governed version of the pattern works in production under adversarial conditions.
-- V2 would evolve toward a **multi-protocol, multi-strategy asset-allocation layer** as the Cardano DeFi landscape deepens — qualified lending protocols beyond Liqwid, deeper DEX liquidity, larger aggregate stablecoin TVL, a matured keeper-operator ecosystem.
-- **Specific V2 design areas (strategy routing, protocol-adapter interface, risk-parameter framework, cross-strategy rebalance bounds) are deliberately not committed at this stage.** The design space will be shaped by what Phase 1 surfaces — observed failure modes, user behavior patterns, Liqwid market evolution, and whether qualified alternative protocols actually materialize.
+1. **Second mature lending venue.** A Cardano stablecoin lending protocol other than Liqwid must reach and sustain $5M+ TVL for 12 consecutive months.
+2. **Audit parity.** The second venue must have completed at least two independent external audits of equivalent depth to Liqwid's audit history, with no high-severity findings open.
+3. **Operational track record.** The second venue must have operated without high-severity smart contract incidents for 12 consecutive months.
+4. **V1 maturity.** V1 mainnet must have completed external audit and operated for 12 months with TVL above $500K.
+5. **Treasury reserve.** OptiVaults treasury must hold reserves equivalent to 6 months of operating runway, providing budget for V2 audit without external funding dependency.
 
-V2 is a **direction**, not a promise. The honest posture: V1 is the production software being shipped today; V2 is where the same product idea heads *if* the ecosystem conditions justify it.
+**Current status as of 2026 Q2**: 0 of 5 conditions met.
 
-**V1 may be the terminal state — and that is an acceptable outcome.** If Cardano's stablecoin DeFi landscape does not mature the way we hope (no qualified second lending protocol emerges, DEX depth stays thin, TVL plateaus), V2 simply never ships. In that scenario V1 remains a single-protocol Liqwid wrapper with three stablecoin exposures and m-of-n governance — a narrower value proposition than "future multi-protocol aggregator." We would encourage depositors to value V1 on what it offers today: **automatic compounding + dual-issuer stablecoin allocation + self-serve exit guarantees + audited-and-capped fee structure**, costing 4.5% of realised yield. Whether that bundle justifies the fee is a personal call that depends on your own alternatives (Direct Liqwid DJED, CEX earn, or simply holding USDCx — all compared in §4.4).
+**Transparent monitoring**
 
-**One framing point that connects this to the license choice.** OptiVaults is not trying to become Cardano's largest vault. The explicit goal is to put a complete, audited, Apache-2.0-licensed reference implementation into the Cardano open-source commons — so that other teams can fork and specialize V1 (different stablecoin baskets, different risk postures, vertical or regional variants) whether or not OptiVaults itself grows. A BSL / source-available license would have protected V1's competitive position against direct forks until 2028 at the cost of blocking exactly that Cardano-wide architecture adoption. Apache 2.0 is the license that matches the goal.
+The status of each condition is monitored on the public OptiVaults dashboard. We publish a monthly summary indicating which conditions remain unmet and which conditions have been newly satisfied since the prior month.
+
+**Why these conditions, specifically**
+
+The conditions listed are not arbitrary. Each addresses a real risk that V2 multi-protocol expansion would otherwise introduce:
+- Conditions 1–3 ensure that adding a second venue increases diversification rather than substituting Liqwid's mature risk profile with an unproven one.
+- Conditions 4–5 ensure that V2 development does not jeopardize V1 stability or exhaust resources required to maintain V1 in good operational standing.
+
+**No timeline commitment**
+
+We do not commit to V2 by a specific date. Based on current Cardano DeFi development trajectory, V2 conditions are unlikely to be satisfied before 2028. We will not artificially modify these conditions to accelerate V2 timing.
+
+**Alternative paths if conditions remain unmet**
+
+If by 2028 Q4 the second-venue conditions remain unmet, V2 will be deferred indefinitely. In that case, OptiVaults will focus expansion on:
+- Fixed-rate vault product (§1.7) — does not require multi-protocol diversification
+- Pogun BTC-collateralized routing (§1.7) — extends V1 within Liqwid framework
+- Privacy-enabled vault on Midnight (§1.7) — orthogonal to multi-protocol path
+
+**V1 may be the terminal state — and that is an acceptable outcome.** If none of the V2.x or V3.0 paths materialise either, V1 remains a single-protocol Liqwid wrapper with three stablecoin exposures and m-of-n governance — a narrower value proposition than "future multi-protocol aggregator." We encourage depositors to value V1 on what it offers today: **automatic compounding + dual-issuer stablecoin allocation + self-serve exit guarantees + audited-and-capped fee structure**, costing 4.5% of realised yield. Whether that bundle justifies the fee is a personal call that depends on your own alternatives (Direct Liqwid DJED, CEX earn, or simply holding USDCx — all compared in §4.4).
+
+**License posture (connects to the goal).** OptiVaults is not trying to become Cardano's largest vault. The explicit goal is to put a complete, audited, Apache-2.0-licensed reference implementation into the Cardano open-source commons — so that other teams can fork and specialize V1 (different stablecoin baskets, different risk postures, vertical or regional variants) whether or not OptiVaults itself grows. A BSL / source-available license would have protected V1's competitive position against direct forks until 2028 at the cost of blocking exactly that Cardano-wide architecture adoption. Apache 2.0 is the license that matches the goal.
+
+### 1.7 Future Product Roadmap
+
+OptiVaults is a single-product launch (V1 variable-rate vault), but the project is structured to expand into adjacent products as Cardano DeFi infrastructure matures. Each future product is contingent on specific external triggers, not internal timeline.
+
+#### V1.0 — Variable-Rate Stablecoin Vault (this document)
+
+- **Status**: Preprod testnet deployed, awaiting launch readiness conditions (§1.5)
+- **Trigger**: Two-Yellow axis state plus external audit completion
+- **Estimated activation**: 2027 Q2 – Q3 (centrist scenario)
+
+#### V1.5 — Fixed-Rate USDCx Vault
+
+A complementary product offering term-locked, fixed-rate yield on USDCx deposits (e.g., 4.0% APY for 6 months). Designed to serve institutional and DAO treasury users who require predictable returns for financial planning.
+
+**Mechanism summary**: User deposits USDCx into a fixed-rate cohort (3, 6, or 12-month maturity). Capital is deployed via the V1 mechanism (Liqwid multi-market). Spread between realized yield and promised rate accumulates in a reserve fund. Reserve covers shortfalls during low-yield periods. Black Swan Clause defines conditions under which fixed rate is suspended (Liqwid critical failure, USDCx depeg, etc.).
+
+**Trigger conditions**:
+- V1 mainnet operating for 6+ months
+- Treasury reserve above $5K
+- Liqwid 90-day blended APY consistently above 4.5% (provides margin for 3.0% offered rate)
+
+**Estimated activation**: 2027 H2 (centrist scenario)
+
+**Why this product**: Cardano has no fixed-rate stablecoin yield infrastructure. Pendle does not operate on Cardano. The market segment of "stablecoin holders requiring predictable returns" is unserved.
+
+#### V2.0 — Multi-Protocol Aggregator
+
+See §1.6.3 for full conditions. Expansion to a multi-protocol stablecoin yield aggregator pending second mature lending venue emergence.
+
+**Estimated activation**: 2028+ if conditions met, indefinitely deferred otherwise.
+
+#### V2.x — Pogun BTC-Collateralized Yield Routing
+
+Extension of V1 to incorporate Liqwid markets that are utilized by Pogun BTC borrowers. As BTC holders deposit BTC as collateral and borrow stablecoins via Pogun, V1 can be the supply-side counterparty, capturing the resulting yield.
+
+This is not a new vault product; it is an addition to V1's market routing logic. No separate audit required if Pogun integrates with existing Liqwid markets.
+
+**Trigger conditions**:
+- Pogun lending mainnet operational
+- Pogun BTC TVL above $15M sustained 60 days
+- Pogun audit history verified (at least one external audit, no high-severity open findings)
+
+**Estimated activation**: 2027 Q2 – Q4 (depending on Pogun rollout timing)
+
+#### V3.0 — Privacy-Enabled Institutional Vault on Midnight
+
+A privacy-preserving variant of OptiVaults deployed on Midnight, leveraging the Midnight DeFi Kernel for shielded position management. Designed for institutional users requiring auditable but non-public DeFi exposure.
+
+**Mechanism summary**: User deposits on Midnight, receiving shielded position certificates. Yield generation continues through Cardano-based Liqwid (publicly), but ownership is private to the user. Selective disclosure available to auditors and regulators per Midnight's design.
+
+**Trigger conditions**:
+- Midnight DeFi Kernel released as production version
+- Compact (Midnight ZK DSL) toolchain audit-ready
+- Cardano ↔ Midnight cross-chain message passing infrastructure mature
+- V1 audit completed and stable for 12+ months
+
+**Estimated activation**: 2028 H2 – 2029
+
+#### Dependencies and prioritization
+
+| Product | Depends on | Independent of |
+|---------|-----------|----------------|
+| V1.0 | Liqwid, USDCx, audit firm capacity | – |
+| V1.5 | V1.0 operational | Multi-protocol |
+| V2.0 | Second venue + 5 conditions | V1.5 |
+| V2.x | Pogun rollout | V2.0, V3.0 |
+| V3.0 | Midnight DeFi Kernel | V2.0, V2.x |
+
+V1.5 is prioritized over V2.0 because its trigger conditions are within OptiVaults' control (V1 operational stability) rather than external (second venue emergence). V2.x is prioritized over V2.0 because Pogun's planned 2026–2027 timeline is more concrete than the indeterminate emergence of a second mature lending venue.
+
+#### Sustainability of roadmap
+
+This roadmap is designed to remain meaningful even if individual triggers do not fire:
+
+- If Pogun fails or is significantly delayed: V2.x is deferred, but V1.5 and other products proceed.
+- If multi-protocol conditions never materialize: V2.0 is deferred indefinitely, but V1.5, V2.x, and V3.0 remain available.
+- If Midnight DeFi Kernel does not mature: V3.0 is deferred, but other products are unaffected.
+
+Multiple parallel paths reduce single-point-of-failure risk in the OptiVaults expansion plan.
 
 ---
 
@@ -226,13 +515,42 @@ vUSDCx is a Cardano native token. It represents a proportional claim on the vaul
 - **Queued** (if buffer is insufficient): user's withdraw order sits in the proxy address; keeper aggregates into a BatchProcess TX in the next batcher cycle. Expected settlement time is typically under 1 hour in normal operation (the keeper runs a batcher cycle every 5-15 minutes and processes pending orders each cycle), but this is an **operational target, not a contract-enforced SLA**. The user's funds remain in the order UTXO and are refundable at any time via `Cancel` (any block) or automatic `Expire` (after the order's on-chain `expires_at` timestamp, default 24 hours).
 - **Self-serve emergency** (if keeper is offline for >7 days): user runs `withdraw-cli` locally or uses the emergency-withdraw web tool to build and submit the TX themselves.
 
-### 2.3 Yield sources + target allocation
+### 2.3 Yield Sources and Fee Definition
 
-V1 generates yield from:
-- **Liqwid lending**: USDCx, DJED, USDM supplied to Liqwid markets. Earns interest from borrowers.
-- **Compound reinvestment**: yield flows back into buffer, either staying in USDCx or being swapped to the highest-APY market at the next rebalance.
+#### Sole yield source: Liqwid qToken interest
 
-**Launch-day target allocation** (set by governance `UpdateStrategy`, adjustable within bounds):
+V1 generates yield through a single mechanism: supply-side interest from Liqwid stablecoin lending markets. Deposited USDCx is converted (where appropriate) and supplied to USDCx, USDM, and DJED markets, with Liqwid issuing qTokens that accrue value as borrowers pay interest.
+
+V1 does not earn:
+- Liquidity mining rewards from Liqwid (Liqwid does not emit LQ tokens to stablecoin suppliers as of 2026 Q2; this is a structural feature of Liqwid's fee model, not an oversight in V1's keeper logic).
+- DEX trading fees (V1 does not provide liquidity to AMM pools).
+- Liquidation rewards (V1 does not participate in stability pools).
+- Protocol governance fee distributions (V1 does not stake governance tokens).
+
+The single-source design reduces accounting complexity, eliminates reward token volatility exposure, and produces NAV that is monotonic under normal market conditions.
+
+#### Performance fee precise definition
+
+The 4.5% performance fee is calculated as follows at each Compound event:
+
+```
+fee_amount = 0.045 × max(0, NAV_now − NAV_last_compound − realised_rebalance_slippage)
+```
+
+Where:
+- `NAV_now` = total vault value at Compound event time, denominated in USDCx
+- `NAV_last_compound` = NAV at the previous Compound event
+- `realised_rebalance_slippage` = sum of all slippage costs from inter-market rebalances since last Compound, where slippage is the difference between oracle-fair price and execution price
+
+Key properties:
+- **Negative periods generate zero fee.** If NAV declines (e.g., due to USDM depeg), no fee is taken at that Compound. The cumulative loss is borne entirely by share holders.
+- **Slippage is borne by the protocol, not the user directly.** Realised rebalance slippage reduces the fee base, not the user's NAV directly (the slippage was already realised when the rebalance executed; this clause ensures the fee is computed on net-of-slippage yield).
+- **The fee applies to realised yield only.** Unrealised qToken accrual that has not yet been measured at Compound time does not generate fee until the next Compound.
+- **No high-water mark.** Each Compound is computed independently against the previous Compound's NAV. NAV recovery from a previous high does not trigger a "make-up fee" on the recovery portion. Whether HWM is added in V1.5 or later is a governance-level decision and is not currently planned for V1.
+
+#### Launch-day target allocation
+
+(Set by governance `UpdateStrategy`, adjustable within bounds defined in §2.5):
 
 | Asset | Target | Role | Yield contribution at launch |
 |-------|--------|------|------------------------------|
@@ -240,13 +558,44 @@ V1 generates yield from:
 | USDM (Liqwid supply) | 25% | Secondary yield — fiat-backed, smaller Liqwid market TVL (but ~11.6M USDCx/USDM direct DEX pool is actually deeper than USDCx/DJED paths; see §5.2) | Full Liqwid USDM supply APY on this share |
 | USDCx (idle buffer) | 30% | **Withdrawal liquidity — 0% yield at V1 launch** (buffer USDCx sits idle at the vault address; it is NOT supplied to Liqwid's USDCx market at launch) | **0%** — see note below |
 
-**Why the USDCx buffer earns 0% at launch, and how that can change.** The buffer's purpose is to serve Direct Withdraw requests in a single transaction without routing through Liqwid's Recall path (which would add gas cost + potential liquidity friction). To serve that purpose reliably, the buffer must stay liquid — i.e., not tied up in a Liqwid supply position that would require a Recall TX to unwind.
+#### Why the USDCx buffer earns 0% at launch, and how that can change
+
+The buffer's purpose is to serve Direct Withdraw requests in a single transaction without routing through Liqwid's Recall path (which would add gas cost + potential liquidity friction). To serve that purpose reliably, the buffer must stay liquid — i.e., not tied up in a Liqwid supply position that would require a Recall TX to unwind.
 
 Historically (internal-verification era) V1's predecessors experimented with parking the buffer in Liqwid's USDCx market at ~0.5–2% APY. The experiment showed that (a) Liqwid USDCx market depth is thin enough that unwinding the buffer to serve a ~5% TVL withdrawal already introduces slippage, and (b) the per-cycle Recall+Supply gas cost on a low-APY market consumes more than the yield. **V1 launch therefore ships with buffer = 0% yield, idle at the vault address.**
 
-**Governance-adjustable — explicit reservation for future Liqwid USDCx allocation.** V1 launches with an explicit **0% allocation to Liqwid USDCx** for conservative reasons, but **reserves the right to reallocate a portion of the idle buffer into Liqwid's USDCx supply market in the future via governance `UpdateStrategy` (7-day timelock)**. Triggering conditions include but are not limited to: (a) Liqwid's USDCx market depth increases enough to absorb 15-25% × V1 TVL at the time without compressing APY by more than 100 bps, (b) Liqwid USDCx APY sustains above ~2% for more than one quarter, (c) post-Phase 2 keeper infrastructure has accumulated operational recovery experience from Recall failure modes, or (d) a better-yielding low-risk home for the buffer emerges (e.g., a future Cardano Treasury T-bill wrapper, a deeper stablecoin money market). None require a contract change — they are policy adjustments within existing validator logic. Governance will publicly disclose the rationale + expected yield uplift + unwind plan before any such `UpdateStrategy` is executed; depositors have the 7-day timelock window to exit if they disagree.
+#### Idle buffer drag — quantified
 
-This is not a pure-USDCx product. The 65% DJED + USDM exposure is core to the value proposition (deeper borrow markets, higher APY than idle USDCx), but depositors bear the depeg / liquidity risk of all three stablecoins in proportion to the vault's current mix. See §5.2 for the multi-stablecoin depeg disclosure.
+The buffer's drag on overall yield is measured against the alternative of supplying it to Liqwid's USDCx market at the prevailing supply APY:
+
+```
+buffer_drag = buffer_ratio × Liqwid_USDCx_supply_APY
+```
+
+At Liqwid USDCx supply APY of 1.5% (current 2026 estimate) and buffer ratio 30%, this represents approximately **45 bps of yield foregone** (30% × 1.5% = 0.45%) relative to a fully-deployed configuration where the buffer is also supplied to Liqwid USDCx. Note: this drag figure measures the buffer's cost vs supplying to Liqwid USDCx specifically, not vs the highest-APY single market.
+
+The buffer becomes governance-activatable for partial Liqwid USDCx deployment under the following conditions, which are 7-day timelock governance parameters:
+
+- Liqwid USDCx market depth exceeds $10M
+- Liqwid USDCx market 90-day average APY exceeds 3%
+- Outstanding withdrawal queue is below 5% of vault TVL
+
+Activation reduces the idle ratio to 15% (deploying 50% of the buffer to Liqwid USDCx) while preserving sufficient liquidity for normal redemption flow.
+
+**Governance-adjustable — explicit reservation for future Liqwid USDCx allocation.** V1 launches with an explicit **0% allocation to Liqwid USDCx** for conservative reasons, but reserves the right to reallocate a portion of the idle buffer into Liqwid's USDCx supply market via governance `UpdateStrategy` (7-day timelock) when the conditions above hold. Triggering conditions also include: a better-yielding low-risk home for the buffer emerging (e.g., a future Cardano Treasury T-bill wrapper, a deeper stablecoin money market). None require a contract change — they are policy adjustments within existing validator logic. Governance will publicly disclose the rationale + expected yield uplift + unwind plan before any such `UpdateStrategy` is executed; depositors have the 7-day timelock window to exit if they disagree.
+
+#### Inter-market routing and rebalancing
+
+V1 dynamically allocates supplied capital across USDCx, USDM, and DJED Liqwid markets. Rebalancing between markets is triggered by:
+
+- APY spread between markets exceeding 200 bps for 7+ days
+- Single-market utilization exceeding 90% for 24+ hours (rebalance away)
+- Single-stablecoin price deviation exceeding 50 bps from peg for 1+ hour (rebalance away)
+- Governance-initiated weight adjustment (7-day timelock)
+
+The complete rebalance algorithm specification, including slippage budgets, DEX path selection, and frequency limits, is published as `spec/rebalance-policy.md` in the OptiVaults GitHub repository. Source code is the canonical reference; the whitepaper provides only the high-level mechanism description.
+
+This is not a pure-USDCx product. The 70% DJED + USDM exposure is core to the value proposition (deeper borrow markets, higher APY than idle USDCx), but depositors bear the depeg / liquidity risk of all three stablecoins in proportion to the vault's current mix. See §5.2 for the multi-stablecoin depeg disclosure.
 
 **V1 does NOT use:**
 - DEX LP positions (impermanent loss risk).
@@ -254,7 +603,7 @@ This is not a pure-USDCx product. The 65% DJED + USDM exposure is core to the va
 - Leveraged positions.
 - Cross-chain bridges.
 
-Yield is strictly the interest differential between Liqwid supply APY (blended across the three markets) and the 4.5% performance fee OptiVaults charges on the gross yield.
+Yield is strictly the interest differential between Liqwid supply APY (blended across the three markets) and the 4.5% performance fee OptiVaults charges on realised yield.
 
 ### 2.4 Fee structure
 
@@ -279,7 +628,54 @@ Yield is strictly the interest differential between Liqwid supply APY (blended a
 
 Prior internal-verification deployments sent 100% of fees to a single operator wallet. V1 separates these flows on-chain with a rotating keeper model (§7 "Run Now, Open Later") and a soul-bound Gov Signer NFT (`spec/gov-nft.md`) for reputation accountability. The Gov Signer NFT's soul-bound property is **enforced via the minting policy's spending-script check** (not a native ledger feature): any TX that spends a UTXO carrying a Gov Signer NFT must either return the NFT to an output paying the signer's original PKH (derived from the NFT's asset-name suffix) or burn the NFT via `BurnRotatedOut`. Third-party transfers fail the script check and are rejected by the ledger. The NFT carries no voting or financial rights (those live in MultisigGov's datum); it is recognition only.
 
-### 2.5 Compound cadence
+### 2.5 Strategy Weight Sensitivity
+
+The default strategy allocation (45% DJED / 25% USDM / 30% USDCx idle buffer) is a launch position, not a permanent configuration. This section documents the conditions under which governance can adjust weights and the bounds within which adjustments must remain.
+
+#### Why launch at 45% DJED rather than higher
+
+DJED currently offers the highest single-market APY among Liqwid stablecoin markets (approximately 11.8%). A higher weight to DJED would increase blended yield. We launch at 45% rather than a higher percentage because:
+
+1. **DJED collateral is ADA-denominated.** A severe ADA decline (>30% in <72 hours) reduces DJED's collateralization ratio and risks depeg. Concentration above 50% would produce unacceptable NAV volatility in tail scenarios.
+2. **Liquidity depth on Cardano DEXes for DJED conversion is finite.** Larger DJED positions face higher rebalance slippage during stress periods.
+3. **Stablecoin issuer diversification matters.** DJED is a Coti-issued algorithmic stable; USDM is Mehen-issued fiat-backed; USDCx is Circle-issued via xReserve. 45% DJED preserves issuer diversity.
+
+#### Adjustment triggers (governance, 7-day timelock)
+
+The following parameters can be adjusted by governance multisig with 7-day timelock:
+
+| Parameter | Range | Default | Adjustment trigger conditions |
+|-----------|-------|---------|------------------------------|
+| DJED weight | 30% – 55% | 45% | DJED collateral ratio, ADA volatility, Liqwid DJED utilization |
+| USDM weight | 15% – 35% | 25% | USDM Liqwid market depth, USDM peg stability |
+| USDCx weight | 0% – 30% (deployed) | 0% (idle buffer) | Liqwid USDCx market depth, market APY |
+| Idle buffer minimum | 10% – 30% | 30% | Withdrawal queue length, vault TVL stability |
+
+#### Conditions for raising DJED weight (toward upper bound)
+
+DJED weight may be increased toward 55% only if all of the following hold:
+
+- DJED system collateral ratio above 500% sustained 30 days
+- ADA 30-day historical volatility below 60%
+- DJED-USDC Cardano DEX depth above $5M (for rebalance liquidity)
+- Liqwid DJED market utilization between 40% – 80% (avoid extremes)
+
+#### Conditions for lowering DJED weight (toward lower bound)
+
+DJED weight is automatically reduced toward 30% if any of the following hold:
+
+- DJED collateral ratio below 300%
+- ADA 30-day historical volatility above 100%
+- Liqwid DJED market experiencing utilization above 95% for 24+ hours
+- DJED-USDC peg deviation exceeding 50 bps for 1+ hour
+
+Lowering is automatic (Keeper-triggered with on-chain validation), not subject to timelock, because the conditions are themselves stress signals where speed matters.
+
+#### Public publication of current weights
+
+Current strategy weights and the conditions of any pending adjustment proposals are published on the OptiVaults dashboard. Governance proposals for weight changes are publicly documented with rationale, expected impact analysis, and minority opinions if any are submitted by signers.
+
+### 2.6 Compound cadence
 
 Compound schedule is driven by TVL tiers (internal-verification-era operational policy, not contract-enforced):
 
@@ -497,61 +893,123 @@ So when reading the tier table: **tier (a)/(b) is "keeper breaks even," treasury
 
 See `spec/keeper-auth.md` for the RegistrationMode state machine.
 
-### 4.4 Who V1 is for, and who may find a different product is a better fit
+### 4.4 Honest Comparison
 
 The right benchmark for V1 is **not** direct Liqwid USDCx supply (0.5–2% APY, thin borrow demand, rarely used by experienced Cardano DeFi users). The correct benchmark is **direct Liqwid DJED supply**, which is what a sophisticated user would do if they did the work manually.
 
-**Reference Liqwid supply APYs as of 2026-04-21** (snapshot; rates float with borrow demand, re-checked at each rebalance): DJED ~11.8%, USDM ~5.3%, USDCx ~0.5-2%.
+**Reference Liqwid supply APYs as of 2026-04-21** (snapshot; rates float with borrow demand, re-checked at each rebalance): DJED ~11.8%, USDM ~5.3%, USDCx ~0.5–2%.
 
-**Honest comparison** against the real alternative, direct Liqwid DJED supply:
+#### V1 yield decomposition
 
-| Strategy | Gross APY | Fee | Net APY | Work per year |
-|---|---|---|---|---|
-| Direct Liqwid DJED supply (manual) | 11.8% | 0% | **11.8%** | ~4 manual rebalances + monitoring |
-| V1 vault (45% DJED / 25% USDM / 30% USDCx buffer) | 6.66% | 4.5% of gross | **~6.36%** | 0 (keeper does it) |
-| **Gap** | | | **−544 bps** | |
+We present V1's yield mechanics with explicit separation of structural drag from fee impact. Numbers below use 2026 Q2 reference rates.
+
+| Component | Annual Contribution |
+|-----------|---------------------|
+| 45% DJED Liqwid (11.84%) + 25% USDM Liqwid (5.33%) + 30% USDCx idle buffer (0%) | 5.33% + 1.33% + 0% = 6.66% gross |
+| Idle buffer drag relative to "buffer also supplied to Liqwid USDCx at 1.5%" | 30% × 1.5% = -0.45% (45 bps foregone vs deployed-to-Liqwid-USDCx alternative) |
+| Performance fee: 4.5% × 6.66% gross | -0.30% |
+| **Net APY to user** | **6.36%** |
+
+Note: the 6.66% gross figure already accounts for the 30% buffer earning 0%. The 45 bps "buffer drag" line measures the cost of NOT supplying that buffer to Liqwid's USDCx market (1.5% APY as of 2026 Q2), it does NOT subtract from the 6.66% — it is the policy choice's cost vs the alternative (deploy buffer to Liqwid USDCx). The policy is conscious: the buffer provides instant withdrawal capacity and emergency liquidity in conditions where Liqwid utilization spikes.
+
+#### Comparison: V1 vs direct Liqwid DJED supply
+
+A user with sufficient capital and operational capacity can replicate higher yield by directly supplying to a single Liqwid market. The most aggressive single-market option is DJED:
+
+| Parameter | V1 (passive) | Direct Liqwid DJED |
+|-----------|--------------|---------------------|
+| Net APY | 6.36% | 11.80% |
+| Annualised gap | – | -544 bps |
+| Required user effort | None | Active monitoring + manual compound |
+| Concentration risk | Diversified across 3 stablecoins + 30% buffer | 100% DJED, 100% Liqwid |
+| ADA correlation exposure | ~45% (DJED collateral) | ~100% (DJED collateral) |
+| Withdrawal liquidity | Buffer-backed instant + queue path | Subject to Liqwid utilization |
 
 The gap is real. Anyone with enough DeFi experience to safely manage their own DJED position manually will earn nearly double what V1 delivers net-of-fee. **V1 is not trying to beat that strategy on pure yield.** If that is you, direct Liqwid DJED supply is the right product.
 
-**What V1's 544 bps gap buys:**
+#### What V1's 544 bps gap buys
 
-1. **Operational burden reduction.** Single-TX entry (no manual swap + supply chain), single-TX exit via vUSDCx burn (no Liqwid recall + Minswap swap-back chain per withdraw), automatic cross-market allocation whenever governance shifts the strategy (no manual rebalance TX), and depeg-response freeze runs at the contract layer (no manual oracle-watching required). Note that Liqwid qToken redeemability across pool-shard migrations is handled by Liqwid itself for both V1 and direct users — V1 does not uniquely save you from that concern. The break-even point between V1's fee gap and the saved time depends heavily on the user's hourly time value (≈ 1 hour/quarter × hourly rate = annual time savings, assuming you would actually perform a quarterly rebalance or respond to depeg events manually — a purely passive direct-Liqwid user saves little time, which is precisely why the table below flags Direct Liqwid as the right product for that profile):
-
-    | Hourly time value | V1 break-even deposit | Who this profile typically is |
-    |-------------------|-----------------------|-------------------------------|
-    | $10/hr | ~$8K | Student / emerging-market user / retiree — **below this break-even, Direct Liqwid wins even after time cost** |
-    | $20/hr | ~$16K | Typical small-deposit earner |
-    | $50/hr | ~$40K | Mid-career professional (figure used in earlier drafts) |
-    | $100/hr | ~$80K | DeFi professional — **not V1's target demographic** |
-
-    **Plainly**: a $2,000 deposit at $20/hr hourly value has V1 fee cost of ~$109/year vs. time savings of $80/year — Direct Liqwid is ~$30/year better **if** you're willing to sit down once a quarter and do the rebalance manually. V1 earns its keep for users who fall into one of these three categories:
-
-    - Value avoiding DeFi complexity above their marginal hourly wage
-    - Refuse CEX custody on principle
-    - Want dual-issuer allocation without running two Liqwid positions in parallel
-
-    The break-even is not a universal $40K number.
-2. **Dual-issuer allocation.** The launch 45% DJED + 25% USDM split spreads exposure across two distinct stablecoin issuers (Cardano Foundation via COTI for DJED, Mehen for USDM). This protects against **issuer-specific** failure modes (Mehen insolvency, COTI DJED reserve depletion) — it does **not** protect against ADA flash-crash scenarios that stress both simultaneously (§5.2 covers this explicitly). A manual user can replicate the allocation themselves, at the cost of managing two Liqwid positions in parallel.
-3. **Withdraw liveness.** The 30% USDCx idle buffer (0% yield by design — see §2.3 footnote) lets most withdrawals settle in one transaction without waiting for a Liqwid Recall round-trip. Manual DJED supply has no such buffer — a Recall from Liqwid DJED takes a full TX and is subject to the market's current underlying-available balance.
+1. **Operational burden reduction.** Single-TX entry (no manual swap + supply chain), single-TX exit via vUSDCx burn (no Liqwid recall + Minswap swap-back chain per withdraw), automatic cross-market allocation whenever governance shifts the strategy (no manual rebalance TX), and depeg-response freeze runs at the contract layer (no manual oracle-watching required). Note that Liqwid qToken redeemability across pool-shard migrations is handled by Liqwid itself for both V1 and direct users — V1 does not uniquely save you from that concern.
+2. **Dual-issuer allocation.** The launch 45% DJED + 25% USDM split spreads exposure across two distinct stablecoin issuers (COTI for DJED, Mehen for USDM). This protects against **issuer-specific** failure modes (Mehen insolvency, COTI DJED reserve depletion) — it does **not** protect against ADA flash-crash scenarios that stress both simultaneously (§5.2 covers this explicitly). A manual user can replicate the allocation themselves, at the cost of managing two Liqwid positions in parallel.
+3. **Withdraw liveness.** The 30% USDCx idle buffer (0% yield by design — see §2.3) lets most withdrawals settle in one transaction without waiting for a Liqwid Recall round-trip. Manual DJED supply has no such buffer — a Recall from Liqwid DJED takes a full TX and is subject to the market's current underlying-available balance.
 4. **Self-serve exit guarantees.** Principal is recoverable via `emergency-withdraw` even if the keeper is offline for 7+ days (§5.4). A manually-constructed position has no equivalent if the user loses access to the tooling they originally used.
 5. **Multi-stablecoin depeg monitor.** V1's keeper halts new Deploy on sustained depeg signals (§5.2). A manual position requires the user to build their own monitor.
 
-**Honest recommendation by user profile:**
+#### Break-even analysis: two-component framing
 
-- **DeFi-savvy, deposit > ~$40K, willing to actively manage:** skip V1, supply DJED directly on Liqwid. The 544 bps gap is real money at scale.
-- **Deposit $100-$10K, DeFi-rational, moderate hourly time value ($20-40/hr):** **honestly look at Direct Liqwid first.** At this band break-even is ~$16-32K, below that Direct Liqwid wins even net of your manual-rebalance time cost. V1 is the right choice here only if you refuse CEX custody AND won't commit to quarterly manual rebalance.
-- **Deposit $100-$10K, explicitly values avoiding DeFi complexity above hourly wage math:** V1 is positioned for this user. Automation + dual-issuer + liveness is worth the fee to users who treat DeFi operations as aversion, not time-trade-off.
-- **Deposit > $10K but not confident in manual DJED handling:** V1 is still reasonable — the 544 bps gap is an **outsourcing premium** for avoiding DeFi operational complexity (multi-market allocation in one TX, depeg-event freeze at the contract layer, Recall failure recovery, multi-step partial-withdraw chains). Treat it as a long-term convenience fee, **not** tuition: V1 ships no educational pathway that graduates users to Direct Liqwid, so paying 544 bps/year does not incrementally build your manual-DeFi competence. If your intent is to eventually learn to manage the position yourself, V1 is not the right teacher — spend the equivalent time studying Liqwid's docs + practicing on Preprod instead.
+The gap-to-direct-Liqwid is divisible into two components: **time cost** (what the user would spend doing it manually) and **risk-management premium** (what V1 delivers that direct Liqwid does not).
 
-**Economic honesty at 100K TVL:** at the pre-audit cap, V1's own revenue (~$270/year perf fee assuming 6% gross on 100K) does not cover operating costs (~$360–2,400/year, economics.md §4). The bootstrapping shortfall is absorbed by founding capital — **not** passed through to depositors as a higher fee. Depositors pay 4.5% regardless of how small V1 is when they deposit. As TVL grows toward the $500K–$2.5M self-sustaining range, the same 4.5% covers real operating costs + treasury accumulation.
+**Component 1: Pure time-cost break-even.**
 
-If governance later activates a yield-bearing home for the USDCx buffer (see §2.3), the 0% buffer term lifts and the blended gross rises — e.g., a 30% × 1% buffer-side yield adds ~30 bps to gross. This would be disclosed publicly before the `UpdateStrategy` TX queues, narrowing but not closing the gap vs direct DJED supply.
+Approximating user time cost as 15 hours/year × hourly rate, divided by the 544 bps yield gap:
+
+```
+break_even_deposit = (annual_hours_required × hourly_rate) / yield_gap_bps
+                   ≈ (15 × $20) / 5.44%
+                   ≈ $5,500
+```
+
+By this calculation alone, users with deposits above ~$5K and 15 hours/year available for manual management could outperform V1 net-of-time-cost.
+
+**Component 2: Risk-management outsourcing premium.**
+
+But the time-cost framing under-prices what V1 delivers vs Direct Liqwid:
+
+- **Diversification value**: holding 100% DJED carries concentration risk that V1's 45/25/30 split avoids. A user who would value 30% allocation reduction in a flash-crash scenario at, say, 1-2% of deposit/year is paying that as part of V1's fee.
+- **Auto-compounding NAV math**: Direct Liqwid users who do not manually compound lose ~30-50 bps/year vs theoretical-perfect compounding. V1 does it automatically.
+- **Depeg response infrastructure**: V1's contract-level freeze + keeper depeg monitoring + emergency-withdraw self-serve path. A direct user must build their own monitoring + response plan.
+- **Operational error avoidance**: failed Recall, batcher delays, swap routing, pool-shard migration — V1's keeper handles these. Direct user must learn + handle.
+
+A reasonable estimate for the risk-management premium component is 200-300 bps/year for deposits at $5K-$50K, declining to ~100-150 bps as user sophistication scales with deposit size (sophisticated $1M holders typically already have these workflows).
+
+**Combined honest break-even**:
+
+| User profile | Pure time break-even | + Risk premium value | Practical break-even |
+|--------------|---------------------|---------------------|---------------------|
+| $10/hr time value, low DeFi experience | ~$2,800 | ~+$30K of perceived risk-mgmt value | ~$33K |
+| $20/hr time value, medium experience | ~$5,500 | ~+$25K | ~$30K |
+| $50/hr time value, high experience | ~$14K | ~+$15K | ~$29K |
+| $100/hr time value, DeFi professional | ~$28K | ~+$0–10K (already has the workflows) | ~$28-38K |
+
+For most realistic profiles, the **practical break-even is in the $25K-$40K range**, not $5K — because users below that range value the risk-management outsourcing more than the pure time-cost calculation captures.
+
+Above ~$40K with relevant DeFi experience, Direct Liqwid DJED is genuinely the better choice.
+
+#### When V1 is the right choice
+
+V1 is structured to serve users for whom one or more of the following apply:
+
+- Deposit size below ~$30K, where time + risk-management cost exceeds the yield gap × time value
+- Concentration aversion: unwilling to hold 100% DJED due to ADA-correlation risk in flash-crash scenarios
+- Operational unwillingness or inability to monitor Liqwid health, manage rebalancing, or respond to depeg events
+- Preference for non-custodial passive exposure with auditable on-chain operations and explicit emergency protocols
+
+#### When V1 is not the right choice
+
+We recommend against V1 for users who:
+
+- Hold deposits exceeding ~$40K and have time available for manual management
+- Have strong conviction in a single stablecoin (typically DJED for highest yield) and are willing to bear concentration risk
+- Require yield above 6% for the strategy to be economically meaningful
+- Need fixed-rate exposure rather than variable-rate (a future product, see §1.7, will address this)
+
+We do not artificially inflate the V1 value proposition. The 544 bps gap to direct DJED supply is real; for users who can capture it themselves, they should.
+
+#### Future product positioning (forward reference)
+
+The fixed-rate vault product described in §1.7 (V1.5) addresses a market segment unserved by either V1 or direct Liqwid supply: users requiring predictable, term-locked returns suitable for institutional treasury planning. V1 and the fixed-rate vault are complementary, not competitive.
+
+#### Economic honesty at 100K TVL
+
+At the pre-audit cap, V1's own revenue (~$270/year perf fee assuming 6% gross on 100K) does not cover operating costs (~$360–2,400/year, economics.md §4). The bootstrapping shortfall is absorbed by founding capital — **not** passed through to depositors as a higher fee. Depositors pay 4.5% regardless of how small V1 is when they deposit. As TVL grows toward the $500K–$2.5M self-sustaining range, the same 4.5% covers real operating costs + treasury accumulation.
+
+If governance later activates a yield-bearing home for the USDCx buffer (see §2.3), the 0% buffer term lifts and the blended gross rises — e.g., a 30% × 1.5% buffer-side yield adds ~45 bps to gross. This would be disclosed publicly before the `UpdateStrategy` TX queues, narrowing but not closing the gap vs direct DJED supply.
 
 Reference `docs/economics.md` §4 (operating cost), §6.2 (net-APY scenarios), §6.3 (depositor alternatives table), §9 (fee-leakage decomposition).
 
 ### 4.5 Compound cadence + per-cycle network cost
 
-Compound frequency in §2.5 is a **ceiling, not a target**. The keeper runs Compound only when accrued yield × remaining-settlement-window justifies the on-chain fee outlay; otherwise it waits. The zero-yield heartbeat (every 5 days) still fires to advance `last_realloc_time` even when yield is economically insignificant.
+Compound frequency in §2.6 is a **ceiling, not a target**. The keeper runs Compound only when accrued yield × remaining-settlement-window justifies the on-chain fee outlay; otherwise it waits. The zero-yield heartbeat (every 5 days) still fires to advance `last_realloc_time` even when yield is economically insignificant.
 
 Internal-verification operations established a TVL-adaptive cadence that V1 inherits as operational policy (not contract-enforced). The tiers are expressed in vault **total_deposited** (USDCx equivalent), carried over from the sub-$1,000 early-testing window when cadence had to be rate-limited to keep per-cycle network fee a reasonable fraction of yield:
 
@@ -664,7 +1122,7 @@ V1 holds three stablecoins simultaneously: USDCx (deposit token), DJED (Liqwid a
 
 **The intentional-scope-boundary framing from §1.1 is also a risk vector here.** §1.1 explicitly positions V1 as "NOT a multi-protocol yield aggregator" — a deliberate product-scope choice, not an oversight. That same design choice becomes a depositor-facing risk when examined from the threat-model side: if the single protocol V1 routes to fails, V1 has no live alternative to switch to. This section is the honest risk-side reading of the §1.1 product-scope positioning — both descriptions are of the same fact, viewed from different angles.
 
-**Single-protocol concentration risk (V1-specific).** All V1 yield comes from one protocol — Liqwid — not because we believe Liqwid dominates every competitor, but because Cardano's current stablecoin supply-side landscape has no second protocol clearing the combined bar of depth + audit maturity + Aiken integration feasibility. If Liqwid suffers a protocol-level failure (contract vulnerability, liquidation breakdown, governance attack), V1 **has no fallback protocol to migrate to quickly** — the response path is governance `EmergencyWithdraw` (freeze) + self-serve depositor exit. Mitigation: (a) Liqwid has itself been through multiple third-party audits and one+ year of mainnet operation; (b) any anomaly can trigger `EmergencyWithdraw` to freeze the vault, and the depositor-side `withdraw-cli` self-serve path **does not depend on Liqwid availability** — only on Cardano ledger uptime; (c) future V2+ evolution adding a second supply-side protocol (the §1.1 direction, gated on maturity per §1.5.2) will reduce this concentration. Until that V2+ evolution ships, depositors should treat Liqwid protocol risk as **V1's single largest on-chain risk source** — higher than governance risk, and higher than any individual stablecoin depeg risk.
+**Single-protocol concentration risk (V1-specific).** All V1 yield comes from one protocol — Liqwid — not because we believe Liqwid dominates every competitor, but because Cardano's current stablecoin supply-side landscape has no second protocol clearing the combined bar of depth + audit maturity + Aiken integration feasibility. If Liqwid suffers a protocol-level failure (contract vulnerability, liquidation breakdown, governance attack), V1 **has no fallback protocol to migrate to quickly** — the response path is governance `EmergencyWithdraw` (freeze) + self-serve depositor exit. Mitigation: (a) Liqwid has itself been through multiple third-party audits and one+ year of mainnet operation; (b) any anomaly can trigger `EmergencyWithdraw` to freeze the vault, and the depositor-side `withdraw-cli` self-serve path **does not depend on Liqwid availability** — only on Cardano ledger uptime; (c) future V2+ evolution adding a second supply-side protocol (the §1.1 direction, gated on maturity per §1.6.3) will reduce this concentration. Until that V2+ evolution ships, depositors should treat Liqwid protocol risk as **V1's single largest on-chain risk source** — higher than governance risk, and higher than any individual stablecoin depeg risk.
 
 V1's Liqwid exposure comes from supplying USDCx, DJED, and USDM to Liqwid's action validators and holding qToken receipts in the vault UTXO. This introduces several protocol-risk vectors:
 
@@ -727,7 +1185,7 @@ Launch configuration is **3-of-3 multisig** (3 signers, threshold 3 — unanimit
 
 Independent SPO recruitment is the **target** for completion before mainnet ceremony but is **not a contract-level launch blocker** — the §5.5.1 three-layer governance safety design provides an acceptable fallback if recruitment lags (V1 may launch with founder-only governance, with SPO recruitment continuing in the post-launch window; this is a contingency path, not a target). Selection criteria: Cardano mainnet SPO operating ≥ 2 years, on-chain public identity (pool ticker + website), no prior commercial partnership with the founder, strong community / technical reputation, and ideally at least one signer outside the Asia time zone for governance response-time diversity.
 
-**SPO signer role framing — Cardano community service.** The two independent SPO signers at V1 launch are committing to a **Cardano community-service role, not an economic-incentive role**. Phase 2+ `UpdateFeeSplit` to 5-10% gov pool share (gated on $500K TVL) is upside, not primary motivation. SPOs take this role because: (a) they support Cardano DeFi public-goods infrastructure, (b) their stake-pool-operator identity provides structural dissent-veto protection for V1 depositors, (c) the role extends their reputation asset, analogous to DRep commitment. If V1 stays in Phase 1 terminal state (§1.5.3 + §8.2 scenario), SPO commitment is not expected to yield financial return — this aligns with V1's non-commercial public-goods positioning and community-service role framing. SPO recruitment outreach is conducted with this framing explicit to avoid signer expectation / actual-incentive-structure mismatch.
+**SPO signer role framing — Cardano community service.** The two independent SPO signers at V1 launch are committing to a **Cardano community-service role, not an economic-incentive role**. Phase 2+ `UpdateFeeSplit` to 5-10% gov pool share (gated on $500K TVL) is upside, not primary motivation. SPOs take this role because: (a) they support Cardano DeFi public-goods infrastructure, (b) their stake-pool-operator identity provides structural dissent-veto protection for V1 depositors, (c) the role extends their reputation asset, analogous to DRep commitment. If V1 stays in Phase 1 terminal state (§1.6.3 + §8.2 scenario), SPO commitment is not expected to yield financial return — this aligns with V1's non-commercial public-goods positioning and community-service role framing. SPO recruitment outreach is conducted with this framing explicit to avoid signer expectation / actual-incentive-structure mismatch.
 
 Disclosed:
 
@@ -852,7 +1310,7 @@ The full bond + slashing state machine is specified in `spec/keeper-auth.md` and
 
 **Honest depositor framing:** Phase 1 governance is **"1 founder + 2 independent Cardano SPOs co-governing; keeper instance still operated solely by founder with on-chain-switchable authorization; structural protection comes from timelocks + hard caps + self-serve exit paths"**. Phase 2 (post-audit + TVL > $500K) expands to 5 signers and switches to 4-of-5, restoring the structural dissent-veto property.
 
-**Founder's professional background — disclosed here as context, not as the primary origin story.** The founder's professional work before OptiVaults was in the wealth-management / private-client-services side of the traditional-finance industry. That background is disclosed in this section (not in §1.5) as **additional context for readers who find the information relevant**: some V1 design choices — 4-bucket treasury with audit-reserve floor, 21-day timelock specifically on `UpdateFeeSplit` (the longest timelock, because governance is adjusting its own pay), multi-tier Compound cadence aligned to traditional-finance product release cadence rather than crypto-launch cadence — draw on product-design patterns familiar from the traditional-finance side. But V1 is **not positioned as a traditional-finance-insight product**; the primary origin story (§1.5) is founder-as-user. Auditors, Catalyst reviewers, and investors who want the professional-background context can use this paragraph; depositors should evaluate V1 on what the contract does, not on the founder's résumé.
+**Founder's professional background — disclosed here as context, not as the primary origin story.** The founder's professional work before OptiVaults was in the wealth-management / private-client-services side of the traditional-finance industry. That background is disclosed in this section (not in §1.6) as **additional context for readers who find the information relevant**: some V1 design choices — 4-bucket treasury with audit-reserve floor, 21-day timelock specifically on `UpdateFeeSplit` (the longest timelock, because governance is adjusting its own pay), multi-tier Compound cadence aligned to traditional-finance product release cadence rather than crypto-launch cadence — draw on product-design patterns familiar from the traditional-finance side. But V1 is **not positioned as a traditional-finance-insight product**; the primary origin story (§1.6) is founder-as-user. Auditors, Catalyst reviewers, and investors who want the professional-background context can use this paragraph; depositors should evaluate V1 on what the contract does, not on the founder's résumé.
 
 ### 7.5 Conway-era DRep stance
 
@@ -1043,4 +1501,39 @@ Every governance QueueAction's payload hash can be reverse-engineered from CBOR 
 
 ---
 
-**End of Whitepaper V1.0**
+## Changelog
+
+### v1.1 — 2026-05-06
+
+**Added**
+- §0 Project Philosophy & Phasing — pre-launch posture as Cardano DeFi public-goods reference implementation, trigger-based not calendar-based launch.
+- §1.4 Cardano Stablecoin Lending Reality — single mature lending venue acknowledgment (Liqwid only at scale; Lenfi/Levvy/FluidTokens situation), oracle concentration disclosure. Existing "Adjacent Cardano products" table preserved as final subsection.
+- §1.5 Launch Readiness Framework — three-axis trigger system (Pogun BTC TVL, USDCx circulating supply, Liqwid blended APY) with 5-stage TVL cap matrix, override conditions, reversal conditions, public dashboard binding, 2027 Q4 maximum deferral.
+- §1.7 Future Product Roadmap — V1.5 fixed-rate vault, V2.0 multi-protocol, V2.x Pogun BTC routing, V3.0 Midnight privacy vault. Each with explicit external trigger conditions.
+- §2.5 Strategy Weight Sensitivity — adjustable weight bounds (DJED 30-55%, USDM 15-35%, USDCx 0-30%, buffer min 10-30%) with raise/lower conditions, governance 7d timelock for raises, automatic Keeper-triggered lowering for stress signals.
+
+**Replaced**
+- §2.3 Yield Sources and Fee Definition — precise performance fee formula `fee = 4.5% × max(0, NAV_now - NAV_last_compound - slippage)` with explicit "no high-water mark" + "negative periods generate zero fee" properties; LQ liquidity-mining clarification; idle buffer drag quantified at 30% × 1.5% = 45 bps relative to Liqwid USDCx supply alternative; rebalancing trigger conditions; spec/rebalance-policy.md cross-reference.
+- §1.6.3 V2 Multi-Protocol Aggregator Conditions (formerly §1.5.3) — replaced narrative "design direction" framing with 5 explicit external conditions (second mature lending venue 12-month track record, audit parity, V1 maturity 12 months + $500K TVL, treasury reserve 6-month runway). Current status: 0/5 met.
+- §4.4 Honest Comparison (formerly "Who V1 is for") — explicit yield decomposition table; corrected buffer drag math (45 bps not 270 bps); two-component break-even framing (pure time cost ~$5K + risk-management premium $25-35K = practical $25-40K); forward reference to V1.5 fixed-rate vault.
+
+**Renumbered (numbering cascade)**
+- Existing §1.5 (founder origin) → §1.6
+- §1.5.1 (user protections) → §1.6.1
+- §1.5.2 (why Cardano, why now) → §1.6.2
+- §1.5.3 (V1 today, V2 as direction) → §1.6.3 (content also replaced as above)
+- §2.5 (Compound cadence) → §2.6
+- All cross-references updated.
+
+**Tone shifts**
+- From "we designed a conservative product" to "we build on Cardano DeFi phase realities".
+- From timeline-based pre-audit framing to trigger-based launch framework.
+- From single break-even number ($40K) to two-component framing (time cost + risk-management premium).
+
+### v1.0 — 2026-04-21
+
+Initial release. Production-ready V1 design specification. Single-protocol Liqwid wrapper, three-stablecoin allocation (45/25/30), 4.5% performance fee, 0.1% early-withdraw fee, 100K USDCx pre-audit TVL cap, 3-of-3 governance multisig, Withdraw-Zero forwarding pattern, R55 compile-time Vault NFT anchor, R72 hacker-mindset audit (0 CRIT/HIGH/MEDIUM remaining).
+
+---
+
+**End of Whitepaper V1.1**
