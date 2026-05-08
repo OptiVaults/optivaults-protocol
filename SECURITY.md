@@ -143,7 +143,8 @@ Internal adversarial audit rounds executed against V1 contract code (additional 
 |-------|-------|-------------------:|--------|
 | R72 | Post-Phase-77d hacker-mindset on full V1 set (17 logic + 4 NFT + 1 adapter) | 0 CRIT / 0 HIGH / 1 MEDIUM / 3 LOW / 6 INFO | MEDIUM + 3 LOW fixed on-chain; INFO documented |
 | R73 | `valid_allocs × vault_recall.MergeUtxo` admissibility gap | 0 CRIT / 0 HIGH / 1 MEDIUM | **FIXED** via `valid_merge_utxo_admissibility` in `lib/vault/validation.ak` + `vault_recall.MergeUtxo` invocation; 6 regression tests in `lib/vault/tests/r73_test.ak` |
-| R74 | Phase O pre-mainnet Minswap V2 decoder byte-for-byte verification against real mainnet order | 0 CRIT / 1 HIGH / 0 MEDIUM | **FIXED** this commit — see R74 F-1 entry in "Recently fixed" below |
+| R74 | Phase O pre-mainnet Minswap V2 decoder byte-for-byte verification against real mainnet order | 0 CRIT / 1 HIGH / 0 MEDIUM | **FIXED** via `hop_chain` redeemer + LP-name re-hash; see R74 F-1 entry in "Recently fixed" |
+| R77 | Independent hacker-mindset audit of full V1 set (17 logic + 4 NFT + 1 adapter + 5 lib modules) | 1 CRITICAL / 1 LOW / 2 INFO | **FIXED** this commit — see R77 F-1 entry in "Recently fixed" below |
 
 ### Coverage-area status (pending external audit)
 
@@ -171,6 +172,50 @@ _No currently open audit findings above LOW severity. See "Recently fixed" below
 ---
 
 ## Recently fixed
+
+### R77 F-1 — `minswap_v2_adapter` order datum recipient fields unconstrained (CRITICAL, FIXED)
+
+**Discovery.** Independent R77 hacker-mindset audit of the post-R76 V1 contract set surfaced a deep gap in the SwapAdapter dispatch path. The R72-R76 audit history had verified that `verify_destination_whitelisted` correctly constrains the OUTPUT ADDRESS at `dest_output_idx` to a script in `protocol_hashes` (Minswap V2 batcher). What it did NOT check is what happens INSIDE that output's order datum.
+
+**Root cause.** `minswap_v2_adapter.ak::extract_minswap_v2_order_min_receive` decoded only the order datum's `lp_asset` (field[5]) and `step` (field[6]), validating routing topology + min_receive. It ignored:
+
+  - `field[1] = refund_addr` — destination of cancel/expire refund
+  - `field[3] = success_addr` — destination of swap fill output
+
+A compromised keeper (or post-CommunitySunset permissionless caller) could submit a `DeployToProtocol` TX where the Minswap V2 order datum had `success_addr = attacker_wallet` and `refund_addr = attacker_wallet`. All R72-R76 checks passed:
+
+  - `verify_destination_whitelisted` ✓ (output address is the Minswap V2 batcher script)
+  - `verify_swap_via_adapter` peg-floor ✓ (adapter only checked min_receive, not addresses)
+  - `valid_buffer` / `valid_token_deploy` / `valid_other_tokens` / `valid_allocs` ✓ (vault state changes were internally consistent)
+
+But on fill, the Minswap V2 batcher routes the target asset (DJED/USDM) to the order datum's `success_addr` — which the attacker controlled. **Direct theft, not bounded slippage griefing.** Per swap, attacker captures `deploy_amount × (1 - slippage 5-7% - batcher fee 0.3%) ≈ 92-95% of deploy_amount` worth of target asset. Total exposure: vault's idle_buffer + NDV (drained over multiple swaps).
+
+**Severity rationale.** CRITICAL because:
+- Direct vault drain modulo Minswap LP slippage (vault loses 100% of deploy_amount; attacker gains ~95%)
+- Two independent activation paths: (a) compromised keeper under normal operation, (b) post-sunset + governance unfreeze under permissionless `community_sunset_triggered = 1` bypass
+- Both paths are within V1's documented threat model (`docs/security-model.md §1`: compromised keeper + governance majority compromise)
+- No additional attacker capability required beyond what the threat model already grants
+
+**Why R72-R76 missed it.** The audit-scope.md & SECURITY.md previously framed keeper-compromise loss as "bounded by peg-floor (~5-7% per swap)" assuming the swap output flowed back to the vault. None of the prior rounds verified that assumption against the actual order datum field layout. R72 F-1 (cross-validator binding) checked Compound's gov_share path; R74 F-1 added hop_chain LP-name re-hashing for the swap routing topology; neither extended to the order datum's address fields.
+
+**Fix** (this commit, Option 1 — adapter interface extension):
+
+  - `lib/vault/swap_adapter.ak`: `SwapAdapterRedeemer` gains a fourth field `expected_recipient_addr: Address`. The composite helper `verify_swap_via_adapter` gains an additional caller parameter and asserts `adapter_r.expected_recipient_addr == expected_recipient_addr`.
+  - `validators/minswap_v2_adapter.ak::extract_minswap_v2_order_min_receive` reads `field[1]` (refund_addr) and `field[3]` (success_addr) from the order datum and verifies BOTH equal `redeemer.expected_recipient_addr`. Decoding is via Aiken's typed cast `if data is addr: Address {…}` — addresses that don't structurally match an `Address` record are rejected.
+  - `validators/vault_protocol.ak::DeployToProtocol` and `validators/vault_admin_deploy.ak::AdminDeployNonDeposit` pass `own_input.output.address` as the `expected_recipient_addr` argument — the vault's own address, an on-chain fact at validation time, not a redeemer-controlled value.
+
+Two-layer enforcement, both must agree:
+
+  - Layer 1 (caller): `redeemer.expected_recipient_addr == vault address`. Caller-side check; keeper cannot bypass since `own_input.output.address` is a Cardano-ledger fact.
+  - Layer 2 (adapter): order datum's `success_addr` AND `refund_addr` equal `redeemer.expected_recipient_addr`. Adapter-side check.
+
+Combined: keeper would need to either lie about `own_input.output.address` (impossible — it's the spending input the validator was invoked on) OR get the adapter to lie about decoded datum fields (impossible — adapter logic is fixed at compile time + the redeemer's `expected_recipient_addr` was already pinned by Layer 1 to be the vault address).
+
+8 new tests in `lib/vault/tests/r77_test.ak` cover redeemer structural shape with the new field, Address equality semantics across (Script vs VKH credential, different hash bytes, with/without stake credential), and the Layer-1 caller check pass/fail scenarios. `lib/vault/tests/swap_test.ak` updated to populate `expected_recipient_addr` in two existing fixtures. Integration coverage for Layer-2 (adapter validates real Minswap V2 datum) is in Preprod E2E (`tests/preprod/`) — Phase 110 oracle E2E + R74 mainnet decoder verification continue to exercise the full path; pre-mainnet adding an explicit F-1 attack-replay E2E (success_addr = attacker) is the natural follow-up.
+
+**Hash drift.** `minswap_v2_adapter` (5,020 → 6,258 B), `vault_protocol` (13,130 → 14,253 B), `vault_admin_deploy` (13,157 → 14,194 B), and the parameterised `vault_proxy` applied form all change. Any off-chain TX builder emitting the adapter redeemer must populate `expected_recipient_addr = vault_proxy_address`. Tightest validator headroom post-fix is `vault_admin_deploy` at 2,190 B free (13.4% of 16 KB ceiling) — comfortably above the red zone. Pre-mainnet ceremony required to deploy the new hashes; E2E test suite (46/46 from R76 era) needs full re-run on the fresh ceremony.
+
+Flagged for Q2-Q3 2027 external audit verification.
 
 ### R74 F-1 — `minswap_v2_adapter` `lp_asset` decoder format mismatch (HIGH, FIXED)
 

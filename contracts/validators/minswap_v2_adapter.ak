@@ -54,7 +54,7 @@ use aiken/builtin.{un_b_data, un_constr_data, un_i_data}
 use aiken/collection/list
 use aiken/crypto.{sha3_256}
 use aiken/primitive/bytearray
-use cardano/address.{Credential, Script}
+use cardano/address.{Address, Credential, Script}
 use cardano/certificate.{Certificate, UnregisterCredential}
 use cardano/transaction.{InlineDatum, Output, Transaction}
 use vault/helpers.{is_gov_authorized, payload_hash_deregister_stake}
@@ -279,9 +279,26 @@ fn un_list_data_safe(d: Data) -> List<Data> {
   builtin.un_list_data(d)
 }
 
+/// R77 F-1 (2026-05-08): also verify the order datum's `refund_addr`
+/// (field[1]) and `success_addr` (field[3]) match the caller-committed
+/// `expected_recipient_addr`. Pre-R77, only field[5]+[6] (lp_asset +
+/// step) were validated, leaving the entire output-routing surface of
+/// the order datum unconstrained. A compromised keeper could set both
+/// success_addr (where fill output lands) and refund_addr (where cancel/
+/// expire refund lands) to an attacker wallet — direct drain at slippage
+/// rate, not the bounded "peg-floor only" loss model the audit-scope
+/// previously claimed.
+///
+/// The `refund_datum` (field[2]) and `success_datum` (field[4]) are
+/// intentionally NOT constrained here: they are routed alongside the
+/// addresses, and as long as the address is the vault, attaching an
+/// arbitrary datum to a vault-address output is a vault-validator
+/// concern (vault validators reject unknown datums via NFT anchors and
+/// `verify_protocol_fields_preserved`).
 fn extract_minswap_v2_order_min_receive(
   output: Output,
   hop_chain: List<(ByteArray, ByteArray)>,
+  expected_recipient_addr: Address,
 ) -> Option<Int> {
   when output.datum is {
     InlineDatum(data) -> {
@@ -291,10 +308,38 @@ fn extract_minswap_v2_order_min_receive(
         // Field layout: [canceller, refund_addr, refund_datum,
         //                success_addr, success_datum, lp_asset,
         //                step, max_batcher_fee, expire_opt]
-        // Index 5 = lp_asset, index 6 = step.
-        when (nth(order_fields, 5), nth(order_fields, 6)) is {
-          (Some(lp_data), Some(step_data)) ->
-            decode_step(step_data, lp_data, hop_chain)
+        // Index 1 = refund_addr, index 3 = success_addr,
+        // index 5 = lp_asset, index 6 = step.
+        when
+          (
+            nth(order_fields, 1),
+            nth(order_fields, 3),
+            nth(order_fields, 5),
+            nth(order_fields, 6),
+          )
+        is {
+          (
+            Some(refund_addr_data),
+            Some(success_addr_data),
+            Some(lp_data),
+            Some(step_data),
+          ) ->
+            if refund_addr_data is r_addr: Address {
+              if success_addr_data is s_addr: Address {
+                if and {
+                  r_addr == expected_recipient_addr,
+                  s_addr == expected_recipient_addr,
+                } {
+                  decode_step(step_data, lp_data, hop_chain)
+                } else {
+                  None
+                }
+              } else {
+                None
+              }
+            } else {
+              None
+            }
           _ -> None
         }
       } else {
@@ -319,7 +364,13 @@ validator minswap_v2_adapter(
       // hop_chain must be well-formed (≥ 2 entries) and have a last
       // entry we can expose as the target asset.
       Some(_target) ->
-        when extract_minswap_v2_order_min_receive(dest_output, redeemer.hop_chain) is {
+        when
+          extract_minswap_v2_order_min_receive(
+            dest_output,
+            redeemer.hop_chain,
+            redeemer.expected_recipient_addr,
+          )
+        is {
           Some(decoded_min_receive) ->
             and {
               redeemer.min_receive == decoded_min_receive,

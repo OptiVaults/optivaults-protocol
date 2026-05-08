@@ -12,7 +12,21 @@
 /// to confirm the decoder matches Minswap V2's actual on-chain datum
 /// layout (see lib/vault/swap.ak PRE-MAINNET VERIFICATION note).
 
+use cardano/address.{Address, Script}
 use vault/swap_adapter.{SwapAdapterRedeemer, check_peg_floor}
+
+// R77 F-1 (2026-05-08): SwapAdapterRedeemer gained an
+// `expected_recipient_addr: Address` field so the adapter can verify
+// the DEX order datum's success_addr/refund_addr match the caller-
+// committed recipient. Test fixtures construct a placeholder vault
+// address — in production this is the actual vault_proxy address.
+const test_vault_addr: Address =
+  Address {
+    payment_credential: Script(
+      #"00000000000000000000000000000000000000000000000000000000",
+    ),
+    stake_credential: None,
+  }
 
 // ─────────────────────────────────────────────────────────────────────
 // check_peg_floor — core bound arithmetic
@@ -114,6 +128,7 @@ test swap_adapter_redeemer_shape() {
           #"446a65644d6963726f555344",
         ),
       ],
+      expected_recipient_addr: test_vault_addr,
     }
   and {
     r.dest_output_idx == 2,
@@ -136,6 +151,7 @@ test swap_adapter_redeemer_ada_target() {
         // ADA sentinel
         (#"", #""),
       ],
+      expected_recipient_addr: test_vault_addr,
     }
   and {
     r.dest_output_idx == 0,

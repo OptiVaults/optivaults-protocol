@@ -48,7 +48,7 @@
 
 use aiken/collection/list
 use aiken/collection/pairs
-use cardano/address.{Script}
+use cardano/address.{Address, Script}
 use cardano/transaction.{Transaction, Withdraw}
 use vault/oracle.{check_tier1_bound, find_asset_oracle}
 use vault/types.{AssetOracleEntry}
@@ -86,6 +86,22 @@ pub type SwapAdapterRedeemer {
   /// `hop_chain[0]` MUST equal the swap input asset; `hop_chain[last]`
   /// is the target asset callers expose for oracle + peg-floor checks.
   hop_chain: List<(ByteArray, ByteArray)>,
+  /// **Security rationale (R77 F-1 fix)**: Minswap V2 OrderDatum carries
+  /// a `success_addr` (where swap output lands on fill) and `refund_addr`
+  /// (where funds return on cancel/expire) that, prior to this fix, were
+  /// not constrained by V1 contracts — `verify_destination_whitelisted`
+  /// only checked the order script address, leaving the order datum's
+  /// internal routing fields completely unvalidated. A compromised keeper
+  /// (or post-sunset permissionless caller) could set both fields to an
+  /// attacker wallet and direct-drain the vault at slippage rate.
+  ///
+  /// This field commits the recipient address that the adapter MUST
+  /// verify against the DEX order datum's success_addr AND refund_addr.
+  /// vault_protocol / vault_admin_deploy enforce
+  /// `expected_recipient_addr == own_input.output.address` so the
+  /// recipient is always the vault itself; the adapter forces the order
+  /// datum to match. Both layers must agree — the keeper cannot bypass.
+  expected_recipient_addr: Address,
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -235,12 +251,20 @@ pub fn verify_swap_via_adapter(
   deploy_amount: Int,
   min_swap_peg_bps: Int,
   max_slippage_bps: Int,
+  /// R77 F-1: caller's vault address. Adapter redeemer's
+  /// `expected_recipient_addr` MUST equal this (caller-layer check); the
+  /// adapter then validates the on-chain DEX order datum's
+  /// success_addr + refund_addr equal the redeemer's value (adapter-
+  /// layer check). Both layers must agree to pass — closes the direct
+  /// drain vector where success_addr was previously unconstrained.
+  expected_recipient_addr: Address,
 ) -> Bool {
   when find_single_adapter_invocation(tx, adapter_hashes) is {
     Some(adapter_hash) ->
       when read_adapter_redeemer(tx, adapter_hash) is {
         Some(adapter_r) -> and {
             adapter_r.dest_output_idx == expected_dest_idx,
+            adapter_r.expected_recipient_addr == expected_recipient_addr,
             check_peg_floor(
               deploy_amount,
               adapter_r.min_receive,
