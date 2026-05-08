@@ -1,6 +1,6 @@
 # OptiVaults V1 白皮書
 
-**版本 1.1 — 公開發佈候選版**
+**版本 1.2 — 公開發佈候選版**
 **目標網路：Cardano Mainnet**
 **存入代幣：USDCx**
 
@@ -1110,6 +1110,22 @@ V1 同時持有三種穩定幣：USDCx（存入代幣）、DJED（Liqwid 配置�
 
 **Flash-loan 與早提領費保留機制的互動。** V1 的早提領費（§2.4）以 share price 上升的形式回饋給剩餘持有者——也就是被提領者付的費用留在金庫作為 buffer，拉升所有剩餘份額的請求權。攻擊者理論上可以 flash-loan 一筆 vUSDCx，立刻在 `min_hold_seconds` 窗口內提領付費，再重新入場把費用領回。但這套攻擊實際上跑不起來：(a) flash-loan vUSDCx 需要已存在的 vUSDCx 借貸市場，啟動時並沒有；(b) 費用按比例攤給所有剩餘份額（包括攻擊者重入的那份），來回淨為零；(c) 攻擊者還要付閃電循環裡的網路 TX 費與 Minswap 滑點。目前這套設計沒有已知可獲利的 flash-loan 路徑；V1 會持續觀察是否出現 vUSDCx 借貸市場，真有了再重新評估。
 
+### 5.2.1 Cardano 生態演化情境
+
+V1 的風險輪廓不是靜態的。Cardano DeFi 基礎設施的數個預期里程碑若如期成熟，會實質改變 V1 的風險輪廓——有些會降低風險，有些則引入新的風險面。本小節列出存入者應留意的條件性敏感度，獨立於 V1 自身設計（§5.1–5.6）。**這些是明確的外部狀態假設，不是預測或承諾**——存入者有權看到並自行追蹤。
+
+**Pogun BTC DeFi 上線（2026 Q2 借貸 → Q3 yield → Q4 BitVM bridge）。** Pogun 在 Cardano 上推出 BTC 抵押借貸，若按計劃上線，會實質提升 Liqwid 穩定幣市場的借方需求——目前這正是結構性缺口、也是 Liqwid 穩定幣 APY 集中而非分散的根本原因。更高且穩定的借方需求將：(a) 拉升 V1 的混合收益、(b) 降低 Liqwid 利用率飆升阻擋 keeper Recall 的機率、(c) 最終解鎖 V2.x BTC 抵押收益路由（§1.7）。**風險：** Pogun 目前是 IO 公開揭露的 roadmap，主網時程有目標但無確切日期。若 Pogun 延後過 2027 Q2，V1 將無限期維持當前的單一協議 Liqwid 姿態，啟動就緒框架（§1.5）的 A 軸維持紅級。
+
+**Leios 擴容（testnet 2026 年底，mainnet 2027）。** Cardano 的 Leios 升級目標是把 TX 吞吐量提升 10–65×。對 V1 而言，Leios 降低：(a) 每筆 Compound / BatchProcess / Swap TX 的網路費、(b) order 從送出到 batch fill 的延遲、(c) 脫鉤事件期間 Minswap V2 batcher 的擁塞。淨效果：V1 的營運成本基線預估在 Leios 之後縮減 30–60%，相應降低 §4.3 的 keeper 損益平衡 TVL。**風險：** Leios 自身是大型協議升級，有時程不確定性。若 Leios 延後到 2028 之後，V1 keeper 經濟學維持當前成本曲線，§4.3 自給門檻會推向 $740K–$1.48M tier (b) 區間的上端。
+
+**Midnight DeFi Kernel 成熟（研究階段，生產目標 2028+）。** Midnight 公開的隱私保護 DeFi 基礎設施成熟後，將解鎖 V3.0 機構級隱私 vault（§1.7）。對 V1 自身而言，Midnight 成熟**不是**風險變動因素——V1 是 Cardano mainnet 公開產品，與 Midnight **完全無依賴關係**。Midnight 純粹是 V3.0 的前向 optionality；不論 Midnight 進展如何，V1 風險輪廓**都不受影響**。**風險：** Midnight DeFi Kernel 目前處於研究論文層級概念、非生產代碼。公開的 2028+ 時程帶有可觀的不確定性；V3.0 評估要等 Midnight Kernel 進入生產形態才會啟動。若 Midnight 沒有成熟，V1 + V1.5 + V2.x 仍是專案的產品面——V3.0 單純不發生，這也是可接受的結果。
+
+**USDCx 補貼到期（Q1 2026 IOG 跨鏈費補貼結束後）。** USDCx 在 Cardano 上線初期由 IOG 出資的跨鏈費補貼支撐——這降低了透過 xReserve 把 USDC 移入移出 Cardano 的摩擦。補貼結束（Q1 2026 之後），USDCx mint/burn 的天然成本重新浮現——這是個小但非零的單趟摩擦，可能抑制 Cardano 上 USDCx 的有機 supply 成長。對 V1 而言，這透過啟動就緒框架（§1.5）的 B 軸監控：若補貼後 30 天淨流出超過 10%，B 軸轉紅，V1 啟動被閘控。**風險：** 若 USDCx supply 在補貼後出現實質收縮（30 天淨流出 > 10%），這是 Cardano 有機 USDCx 需求低於門檻的明確訊號，V1 的 TAM 假設（§1.2）需要重新檢視。反過來說，若補貼結束後 supply 仍持續成長，B 軸的綠燈就是 V1 市場定位結構性穩固的最強訊號之一。
+
+**NIGHT solar drop 持續釋出時程（450 天 thawing）。** NIGHT token thawing 時程從每位持有者的快照日起算 450 天持續釋出 supply。對 V1 的關聯是間接的：創辦人的 Minswap V2 ADA/NIGHT LP 部位（§1.6）是創辦人個人投資組合的一部分，NIGHT 持續釋出會影響 Minswap V2 上 ADA/NIGHT pool 的動態——而這是 V1 用來做穩定幣 routing 的同一個 DEX。Minswap V2 上的 pool 深度變動（任一 pair，因為 AMM 共享流動性提供者注意力）會邊際影響 V1 的 swap 衝擊估計。這是低量級的影響——Minswap V2 穩定幣 pool 的規模大致獨立於 NIGHT 相關流動性——但為求完整列出，因為創辦人的 NIGHT/ADA LP 是 §1.6 文件化的偏誤來源之一。
+
+**V1 不假設的事。** 上述條件性敏感度文件化的目的是讓存入者了解，當 Cardano DeFi 基礎設施成熟時 V1 風險輪廓會如何演化——**不是預測、不是承諾**。V1 設計上能在當前姿態（單一協議 Liqwid wrapper、僅 Cardano mainnet、USDCx 計價）下運作，與哪一個情境是否成立無關。Pogun 延後，V1 繼續以當前 yield 出貨。Leios 延後，V1 keeper 經濟維持原狀。Midnight 沒有成熟，V3.0 不發生——V1 不受影響。啟動就緒框架（§1.5）是外部狀態變動回饋到 V1 TVL 上限演進的正式機制；本小節讓底層假設與觸發條件明確化，讓存入者能獨立追蹤。
+
 ### 5.3 Liqwid 協議風險
 
 **§1.1 的刻意 scope boundary 換個角度看就是這裡的風險。** §1.1 明確說「V1 **不是** 多協議收益 aggregator」——那是刻意的產品範圍選擇，不是疏漏。從威脅模型的角度再看同一件事，它就變成存入者要承擔的風險：V1 只 route 到一個協議，那個協議一旦倒了，V1 沒有可切換的備援。本節是 §1.1 產品定位在風險面的誠實對照——兩邊描述的是同一件事，只是視角不同。
@@ -1502,6 +1518,14 @@ scripts/verify-hashes.sh  # 比對 plutus.json 的 hash 與鏈上部署
 
 ## 變更紀錄
 
+### v1.2 — 2026-05-08
+
+**新增**
+- §5.2.1 Cardano 生態演化情境 — 5 個條件性敏感度（Pogun BTC DeFi 上線、Leios 擴容、Midnight DeFi Kernel 成熟、USDCx 補貼到期、NIGHT solar drop 釋出時程），明確 framing 為外部狀態假設，**不是預測也不是承諾**。關閉 §5 風險框架的缺口——先前版本在 §1.5 啟動就緒框架討論外部觸發條件，但沒有文件化這些觸發條件啟動時 V1 風險輪廓會如何演化。
+
+**語氣轉變**
+- 強化「V1 是 Cardano DeFi 公共財參考實作，不是『2028 必須出貨』的承諾」framing——V1 在當前姿態下繼續出貨，與哪個演化情境成立無關。
+
 ### v1.1 — 2026-05-06
 
 **新增**
@@ -1535,4 +1559,4 @@ scripts/verify-hashes.sh  # 比對 plutus.json 的 hash 與鏈上部署
 
 ---
 
-**白皮書 V1.1 結束**
+**白皮書 V1.2 結束**

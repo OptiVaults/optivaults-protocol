@@ -1,6 +1,6 @@
 # OptiVaults V1 Whitepaper
 
-**Version 1.1 — Public Launch Candidate**
+**Version 1.2 — Public Launch Candidate**
 **Target Network: Cardano Mainnet**
 **Deposit Token: USDCx**
 
@@ -1118,6 +1118,22 @@ V1 holds three stablecoins simultaneously: USDCx (deposit token), DJED (Liqwid a
 
 **Flash-loan interaction with early-withdraw fee retention.** V1's early-withdraw fee (§2.4) accrues to remaining holders via share-price appreciation — i.e., the withdrawn user's fee stays inside the vault as buffer, lifting all remaining shares' claim. An attacker could theoretically flash-loan vUSDCx, immediately withdraw inside the `min_hold_seconds` window to pay the fee, and re-enter to claim the fee back — but: (a) flash-loaning vUSDCx requires an existing lending market for vUSDCx which does not exist at launch, (b) the fee accrues proportionally to all remaining shares including the attacker's re-entry, so the round-trip is net-zero ex post, and (c) the attacker still pays network TX fees + Minswap slippage for the flash cycle. No known profitable flash-loan attack exists on this design; V1 monitors for new vUSDCx lending markets and will revisit if one appears.
 
+### 5.2.1 Cardano ecosystem evolution scenarios
+
+V1's risk profile is not static. Several anticipated Cardano DeFi infrastructure milestones will materially shift V1's risk profile if they ship — sometimes reducing risk, sometimes introducing new risk surfaces. This subsection documents the conditional sensitivities depositors should be aware of, separately from V1's own design (§5.1–5.6). These are **not predictions or commitments** — they are explicit assumptions about external state that depositors deserve to see.
+
+**Pogun BTC DeFi rollout (2026 Q2 lending → Q3 yield → Q4 BitVM bridge).** Pogun's introduction of Bitcoin-collateralized lending on Cardano, if it ships on schedule, would materially increase the borrow-side demand on Liqwid stablecoin markets — which has been structurally absent and is the underlying reason Liqwid stablecoin APYs are concentrated rather than diversified. Higher and more stable borrow demand would (a) lift V1's blended yield, (b) reduce the probability of Liqwid utilization spikes that block keeper Recall, and (c) eventually unlock V2.x BTC-collateralized yield routing (§1.7). **Risk:** Pogun is currently a publicly-announced roadmap from IO with mainnet timeline targets but no firm ship dates. If Pogun delays past 2027 Q2, V1 stays in the current single-protocol Liqwid posture indefinitely, and Axis A of the Launch Readiness Framework (§1.5) remains red.
+
+**Leios scaling (testnet end-2026, mainnet 2027).** Cardano's Leios upgrade targets 10–65× transaction throughput improvement. For V1, Leios reduces (a) network fees per Compound / BatchProcess / Swap TX, (b) latency from order submission to batch fill, and (c) Minswap V2 batcher congestion during depeg events. Net effect: V1's operational cost base shrinks by an estimated 30–60% post-Leios, which lowers the §4.3 keeper break-even TVL accordingly. **Risk:** Leios is itself a major protocol upgrade with timeline uncertainty. If Leios delays past 2028, V1 keeper economics stay on the current cost curve, and the §4.3 self-sustain threshold pushes toward the upper end of the $740K–$1.48M tier (b) range.
+
+**Midnight DeFi Kernel maturation (research-stage, production target 2028+).** Midnight's announced privacy-preserving DeFi infrastructure, when it matures, would unlock V3.0 institutional privacy vault (§1.7). For V1 itself, Midnight maturity is **not** a risk-changing factor — V1 is a Cardano-mainnet-public product and does not depend on Midnight in any way. Midnight is purely forward optionality for V3.0; V1's risk profile is unaffected by Midnight's trajectory either direction. **Risk:** Midnight DeFi Kernel is currently at research-paper level concept, not production code. The announced 2028+ timeline reflects substantial uncertainty; V3.0 evaluation does not begin until Midnight Kernel ships in production form. If Midnight does not mature, V1 + V1.5 + V2.x remain the protocol's product surface — V3.0 simply does not happen, and that is an acceptable outcome.
+
+**USDCx subsidy expiry (post Q1 2026 IOG bridging fee subsidy).** The first months of USDCx availability on Cardano have been supported by an IOG-funded bridging fee subsidy that lowered the friction of moving USDC into and out of Cardano via xReserve. Once that subsidy expires (post Q1 2026), the natural cost of USDCx mint/burn re-emerges — a small but non-zero per-trip friction that may dampen organic USDCx supply growth on Cardano. For V1, this is monitored via Axis B of the Launch Readiness Framework (§1.5): if 30-day net USDCx outflow exceeds 10% post-subsidy, Axis B turns red and V1 launch is gated. **Risk:** If USDCx supply contracts post-subsidy (net outflow > 10% over 30 days), this is a material signal that organic Cardano USDCx demand is below threshold and V1's TAM thesis (§1.2) needs re-examination. Conversely, if supply continues to grow post-subsidy, Axis B confirmation is one of the strongest signals that V1's market positioning is structurally sound.
+
+**NIGHT solar drop continued release schedule (450-day thawing period).** NIGHT token thawing schedule continues to release supply over a 450-day period from each holder's snapshot date. The relevance to V1 is indirect: the founder's Minswap V2 ADA/NIGHT LP exposure (§1.6) is part of the founder's personal portfolio, and continued NIGHT release affects ADA/NIGHT pool dynamics on Minswap V2 — which is the same DEX V1 uses for stablecoin routing. Pool depth changes on Minswap V2 (any pair, since the AMM shares liquidity-provider attention) marginally affect V1's swap impact estimates. This is a low-magnitude effect — Minswap V2 stablecoin pools are sized largely independently of NIGHT-related liquidity — but worth flagging for completeness because the founder's NIGHT/ADA LP is one of the bias sources documented in §1.6.
+
+**What V1 does not assume.** The conditional sensitivities above are documented to inform depositors of how V1's risk profile will evolve as Cardano DeFi infrastructure matures, **not as predictions or commitments**. V1 is designed to operate within its current posture (single-protocol Liqwid wrapper, Cardano-mainnet-only, USDCx-denominated) regardless of which scenarios materialize. If Pogun delays, V1 keeps shipping with current yields. If Leios delays, V1 keeper economics stay where they are. If Midnight does not mature, V3.0 does not happen — V1 is unaffected. The Launch Readiness Framework (§1.5) is the formal mechanism by which external state changes feed into V1's TVL cap progression; this subsection makes the underlying assumptions and triggers explicit so depositors can independently track them.
+
 ### 5.3 Liqwid protocol risk
 
 **The intentional-scope-boundary framing from §1.1 is also a risk vector here.** §1.1 explicitly positions V1 as "NOT a multi-protocol yield aggregator" — a deliberate product-scope choice, not an oversight. That same design choice becomes a depositor-facing risk when examined from the threat-model side: if the single protocol V1 routes to fails, V1 has no live alternative to switch to. This section is the honest risk-side reading of the §1.1 product-scope positioning — both descriptions are of the same fact, viewed from different angles.
@@ -1503,6 +1519,14 @@ Every governance QueueAction's payload hash can be reverse-engineered from CBOR 
 
 ## Changelog
 
+### v1.2 — 2026-05-08
+
+**Added**
+- §5.2.1 Cardano Ecosystem Evolution Scenarios — five conditional sensitivities (Pogun BTC DeFi rollout, Leios scaling, Midnight DeFi Kernel maturation, USDCx subsidy expiry, NIGHT solar drop release schedule) explicitly framed as external assumptions, not predictions or commitments. Closes the §5 Risk Framework gap where prior versions discussed external triggers in §1.5 Launch Readiness Framework but did not document how V1's risk profile evolves as those triggers fire.
+
+**Tone shift**
+- Reinforces "V1 is a Cardano DeFi public-goods reference implementation, not a commitment to ship in 2028" framing — V1 keeps shipping under current posture regardless of which evolution scenarios materialize.
+
 ### v1.1 — 2026-05-06
 
 **Added**
@@ -1536,4 +1560,4 @@ Initial release. Production-ready V1 design specification. Single-protocol Liqwi
 
 ---
 
-**End of Whitepaper V1.1**
+**End of Whitepaper V1.2**
