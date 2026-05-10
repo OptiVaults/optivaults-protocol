@@ -392,7 +392,7 @@ publish(_redeemer, credential, tx) {
 
 **Payload**:`payload_hash_deregister_stake(target_hash) = blake2b_256(cbor.serialise(target_hash))`。Off-chain 工具排入時計算同樣的 hash。
 
-**Timelock**:14 天(production)。與 `UpdateKeeperAuth` 同——同屬「operator credential 變更」層級。**Preprod A2 驗證覆寫**:1 小時(`lib/vault/constants.ak` 的 `timelock_deregister_stake_ms`——mainnet build 前須還原)。
+**Timelock**:14 天(production)。與 `UpdateKeeperAuth` 同——同屬「operator credential 變更」層級。**Preprod build 覆寫**:當 `lib/vault/constants.ak` 中 `preprod_fast_timelocks: Bool = True` 時,所有 gated timelock(包含此項)解析為 60 秒,供 E2E 快速測試輪次使用。Mainnet build 將 flag 設為 `False`,並透過 `deploy/tools/verify-mainnet-build.sh` 驗證 active branch 無 60 秒字面值殘留。
 
 **攻擊面分析**:
 - AT-1(grief):被入侵的 m-of-n gov queue ActDeregisterStake → 14d timelock + 1-of-n cancel 否決。與其他 Act* 的防禦 profile 相同。

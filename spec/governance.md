@@ -392,7 +392,7 @@ publish(_redeemer, credential, tx) {
 
 **Payload:** `payload_hash_deregister_stake(target_hash) = blake2b_256(cbor.serialise(target_hash))`. Off-chain tooling computes the same hash when queueing.
 
-**Timelock:** 14 days (production). Matches `UpdateKeeperAuth` — same operator-credential-change tier. **Preprod A2 verification override:** 1 hour (`timelock_deregister_stake_ms` in `lib/vault/constants.ak` — revert before mainnet build).
+**Timelock:** 14 days (production). Matches `UpdateKeeperAuth` — same operator-credential-change tier. **Preprod build override:** when `preprod_fast_timelocks: Bool = True` in `lib/vault/constants.ak`, all gated timelocks (including this one) resolve to 60 s for end-to-end test turnaround. Mainnet build sets the flag to `False`; verifier `deploy/tools/verify-mainnet-build.sh` confirms no 60 s literal sneaks through to the active branch.
 
 **Attack-surface analysis:**
 - AT-1 (griefing): compromised m-of-n gov queues ActDeregisterStake → 14d timelock + 1-of-n cancel veto. Same defense profile as every other Act*.
