@@ -98,6 +98,50 @@ pub const min_swap_peg_bps_ceiling: Int = 9_950
 pub const max_validity_range_ms: Int = 3_600_000
 
 // ─────────────────────────────────────────────────────────────────────
+// Timelock build flag — single source of truth for Preprod vs Mainnet
+// ─────────────────────────────────────────────────────────────────────
+
+/// Gate for ALL governance timelocks, registry cooldowns, and the
+/// Heartbeat distribute-period. Set to `True` for Preprod E2E ceremonies
+/// (60s turnaround on every governance action). Set to `False` and
+/// rebuild for mainnet — restores production values (7d / 14d / 21d /
+/// 90d) without per-constant editing.
+///
+/// Replaces 14+ individual `pub const timelock_*_ms = if ... else ...`
+/// overrides — those had a partial-patch failure mode where editing
+/// one of several related constants while missing siblings would
+/// silently break a Preprod E2E test. A single Bool gate makes that
+/// class of bug structurally impossible.
+///
+/// Affected constants (all defined below):
+/// - timelock_update_strategy_ms       7d
+/// - timelock_update_fee_ms            14d
+/// - timelock_update_fee_split_ms      21d
+/// - timelock_admin_deploy_ms          7d
+/// - timelock_update_registry_ms       14d
+/// - timelock_update_keeper_auth_ms    14d
+/// - timelock_treasury_spend_ms        7d
+/// - timelock_update_treasury_params_ms 14d
+/// - timelock_rotate_signers_ms        14d
+/// - timelock_slash_bond_ms            14d
+/// - timelock_deregister_stake_ms      14d
+/// - timelock_update_slippage_policy_ms 48h
+/// - admin_deploy_registry_cooldown_ms 21d
+/// - distribute_period_ms              90d
+///
+/// NOT gated (already short or always-zero by design):
+/// - timelock_emergency_ms             0    (immediate; gated via §3 hard-gate)
+/// - timelock_fast_update_markets_ms   1h   (named "fast" — already short)
+/// - keeper_inactive_ms                7d   (security feature; tests use BACKDATE_COMPOUND_DAYS)
+/// - one_hour_ms                       1h   (rate-limit on Compound/RebalanceBuffer/etc.)
+///
+/// MAINNET BUILD CHECKLIST: `preprod_fast_timelocks = False` + `aiken build`
+/// + verify `cat ./plutus.json | grep timelock` shows production values
+/// + run `deploy/scripts/verify-mainnet-build.sh` to assert no Preprod
+/// 60s literal sneaked through to the active branch.
+pub const preprod_fast_timelocks: Bool = False
+
+// ─────────────────────────────────────────────────────────────────────
 // Cooldowns (milliseconds)
 // ─────────────────────────────────────────────────────────────────────
 
@@ -113,7 +157,9 @@ pub const keeper_inactive_ms: Int = 7 * 86_400 * 1_000
 pub const fee_update_cooldown_ms: Int = 7 * 86_400 * 1_000
 
 /// 21 days — AdminDeployNonDeposit registry-stability cooldown
-pub const admin_deploy_registry_cooldown_ms: Int = 21 * 86_400 * 1_000
+/// Conditional via `preprod_fast_timelocks` flag (see top of file).
+pub const admin_deploy_registry_cooldown_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 21 * 86_400 * 1_000 }
 
 /// Sanity baseline: timestamps before 2023-11-15 UTC are treated as
 /// uninitialised (mainly defends against an uninitialised
@@ -181,37 +227,42 @@ pub const gov_min_ttl_ms: Int = 86_400_000
 /// Maximum TTL on any queued action (30 days)
 pub const gov_max_ttl_ms: Int = 30 * 86_400_000
 
-/// Per-action timelock floors (per spec/governance.md §3). PRODUCTION
-/// VALUES — restored from Preprod 60s overrides for mainnet-candidate
-/// build (2026-05-03).
-///
-/// Preprod E2E that previously relied on 60s timelock turnaround is now
-/// validated via either (a) numeric verification (Queue → query
-/// queued_at_ms + executable_at_ms → confirm delta == production
-/// timelock value) or (b) datum-backdate (BACKDATE_FEE_MS +
-/// BACKDATE_COMPOUND_DAYS in deploy/lib/datumBuilders.ts;
-/// extended for UpdateFee / UpdateStrategy / UpdateRegistry /
-/// UpdateFeeSplit happy paths). emergency (0d) + fast_update_markets
-/// (1h) remain runnable in a single Preprod session.
-pub const timelock_update_strategy_ms: Int = 7 * 86_400 * 1_000
-pub const timelock_update_fee_ms: Int = 14 * 86_400 * 1_000
-pub const timelock_update_fee_split_ms: Int = 21 * 86_400 * 1_000
+/// Per-action timelock floors (per spec/governance.md §3).
+/// All values gated through `preprod_fast_timelocks` Bool flag — see top
+/// of file. Flip the flag for mainnet builds to restore production values
+/// in one place. emergency (0d) + fast_update_markets (1h) remain
+/// runnable in a single Preprod session and are NOT gated by the flag
+/// (already short by design).
+pub const timelock_update_strategy_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 7 * 86_400 * 1_000 }
+pub const timelock_update_fee_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 14 * 86_400 * 1_000 }
+pub const timelock_update_fee_split_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 21 * 86_400 * 1_000 }
 pub const timelock_emergency_ms: Int = 0
-pub const timelock_admin_deploy_ms: Int = 7 * 86_400 * 1_000
-pub const timelock_update_registry_ms: Int = 14 * 86_400 * 1_000
+pub const timelock_admin_deploy_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 7 * 86_400 * 1_000 }
+pub const timelock_update_registry_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 14 * 86_400 * 1_000 }
 pub const timelock_fast_update_markets_ms: Int = 3_600_000
-pub const timelock_update_keeper_auth_ms: Int = 14 * 86_400 * 1_000
-pub const timelock_treasury_spend_ms: Int = 7 * 86_400 * 1_000
-pub const timelock_update_treasury_params_ms: Int = 14 * 86_400 * 1_000
-pub const timelock_rotate_signers_ms: Int = 14 * 86_400 * 1_000
+pub const timelock_update_keeper_auth_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 14 * 86_400 * 1_000 }
+pub const timelock_treasury_spend_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 7 * 86_400 * 1_000 }
+pub const timelock_update_treasury_params_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 14 * 86_400 * 1_000 }
+pub const timelock_rotate_signers_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 14 * 86_400 * 1_000 }
 
 /// SlashBond (Phase 3+ only; per spec/keeper-auth.md §3.6)
-pub const timelock_slash_bond_ms: Int = 14 * 86_400 * 1_000
+pub const timelock_slash_bond_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 14 * 86_400 * 1_000 }
 
 /// ActDeregisterStake (A2, 2026-04-20): governance-gated stake credential
 /// deregister path enabling recovery of 2 ADA per staking validator deposit.
 /// PRODUCTION = 14 days (matches `timelock_update_keeper_auth_ms`).
-pub const timelock_deregister_stake_ms: Int = 14 * 86_400 * 1_000
+pub const timelock_deregister_stake_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 14 * 86_400 * 1_000 }
 
 /// UpdateSlippagePolicy (§5.4 Phase 2, 2026-04-21): governance-gated
 /// adjustment of `max_slippage_bps` + `min_swap_peg_bps`. 48 hours chosen
@@ -221,10 +272,16 @@ pub const timelock_deregister_stake_ms: Int = 14 * 86_400 * 1_000
 /// preservation — depositors still have a full business day plus weekend
 /// to exit if they disagree with the policy change. 1-of-n cancel still
 /// applies throughout the 48h window.
-pub const timelock_update_slippage_policy_ms: Int = 48 * 60 * 60 * 1_000
+pub const timelock_update_slippage_policy_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 48 * 60 * 60 * 1_000 }
 
 /// Heartbeat / quarterly-distribution cadence (90 days)
-pub const distribute_period_ms: Int = 90 * 86_400 * 1_000
+/// Affects multisig_gov.Heartbeat `cooldown_ok = lo - prev_qual >=
+/// distribute_period_ms` gate (line 594). NOT the GovDatum field
+/// `gov.distribute_period_ms` (which only governs DistributeSignerCompensation
+/// cadence at line 732 — that's a separate runtime field, not this constant).
+pub const distribute_period_ms: Int =
+  if preprod_fast_timelocks { 60_000 } else { 90 * 86_400 * 1_000 }
 
 /// Zero-yield Compound minimum on-chain cooldown (10 min).
 /// Keeper off-chain policy targets every 5 days per whitepaper §2.5;

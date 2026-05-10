@@ -354,10 +354,10 @@ async function publishOneRef(
   label: string,
   minAda: bigint,
   bfUrl: string,
-  bfKey: string,
+  bfKeys: string | string[],
 ): Promise<{ txHash: string; outputIndex: number; scriptHash: string; sizeBytes: number; minAda: string }> {
   const deployRefScripts = (await import("./deployRefScript.js")).deployRefScripts;
-  const [r] = await deployRefScripts(lucid, [script], [minAda], bfUrl, bfKey);
+  const [r] = await deployRefScripts(lucid, [script], [minAda], bfUrl, bfKeys);
   const sizeBytes = Math.floor(script.script.length / 2);
   const scriptHash = validatorToScriptHash(script);
   log("INFO", `  ${label.padEnd(20)} ${scriptHash.slice(0, 12)} ${sizeBytes}B TX ${r.txHash}`);
@@ -376,7 +376,8 @@ export async function runPhase3RefScripts(
   cfg: DeployConfig,
   state: CeremonyState,
   bfUrl: string,
-  bfKey: string,
+  /** Accept primary + backup keys for 402/429 quota-rotation. */
+  bfKey: string | string[],
 ): Promise<void> {
   log("STEP", "PHASE 3: publishing 18 reference scripts");
   const mult = cfg.ceremonyOptions.refScriptMinAdaMultiplier;
@@ -437,21 +438,29 @@ export interface StakeRegistration {
 
 async function isStakeRegistered(
   bfUrl: string,
-  bfKey: string,
+  bfKeys: string | string[],
   rewardAddr: string,
 ): Promise<boolean> {
-  try {
-    const res = await fetch(`${bfUrl}/accounts/${rewardAddr}`, {
-      headers: { project_id: bfKey },
-      signal: AbortSignal.timeout(15000),
-    });
-    if (res.status === 404) return false;
-    if (!res.ok) return false;
-    const data = (await res.json()) as { active?: boolean };
-    return !!data.active;
-  } catch {
-    return false;
+  // Try each key on 402/429; non-quota errors return false
+  // (caller treats false as "not registered" which fails-safe — register
+  // anyway is idempotent).
+  const keys = Array.isArray(bfKeys) ? bfKeys.filter((k) => k && k.length > 0) : [bfKeys];
+  for (const k of keys) {
+    try {
+      const res = await fetch(`${bfUrl}/accounts/${rewardAddr}`, {
+        headers: { project_id: k },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.status === 402 || res.status === 429) continue; // try next key
+      if (res.status === 404) return false;
+      if (!res.ok) return false;
+      const data = (await res.json()) as { active?: boolean };
+      return !!data.active;
+    } catch {
+      // network error — try next key
+    }
   }
+  return false;
 }
 
 export async function runPhase4aStakes(
@@ -460,7 +469,8 @@ export async function runPhase4aStakes(
   cfg: DeployConfig,
   state: CeremonyState,
   bfUrl: string,
-  bfKey: string,
+  /** Accept primary + backup keys for 402/429 quota-rotation. */
+  bfKey: string | string[],
 ): Promise<void> {
   log("STEP", "PHASE 4a: registering 12 stake credentials");
 
@@ -484,7 +494,23 @@ export async function runPhase4aStakes(
   }
   const regs = (state as any).stakeRegistrations as Record<string, StakeRegistration>;
 
-  for (const t of targets) {
+  // Explicit pure-ADA UTxO selection prevents Lucid's wallet
+  // coin selector from picking scriptRef-bearing UTxOs as fee inputs and
+  // destroying ref scripts mid-PHASE-4a (an earlier ceremony lost
+  // vaultProtocol/vaultRecall/vaultAdminDeploy this way; recovery via
+  // state-file delete + redeploy succeeded but burnt 3 extra TXs).
+  // Mirror deployRefScript.ts pure-ADA filter: !scriptRef, no tokens,
+  // ≥3 ADA each (2 ADA stake deposit + ~0.2 ADA fee + 0.8 ADA min-UTXO change).
+  const walletAddr = await lucid.wallet().address();
+
+  // Queue-based loop (instead of for...of) so the
+  // ConwayMempoolFailure "all inputs spent" retry path can re-enqueue the
+  // current target via queue.unshift(t) when Blockfrost indexer lag picks
+  // a stale pure-ADA UTxO. for...of can't re-iterate the same element.
+  const queue = [...targets];
+  const retryCount: Record<string, number> = {};
+  while (queue.length > 0) {
+    const t = queue.shift()!;
     if (regs[t.target]?.txHash) {
       log("INFO", `  ${t.target}: already registered (${regs[t.target].txHash})`);
       continue;
@@ -500,7 +526,38 @@ export async function runPhase4aStakes(
     }
     log("INFO", `  ${t.target}: registering ${rewardAddr.slice(0, 40)}…`);
     try {
-      const tx = await lucid.newTx().register.Stake(rewardAddr).complete();
+      // Re-fetch pure-ADA list each iteration. Stake reg TX
+      // consumes 1 input + emits 1 change output back to wallet; Blockfrost
+      // index lag (Lucid awaitTx waits for it) means after `awaitTxAndSettle`
+      // the new change UTxO is visible on the next /addresses/<addr>/utxos
+      // page. Cost: ~1 BF call per stake reg = ~12 extra calls per ceremony,
+      // well within quota. Sort ascending consumes smallest first → preserves
+      // larger UTxOs for any concurrent ceremony work.
+      const bfPureAdaUtxos = await fetchPureAdaUtxosForStakeReg(walletAddr, bfUrl, bfKey);
+      const cleanOutRef = bfPureAdaUtxos.shift();
+      if (!cleanOutRef) {
+        throw new Error(
+          `[runPhase4aStakeRegs] PHASE 4a BLOCKED: no clean pure-ADA UTxO ` +
+          `available for ${t.target} stake reg fee. Wallet may have been ` +
+          `drained mid-PHASE-4a or all pure-ADA was consumed by prior stake ` +
+          `regs (12 total × ~3 ADA each = 36 ADA min). ` +
+          `Run \`cd v1 && npx tsx deploy/tools/scrub-deploy-wallet.ts\` to free ` +
+          `~250 ADA pure-ADA, then re-launch deploy.ts (idempotent skip via ` +
+          `state.stakeRegistrations checkpoints).`,
+        );
+      }
+      const [feeUtxo] = await lucid.utxosByOutRef([cleanOutRef]);
+      if (!feeUtxo) {
+        throw new Error(
+          `[runPhase4aStakeRegs] Blockfrost said pure-ADA UTxO ${cleanOutRef.txHash}#${cleanOutRef.outputIndex} ` +
+          `exists but Lucid utxosByOutRef returned empty (indexer race?). Try resume.`,
+        );
+      }
+      const tx = await lucid
+        .newTx()
+        .collectFrom([feeUtxo])
+        .register.Stake(rewardAddr)
+        .complete({ coinSelection: false });
       const signed = await tx.sign.withWallet().complete();
       const txHash = await signed.submit();
       log("INFO", `    TX ${txHash}`);
@@ -515,10 +572,92 @@ export async function runPhase4aStakes(
         saveState(state);
         continue;
       }
+      // Blockfrost indexer lag race — `addresses/<addr>/utxos`
+      // hasn't caught up to the previous stake reg's change UTxO yet, so
+      // we tried to spend an already-consumed input. Sleep + retry: same
+      // iteration will re-fetch the pure-ADA list which should now reflect
+      // the new change output.
+      if (/All inputs are spent|Transaction has probably already been included|MempoolFailure/i.test(msg)) {
+        retryCount[t.target] = (retryCount[t.target] ?? 0) + 1;
+        if (retryCount[t.target] > 5) {
+          log("ERROR", `  ${t.target}: exceeded 5 retries on Blockfrost indexer lag race; aborting`);
+          throw e;
+        }
+        log("INFO", `    Blockfrost indexer lag (input spent by prior stake reg) — sleeping 30s + retry ${retryCount[t.target]}/5`);
+        await new Promise((r) => setTimeout(r, 30_000));
+        queue.unshift(t); // re-process this target after sleep
+        continue;
+      }
       log("ERROR", `  ${t.target} stake registration failed: ${msg.slice(0, 400)}`);
       throw e;
     }
   }
+}
+
+// Blockfrost-direct fetch of pure-ADA UTxO outrefs at deploy
+// wallet. Used by PHASE 4a stake reg loop to pin which input UTxO each
+// stake reg TX consumes (scriptRef-aware filtering — see fix description
+// at runPhase4aStakeRegs above). Supports key rotation alongside the same withKeyRotation pattern in deployRefScript
+// (primary + backup keys, retry on 402/403/429).
+async function fetchPureAdaUtxosForStakeReg(
+  addr: string,
+  bfUrl: string,
+  bfKey: string | string[],
+): Promise<Array<{ txHash: string; outputIndex: number }>> {
+  const keys = Array.isArray(bfKey) ? bfKey : [bfKey];
+  if (keys.length === 0) throw new Error("fetchPureAdaUtxosForStakeReg: no Blockfrost keys");
+  const out: Array<{ txHash: string; outputIndex: number; lovelace: bigint }> = [];
+  for (let page = 1; page <= 10; page++) {
+    let pageBatch: any[] | null = null;
+    let lastErr = "";
+    for (const k of keys) {
+      try {
+        const res = await fetch(`${bfUrl}/addresses/${addr}/utxos?count=100&page=${page}`, {
+          headers: { project_id: k },
+          signal: AbortSignal.timeout(20000),
+        });
+        if (res.status === 404) {
+          pageBatch = [];
+          break;
+        }
+        if (res.status === 402 || res.status === 403 || res.status === 429) {
+          lastErr = `key prefix ${k.slice(0, 12)}… returned ${res.status}`;
+          continue; // try next key
+        }
+        if (!res.ok) {
+          throw new Error(`Blockfrost /utxos page ${page} failed: ${res.status}`);
+        }
+        pageBatch = (await res.json()) as any[];
+        break;
+      } catch (e) {
+        lastErr = (e as Error).message;
+        continue;
+      }
+    }
+    if (pageBatch === null) {
+      throw new Error(`Blockfrost /utxos page ${page} all keys failed: ${lastErr}`);
+    }
+    if (!Array.isArray(pageBatch) || pageBatch.length === 0) break;
+    for (const u of pageBatch) {
+      const hasRefScript = !!u.reference_script_hash;
+      const amounts = u.amount as Array<{ unit: string; quantity: string }>;
+      const isPureAda = amounts.length === 1 && amounts[0].unit === "lovelace";
+      if (hasRefScript || !isPureAda) continue;
+      const lovelace = BigInt(amounts[0].quantity);
+      if (lovelace < 3_000_000n) continue;
+      out.push({ txHash: u.tx_hash, outputIndex: Number(u.output_index ?? u.tx_index ?? 0), lovelace });
+    }
+    if (pageBatch.length < 100) break;
+  }
+  // Sort ascending by lovelace — consume smallest pure-ADA first to preserve
+  // larger UTxOs for ref-script publishes which need ~95 ADA each.
+  out.sort((a, b) => Number(a.lovelace - b.lovelace));
+  log(
+    "INFO",
+    `  PHASE 4a: ${out.length} pure-ADA UTxOs available for stake reg fees ` +
+    `(total ${Number(out.reduce((s, u) => s + u.lovelace, 0n)) / 1e6} ADA)`,
+  );
+  return out.map((u) => ({ txHash: u.txHash, outputIndex: u.outputIndex }));
 }
 
 // ---------------------------------------------------------------------
@@ -614,7 +753,6 @@ export async function runPhase4bStateUtxos(
   // --- Step 4: Governance (multisig_gov, locks gov NFT) ---
   if (!state.stateUtxos.governance) {
     log("INFO", `  Governance at ${multisigGovAddr.slice(0, 40)}…`);
-
     // Phase B (datum-backdate) pre-queue support — Preprod only.
     // Reads BACKDATE_FEE_DAYS / BACKDATE_STRATEGY_DAYS / BACKDATE_FEE_SPLIT_DAYS /
     // BACKDATE_REGISTRY_DAYS env vars (unset = 0 = no pre-queue).
@@ -683,11 +821,11 @@ export async function runPhase4bStateUtxos(
     //     unset = 0 = no backdate. See tests/preprod/TIME-MACHINE.md.
     //   - adaSwapMs: backdates last_ada_swap_time so SwapAda's 1h cooldown
     //     is satisfied at deploy time. Without this, SwapAda E2E tests
-    //     wait 1h after vault init before they can execute, because every
-    //     redeemer EXCEPT SwapAda itself preserves last_ada_swap_time —
-    //     leaving no off-chain way to advance it. Set via env
-    //     BACKDATE_ADA_SWAP_HOURS (default 0 = no backdate). 2 hours is
-    //     enough headroom for a multi-test session.
+    //     (80/82/83) wait 1h after vault init before they can execute
+    //     because every redeemer EXCEPT SwapAda itself preserves
+    //     last_ada_swap_time, leaving no off-chain way to advance it.
+    //     Set via env BACKDATE_ADA_SWAP_HOURS (default 0 = no backdate).
+    //     2 hours = enough headroom for a multi-test session.
     const backdate =
       cfg.network === "Preprod"
         ? {
@@ -712,7 +850,7 @@ export async function runPhase4bStateUtxos(
       log(
         "INFO",
         `  ⏰ Preprod backdate: last_ada_swap_time -${backdate.adaSwapMs / 3_600_000}h ` +
-          `(SwapAda 1h cooldown bypass for E2E tests)`,
+          `(SwapAda 1h cooldown bypass for E2E tests 80/82/83)`,
       );
     }
     const datum = buildVaultDatum(cfg, hashes, nowMs, backdate);

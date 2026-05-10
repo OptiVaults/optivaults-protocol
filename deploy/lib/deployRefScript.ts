@@ -15,46 +15,125 @@ export interface DeployResult {
 }
 
 /**
- * Get current slot from Blockfrost /blocks/latest.
+ * Normalize a `string | string[]` BF key input into a non-empty array.
+ * Filters out empty strings to allow callers to pass `[primary, backup]`
+ * where backup is optional.
  */
-async function getCurrentSlot(blockfrostUrl: string, blockfrostKey: string): Promise<number> {
-  const res = await fetch(`${blockfrostUrl}/blocks/latest`, {
-    headers: { project_id: blockfrostKey },
-    signal: AbortSignal.timeout(15000),
+function normalizeKeys(keys: string | string[]): string[] {
+  const arr = Array.isArray(keys) ? keys : [keys];
+  const filtered = arr.filter((k) => k && k.length > 0);
+  if (filtered.length === 0) {
+    throw new Error("[deployRefScript] no Blockfrost keys provided");
+  }
+  return filtered;
+}
+
+/**
+ * Wrap a single-key Blockfrost call with rotation-on-quota-error
+ * fallback. Accepts an array of keys and tries each one until either
+ * the call succeeds OR a non-quota error fires (e.g. 4xx other than
+ * 402/429, network error, payload error). Quota errors (402, 429,
+ * "over limit", "rate limit") rotate to the next key; non-quota errors
+ * propagate immediately so real bugs aren't masked.
+ *
+ * Without this, a primary-key 402 mid-ceremony crashed the deploy and
+ * left partial state with no clean resume path.
+ */
+async function withKeyRotation<T>(
+  keys: string[],
+  callerLabel: string,
+  fn: (key: string) => Promise<T>,
+): Promise<T> {
+  let lastErr: Error | null = null;
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    try {
+      return await fn(k);
+    } catch (e: any) {
+      lastErr = e instanceof Error ? e : new Error(String(e));
+      const msg = lastErr.message || "";
+      const isQuotaError =
+        msg.includes("402") ||
+        msg.includes("429") ||
+        msg.toLowerCase().includes("over limit") ||
+        msg.toLowerCase().includes("rate limit");
+      if (!isQuotaError) {
+        // Non-quota error — don't try other keys, surface immediately
+        throw lastErr;
+      }
+      // Quota error: log + try next key
+      const remaining = keys.length - i - 1;
+      console.log(
+        `[deployRefScript] ${callerLabel} key #${i + 1}/${keys.length} (${k.slice(0, 12)}…) quota-exhausted; ${
+          remaining > 0 ? `rotating to backup` : `all keys exhausted`
+        }`,
+      );
+    }
+  }
+  throw lastErr ?? new Error(`[deployRefScript] ${callerLabel}: all ${keys.length} keys exhausted`);
+}
+
+/**
+ * Get current slot from Blockfrost /blocks/latest.
+ *
+ * Accepts string OR array of keys; rotates on 402/429 to backup keys
+ * (this rotation fix). Original single-key signature still works because
+ * `string` is normalized to `[string]` internally.
+ */
+async function getCurrentSlot(
+  blockfrostUrl: string,
+  blockfrostKeys: string | string[],
+): Promise<number> {
+  const keys = normalizeKeys(blockfrostKeys);
+  return withKeyRotation(keys, "getCurrentSlot", async (key) => {
+    const res = await fetch(`${blockfrostUrl}/blocks/latest`, {
+      headers: { project_id: key },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) throw new Error(`Blockfrost /blocks/latest failed: ${res.status}`);
+    const data = await res.json() as any;
+    const slot = data.slot as number;
+    if (!slot) throw new Error("Cannot get current slot from Blockfrost");
+    return slot;
   });
-  if (!res.ok) throw new Error(`Blockfrost /blocks/latest failed: ${res.status}`);
-  const data = await res.json() as any;
-  const slot = data.slot as number;
-  if (!slot) throw new Error("Cannot get current slot from Blockfrost");
-  return slot;
 }
 
 /**
  * Submit TX via Blockfrost /tx/submit.
  * Returns TX hash on success, throws on error.
+ *
+ * Accepts string OR array of keys; rotates on 402/429 (this rotation fix).
+ * Other 4xx (e.g. duplicate input, validity-range, FeeTooSmall) propagate
+ * immediately — no point retrying with a different key.
  */
 async function submitViaBf(
   signedCbor: string,
   blockfrostUrl: string,
-  blockfrostKey: string,
+  blockfrostKeys: string | string[],
 ): Promise<string> {
+  const keys = normalizeKeys(blockfrostKeys);
   const cborBytes = Buffer.from(signedCbor, "hex");
-  const res = await fetch(`${blockfrostUrl}/tx/submit`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/cbor",
-      project_id: blockfrostKey,
-    },
-    body: cborBytes,
-    signal: AbortSignal.timeout(30000),
+  return withKeyRotation(keys, "submitViaBf", async (key) => {
+    const res = await fetch(`${blockfrostUrl}/tx/submit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/cbor",
+        project_id: key,
+      },
+      body: cborBytes,
+      signal: AbortSignal.timeout(30000),
+    });
+    const body = await res.text();
+    if (res.ok) {
+      // Blockfrost returns the TX hash as a JSON string (with quotes)
+      return body.replace(/"/g, "").trim();
+    }
+    // 402/429 → withKeyRotation rotates; everything else surfaces.
+    if (res.status === 402 || res.status === 429) {
+      throw new Error(`Blockfrost /tx/submit failed: ${res.status} ${body}`);
+    }
+    throw new Error(body);
   });
-  const body = await res.text();
-  if (res.ok) {
-    // Blockfrost returns the TX hash as a JSON string (with quotes)
-    return body.replace(/"/g, "").trim();
-  }
-  // Return raw error for caller to parse
-  throw new Error(body);
 }
 
 /**
@@ -75,21 +154,32 @@ async function submitViaBf(
 async function fetchAllUtxosFromBlockfrost(
   addr: string,
   blockfrostUrl: string,
-  blockfrostKey: string,
+  blockfrostKeys: string | string[],
 ): Promise<UTxO[]> {
+  const keys = normalizeKeys(blockfrostKeys);
   const out: UTxO[] = [];
   let page = 1;
   while (true) {
-    const res = await fetch(
-      `${blockfrostUrl}/addresses/${addr}/utxos?count=100&page=${page}`,
-      {
-        headers: { project_id: blockfrostKey },
-        signal: AbortSignal.timeout(20000),
+    const batch = await withKeyRotation(
+      keys,
+      `fetchAllUtxosFromBlockfrost page=${page}`,
+      async (key) => {
+        const res = await fetch(
+          `${blockfrostUrl}/addresses/${addr}/utxos?count=100&page=${page}`,
+          {
+            headers: { project_id: key },
+            signal: AbortSignal.timeout(20000),
+          },
+        );
+        if (res.status === 404) return null; // no UTxOs at all
+        if (res.status === 402 || res.status === 429) {
+          throw new Error(`Blockfrost /utxos page ${page} failed: ${res.status}`);
+        }
+        if (!res.ok) throw new Error(`Blockfrost /utxos page ${page} failed: ${res.status}`);
+        return await res.json() as any[];
       },
     );
-    if (res.status === 404) break; // no UTxOs at all
-    if (!res.ok) throw new Error(`Blockfrost /utxos page ${page} failed: ${res.status}`);
-    const batch = await res.json() as any[];
+    if (batch === null) break;
     if (!Array.isArray(batch) || batch.length === 0) break;
     for (const u of batch) {
       const assets: Record<string, bigint> = {};
@@ -123,21 +213,39 @@ async function fetchAllUtxosFromBlockfrost(
 async function awaitTxConfirmed(
   txHash: string,
   blockfrostUrl: string,
-  blockfrostKey: string,
+  blockfrostKey: string | string[],
   timeoutMs: number = 90_000,
 ): Promise<void> {
+  const keys = normalizeKeys(blockfrostKey);
   const deadline = Date.now() + timeoutMs;
+  let keyIdx = 0;
   while (Date.now() < deadline) {
-    const res = await fetch(`${blockfrostUrl}/txs/${txHash}`, {
-      headers: { project_id: blockfrostKey },
-      signal: AbortSignal.timeout(15000),
-    });
-    if (res.ok) return;
-    if (res.status !== 404) {
-      const body = await res.text();
-      throw new Error(`Blockfrost /txs/${txHash} ${res.status}: ${body.slice(0, 300)}`);
+    const k = keys[keyIdx];
+    try {
+      const res = await fetch(`${blockfrostUrl}/txs/${txHash}`, {
+        headers: { project_id: k },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.ok) return;
+      if (res.status === 402 || res.status === 429) {
+        // Quota error — try next key on next loop iteration
+        keyIdx = (keyIdx + 1) % keys.length;
+        await new Promise((r) => setTimeout(r, 5000));
+        continue;
+      }
+      if (res.status !== 404) {
+        const body = await res.text();
+        throw new Error(`Blockfrost /txs/${txHash} ${res.status}: ${body.slice(0, 300)}`);
+      }
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      if (msg.includes("402") || msg.includes("429") || msg.toLowerCase().includes("over limit")) {
+        keyIdx = (keyIdx + 1) % keys.length;
+      } else {
+        throw e;
+      }
     }
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise((r) => setTimeout(r, 5000));
   }
   throw new Error(`TX ${txHash} not confirmed after ${timeoutMs}ms`);
 }
@@ -169,7 +277,7 @@ async function consolidateTokensIfNeeded(
   addrCml: any,
   targetBalance: bigint,
   blockfrostUrl: string,
-  blockfrostKey: string,
+  blockfrostKey: string | string[],
   currentSlot: number,
   prefetchedAllUtxos?: UTxO[],
 ): Promise<string | null> {
@@ -193,6 +301,32 @@ async function consolidateTokensIfNeeded(
   );
   if (pureAdaSum >= targetBalance || tokenCarrying.length === 0) {
     return null; // no consolidation needed
+  }
+
+  // pure-ADA pool drained to 0 case. The consolidator
+  // re-folds N existing 30-ADA tanks into N new 30-ADA tanks; the lovelace
+  // conserved exactly equals 30N. Without an additional pure-ADA input to
+  // cover the ~600K-1.2M lovelace TX fee, the change output goes negative
+  // (observed e.g. -6924138 lovelace at the vaultAdminDeploy ref publish)
+  // We can't auto-recover here because (a) inline scrub of stale ref-scripts
+  // is risky in the middle of a ceremony (might destroy active refs from
+  // CONCURRENT releaseTags), and (b) Lucid coin selection on heavily-used
+  // wallets is unreliable. Throw an actionable error directing operator to
+  // run `scrub-deploy-wallet.ts` then resume deploy.ts (idempotent skip via
+  // state checkpoints).
+  if (pureAda.length === 0) {
+    const tokenLovelace = tokenCarrying.reduce(
+      (sum, u) => sum + (u.assets.lovelace as bigint),
+      0n,
+    );
+    throw new Error(
+      `[deployRefScript] consolidation BLOCKED: wallet has 0 pure-ADA UTxOs ` +
+      `(token-tank pool ${Number(tokenLovelace)/1e6} ADA insufficient to cover ~0.6-1.2 ADA TX fee). ` +
+      `Run \`cd v1 && npx tsx deploy/tools/scrub-deploy-wallet.ts\` to fold ~15 stale ` +
+      `ref-script UTxOs into a fresh ~250 ADA pure-ADA UTxO, then re-launch ` +
+      `\`npx tsx deploy/deploy.ts --network Preprod --releaseTag <tag>\` ` +
+      `(idempotent: skips already-checkpointed PHASE 0/1/2 + 3 already-published refs + 4a/4b items).`,
+    );
   }
 
   console.log(
@@ -250,8 +384,20 @@ async function consolidateTokensIfNeeded(
     return ma;
   }
 
-  // Build inputs (sorted)
-  const sorted = [...tokenCarrying].sort(
+  // Build inputs (sorted). Include token-carrying UTxOs PLUS at least one
+  // pure-ADA UTxO so that fees + min-ADA change have a lovelace source
+  // beyond the token-tank inputs themselves. Without this, re-folding 14
+  // existing tanks (each 30 ADA = 420 ADA) into 14 new tanks (each 30 ADA
+  // = 420 ADA) leaves no ADA for the ~600K fee → change output goes
+  // negative → throw on line ~430. Pull the largest pure-ADA UTxO available
+  // (greedy — fewer inputs = smaller TX size = lower fee).
+  const pureAdaSorted = [...pureAda].sort(
+    (a, b) => Number((b.assets.lovelace as bigint) - (a.assets.lovelace as bigint)),
+  );
+  const pureAdaToInclude: UTxO[] = pureAdaSorted.length > 0 ? [pureAdaSorted[0]] : [];
+
+  const allInputs = [...tokenCarrying, ...pureAdaToInclude];
+  const sorted = allInputs.sort(
     (a, b) =>
       a.txHash.localeCompare(b.txHash) || a.outputIndex - b.outputIndex,
   );
@@ -263,6 +409,11 @@ async function consolidateTokensIfNeeded(
         BigInt(u.outputIndex),
       ),
     );
+  }
+  // aggLovelace was calculated only from tokenCarrying; bump it with the
+  // pure-ADA inputs we just pulled in.
+  for (const u of pureAdaToInclude) {
+    aggLovelace += u.assets.lovelace as bigint;
   }
 
   const reqSigners = CML.Ed25519KeyHashList.new();
@@ -359,7 +510,12 @@ export async function deployRefScripts(
   scripts: Script[],
   outputLovelaces: bigint[],
   blockfrostUrl: string,
-  blockfrostKey: string,
+  /**
+   * accept `string` (single key, original) OR `string[]`
+   * (primary + backups). Internal getCurrentSlot/submitViaBf/utxos
+   * helpers rotate on 402/429 quota errors.
+   */
+  blockfrostKey: string | string[],
   prefetchedUtxos?: UTxO[],
 ): Promise<DeployResult[]> {
   if (scripts.length !== outputLovelaces.length) {

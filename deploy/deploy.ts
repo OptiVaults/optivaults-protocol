@@ -547,13 +547,19 @@ async function main() {
   await runPhase2Mints(lucid!, scripts, cfg, state, hashes);
 
   // -------- PHASE 3: publish 18 reference scripts --------
+  // Pass [primary, backup] so getCurrentSlot/submitViaBf
+  // rotate on 402/429 quota errors instead of crashing the deploy.
+  const bfKeys: string[] = [
+    cfg.blockfrost.projectId!,
+    cfg.blockfrost.projectIdBackup,
+  ].filter((k): k is string => !!k && k.length > 0);
   await runPhase3RefScripts(
     lucid!,
     scripts,
     cfg,
     state,
     cfg.blockfrost.url,
-    cfg.blockfrost.projectId!,
+    bfKeys,
   );
 
   // -------- PHASE 4a: register 12 stake credentials --------
@@ -563,7 +569,7 @@ async function main() {
     cfg,
     state,
     cfg.blockfrost.url,
-    cfg.blockfrost.projectId!,
+    bfKeys,
   );
 
   // -------- PHASE 4b: initialize 5 state UTXOs --------
