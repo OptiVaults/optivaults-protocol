@@ -184,7 +184,7 @@ Changing any of these requires a full V1 redeploy (new validator hashes, new vau
 
 ## 5. Oracle source
 
-**§5.4 P5 (2026-04-22) — shared dual-feed reader via `lib/vault/oracle.ak`.** SwapAda reads the ADA/USDCx price through the same `read_fair_price` helper used for P4 Tier 1 peg-floor checks on `DeployToProtocol`. The oracle config comes from the registry's `asset_oracles` list — an `AssetOracleEntry` pinned to the ADA convention `(asset_policy = #"", asset_name = #"")`. Governance populates the ADA entry via `UpdateRegistry` (14-day timelock); V1 launches with `asset_oracles = []`, which means SwapAda is **inactive until governance enables it** — during the bootstrap window, vault ADA top-up goes via `MergeUtxo` donations (operator path).
+**§5.4 P5 — shared dual-feed reader via `lib/vault/oracle.ak`.** SwapAda reads the ADA/USDCx price through the same `read_fair_price` helper used for P4 Tier 1 peg-floor checks on `DeployToProtocol`. The oracle config comes from the registry's `asset_oracles` list — an `AssetOracleEntry` pinned to the ADA convention `(asset_policy = #"", asset_name = #"")`. Governance populates the ADA entry via `UpdateRegistry` (14-day timelock); V1 launches with `asset_oracles = []`, which means SwapAda is **inactive until governance enables it** — during the bootstrap window, vault ADA top-up goes via `MergeUtxo` donations (operator path).
 
 ### 5.1 Registry entry layout
 

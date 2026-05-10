@@ -178,7 +178,7 @@ SwapAda { amount_ada, keeper_output_idx } -> {
 
 ## 5. Oracle 來源
 
-**§5.4 P5(2026-04-22)——透過 `lib/vault/oracle.ak` 的共用 dual-feed 讀取器。** SwapAda 透過與 P4 Tier 1 peg-floor(on `DeployToProtocol`)相同的 `read_fair_price` helper 讀取 ADA/USDCx 價格。Oracle 設定來自 registry 的 `asset_oracles` list——一個 `AssetOracleEntry` 釘在 ADA 慣例 `(asset_policy = #"", asset_name = #"")`。治理透過 `UpdateRegistry`(14 天 timelock)填入 ADA 條目;V1 啟動時 `asset_oracles = []`,代表 SwapAda **在治理啟用之前處於 inactive**——啟動窗口內,金庫 ADA top-up 走 `MergeUtxo` 捐贈(operator 路徑)。
+**§5.4 P5——透過 `lib/vault/oracle.ak` 的共用 dual-feed 讀取器。** SwapAda 透過與 P4 Tier 1 peg-floor(on `DeployToProtocol`)相同的 `read_fair_price` helper 讀取 ADA/USDCx 價格。Oracle 設定來自 registry 的 `asset_oracles` list——一個 `AssetOracleEntry` 釘在 ADA 慣例 `(asset_policy = #"", asset_name = #"")`。治理透過 `UpdateRegistry`(14 天 timelock)填入 ADA 條目;V1 啟動時 `asset_oracles = []`,代表 SwapAda **在治理啟用之前處於 inactive**——啟動窗口內,金庫 ADA top-up 走 `MergeUtxo` 捐贈(operator 路徑)。
 
 ### 5.1 Registry 條目佈局
 

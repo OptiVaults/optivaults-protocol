@@ -215,7 +215,7 @@ Validator hash + 基礎身份。任何一個變動都會強制新部署(新地�
 - 有序停運協議(白皮書 §9.2)
 - 放寬上限的閘門是第三方審計
 
-### 5.4 Phase 1 治理安全 — 三層 founder-only-acceptable 設計(2026-04-25)
+### 5.4 Phase 1 治理安全 — 三層 founder-only-acceptable 設計
 
 不論簽名者組成為何(3-of-3 with SPOs vs 單一簽名者 founder fallback),V1 上線時就帶有三個 **validator 層**的安全防護,在最壞單一簽名者失能情境下界定存入者損失。設計目標是讓 **founder-only Phase 1 治理成為合理的上線 fallback**——SPO 招募變成可信度加分項,而不是上線阻礙。
 

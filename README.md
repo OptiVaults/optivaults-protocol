@@ -91,7 +91,7 @@ Articles are mirrored on Medium with canonical URLs pointing back to this reposi
 │   │   ├── deregister-stakes.ts        Legacy (pre-A2)
 │   │   ├── derive-gov-signers.ts       PKH derivation helper
 │   │   ├── whoami-preprod.ts           Wallet sanity print
-│   │   ├── a2-queue-deregister.ts      A2 Queue (idempotent — Phase 84 backport)
+│   │   ├── a2-queue-deregister.ts      A2 Queue (idempotent)
 │   │   ├── a2-execute-deregister.ts    A2 Execute (idempotent)
 │   │   ├── a2-cancel-deregister.ts     A2 Cancel (idempotent)
 │   │   ├── h-emergency-benign.ts       ActEmergencyWithdraw(0,0) Queue+Execute smoke

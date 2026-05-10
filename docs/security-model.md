@@ -214,7 +214,7 @@ Note on keeper identity: V1 does NOT anchor a specific `keeper_pkh` at compile t
 - Orderly wind-down protocol (whitepaper §9.2)
 - Third-party audit gate before cap removal
 
-### 5.4 Phase 1 governance safety — three-layer founder-only-acceptable design (2026-04-25)
+### 5.4 Phase 1 governance safety — three-layer founder-only-acceptable design
 
 Independent of signer-slate composition (3-of-3 with SPOs vs single-actor founder fallback), V1 ships three **validator-level** safety layers that bound depositor loss in the worst single-actor failure scenarios. The design goal is to make **founder-only Phase 1 governance an acceptable launch-time fallback** — SPO recruitment becomes a credibility upside, not a launch blocker.
 
