@@ -9,9 +9,11 @@
 
 OptiVaults V1 是 Cardano 上的非託管智能合約 vault。使用者存入 USDCx，vault 會把所有人的存款匯集起來，組成一個由 USDCx、DJED、USDM 三種穩定幣構成的混合部位，投入 Liqwid Finance 賺取借貸收益。存入後你會拿到 **vUSDCx** 份額代幣，數量與存入金額成比例；隨著 vault 累積收益，vUSDCx 可換回的 USDCx 會逐漸變多；想退場時，銷毀 vUSDCx 就能取回對應的 USDCx。**沒有任何第三方能動用你的資金**——整套機制由公開可讀的智能合約加上一組治理多簽組成，而治理多簽只能在合約硬編碼的上限內調整協議參數。
 
-**V1 是 Cardano DeFi 公共財參考實作 (reference implementation),不是商業產品**——4.5% 績效費用於覆蓋協議運營 + 審計儲備,不是創辦人或投資人的收益;Apache 2.0 授權讓其他團隊可以 fork 下來做特化。存入者應以「貢獻公共財 + 當早期驗證者」的心態參與,不是購買商業服務(完整定位見白皮書 Executive Summary + §12 免責聲明)。
+**V1 是 Cardano DeFi 公共財參考實作 (reference implementation),不是商業產品**——4.5% 績效費用於覆蓋協議運營 + 審計儲備;**沒有股權、沒有代幣、沒有對投資人的分配**。**Keeper share 的揭露**:績效費 40%(約佔收益的 1.8%)流入 keeper 錢包作為營運補償。由於 V1 啟動時由創辦人運作 keeper,**確實有 USDCx 流入創辦人的 keeper 錢包**(100K cap 下年化 ~$108;實際 Phase 1 sub-scenario 下 < $30/年)。但**這低於 keeper 自身基礎設施成本**(VPS + monitoring 一年 $400–1000,見白皮書 §4.3),所以這個位子對創辦人來說是**淨成本中心,不是利潤線**,虧損由啟動資金 runway 吸收。Apache 2.0 授權讓其他團隊可以 fork 下來做特化。存入者應以「貢獻公共財 + 當早期驗證者」的心態參與,不是購買商業服務(完整定位見白皮書 Executive Summary + §0 + §12 免責聲明)。
 
 **V1 尚未完成第三方審計,整體存款上限 100K USDCx(約 $100K)。** 這個數字是上限,不是目標——Phase 1(啟動後頭 6-12 個月)預期 TVL 落在 **$500-$25K** 之間(下限反映 permissionless 合約 + 小額存款的現實情境,三種情境拆解見白皮書 §4.1 + §8.2)。換句話說:我們希望小規模、務實的使用者在真實環境下協助驗證系統,不是衝 TVL 的快速募集。外部審計目前目標 **Q2-Q3 2027**(反映 Cardano Project Catalyst Round 時程不確定性,見白皮書 §8.1),審計通過後才會放寬上限。
+
+**關於目前已部署的合約(請仔細讀)。** 另有一份 **internal-verification 期的舊版合約迭代**(pre-V1)目前已在 Cardano mainnet 運作,前端為 **founder-gated**(`vault.optivaults.app` 的 deposit 只開放給創辦人錢包;withdraw 對所有 internal-verification 期的 depositor 開放)。**這份部署不是**本文件描述的 V1 設計——V1 是另一組全新的合約,要等 §1.5 啟動條件成熟時才依白皮書 §8.2 進行自己的部署儀式。Internal-verification 期已存入的使用者,V1 啟動時會有 migration 窗口;新使用者則直接走 V1 合約。完整差異說明見白皮書 §0 + §4.1 + §8.2 + `migration.md`。
 
 **程式住在哪(兩個 repo)**。你可以在 GitHub 讀到 V1 的每一行原始碼,它拆在兩個 Apache-2.0 公 repo:
 
@@ -86,7 +88,7 @@ V1 §1.1 列的 5 條獨特之處，沒有一項依賴「我們承諾會做」�
 
 存入 vault 的 USDCx 會依治理設定的目標配置（目前啟動值：**45% DJED、25% USDM、30% USDCx 緩衝**）分配到 Liqwid Finance 三個穩定幣市場。Vault 的 keeper 定期做三件事：
 
-- **Compound 複利**：約每週一次（視 TVL 分層），收回 Liqwid 給付的利息，扣除 4.5% 績效費後把剩餘部分回補到 vault 總額。
+- **Compound 複利**:把 Liqwid 給付的利息收回來,扣除 4.5% 績效費,剩餘部分回補到 vault 總額。**節奏依 TVL 分層**:post-audit 進入 1,200+ USDCx 檔、跑 §2.6 預設節奏時,Compound 每週六固定執行一次;**實際 Phase 1 sub-scenario (a)** $500–$5K 進入 §2.6.1 Reference Implementation Mode,Compound 改為季度到年度才執行一次(累計收益要 > $5 USDCx 才會 fire,讓 gas 成本與 harvest 規模相稱);**sub-scenario (b)** $5K–$25K 區間,節奏會隨 TVL 接近 $25K 而往月度–雙週偏。當前營運模式公開於 OptiVaults 儀表板。**這對你的意義**:若你是在 Phase 1 低 TVL 期間存入的,share price 更新頻率會偏低——這是刻意的設計(營運效率考量),不是異常。完整節奏政策見白皮書 §2.6 + §2.6.1。
 - **Rebalance 再平衡**：配置偏離目標時（例如大額存提之後），把各資產比例調回目標值。
 - **脫鉤監控**：持續觀測三種穩定幣；任一種連續 15 分鐘偏離 1% 以上，keeper 會停下新資金部署。
 
@@ -259,8 +261,8 @@ Cardano 上當時沒有「存 USDCx 進去、讓它自動在 DJED + USDM 複利�
 **營運實況（與 depositor 決策直接相關，不藏起來）。**
 
 - **V1 的成功門檻是 $500K-$1M TVL，不是 $20M。** 4.5% 績效費 × 該 TVL × ~6% blended yield 在 V1 啟動 40% keeper 份額下每年產生 ~$270-540 keeper-share 收入，足以讓 keeper 覆蓋自身基礎建設成本。這是 **tier (a)/(b) self-sustain** 目標。坊間常被引用的「$20M TVL」是另一個 **tier (c) audit-reserve self-funding** 目標（協議能從 V1 啟動的 treasury 60% 份額自行支付未來外部審計週期），那是 Phase 3+ 的 stretch goal，不是 V1 的前提條件。完整三層 self-sustain breakdown 見白皮書 §4.3。
-- **審計資金 stack 並明確揭露 Catalyst 暫停狀態。** 主要 stack 是 (a) Cardano Project Catalyst grant($30-50K)——**但 Catalyst 撰寫時處於暫停 / 重組狀態,下一個 Round 何時恢復尚無明確時程**;(b) 審計事務所公共財費率(從 $50-150K 商業區間折 30-50%);(c) heritage 內部審計帶來的 scope reduction(省 $15-25K);(d) 創辦人自付。**審計時程設為 Q2-Q3 2027**,刻意預留時間以容納 Catalyst 恢復概率 + Cardano Foundation / Intersect / Aiken Foundation 等 alternative grant 接洽 + founder runway 累積。若 Catalyst 未達成,創辦人自付上限從 $20-40K 升至 $50-90K。完整 funding stack 揭露見白皮書 §8.1。
-- **2 位獨立 SPO 治理簽名者是 Cardano 社群服務角色，不是有薪職位。** 他們會收到一個 soul-bound 認證 NFT，並有選項在 Phase 2+ 取得 5-10% gov pool 份額（gated on $500K TVL milestone）——這兩者都是**「V1 成功後的 upside」而非主要動機**。挑選標準：≥ 2 年 mainnet SPO 營運、公開鏈上身份、與創辦人無事前商業關係。完整內容見白皮書 §5.5。
+- **審計資金 stack 並明確揭露 Catalyst 暫停狀態。** 主要 stack 是 (a) Cardano Project Catalyst grant($30-50K)——**但 Catalyst 撰寫時處於暫停 / 重組狀態,下一個 Round 何時恢復尚無明確時程**;(b) 審計事務所公共財費率(在 **折扣前 base 報價 $100-150K** 上砍 30-50%);(c) heritage 內部審計帶來的 scope reduction(省 $15-25K);(d) 創辦人自付。白皮書 §8.1 寫的 **$50-150K 委託區間**,涵蓋從拿到折扣後的 ~$50K 一路到折扣前全價 ~$150K。**審計時程設為 Q2-Q3 2027**,刻意預留時間以容納 Catalyst 恢復概率 + Cardano Foundation / Intersect / Aiken Foundation 等 alternative grant 接洽 + founder runway 累積。**Worst case—— 三項 mitigation 同時失效**:創辦人自付 $100-150K(整筆審計基礎成本由創辦人扛起)。一旦走到這個分支,**很可能直接觸發 §4.1 sunset**,因為這筆支出會吃掉啟動資金 runway 的大部分。完整 funding stack 揭露 + 四個應變方案(延後時程 / 縮減 scope / 無限期延後 / 在 §0 框架下 sunset)見白皮書 §8.1。
+- **2 位獨立 SPO 治理簽名者是 Cardano 社群服務角色,不是有薪職位。** 他們會收到一個 soul-bound 認證 NFT,並有選項在 Phase 2+ 取得 5-10% gov pool 份額(gated on $500K TVL milestone)——這兩者都是**「V1 成功後的 upside」而非主要動機**。挑選標準:≥ 2 年 mainnet SPO 營運、公開鏈上身份、與創辦人無事前商業關係。**SPO 招募是 launch target,不是 launch blocker**——若主網儀式前招募仍未到位,V1 會在 §5.5.1 三層治理安全設計下啟動,由創辦人以 key separation 方式操作全部 3 個簽名者席位;存入者的回收路徑(`emergency-withdraw`、硬上限、7 天 inactivity gate)**不依賴 SPO 招募是否完成**。因此實際啟動配置會是「**3-of-3 with SPOs**」**或**「**創辦人 + key separation 的 §5.5.1 fallback**」其中一種。完整內容見白皮書 §5.5 + §5.5.1 + §7.4。
 
 **聯絡方式**：
 - 網站：[optivaults.app](https://optivaults.app)
