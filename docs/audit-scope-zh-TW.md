@@ -115,19 +115,17 @@ V1 validator 集合從內部驗證期設計繼承下列架構不變量,作為 V1
 
 ## 3. Property-based 測試新增項目
 
-既有的 `property_fuzz_test.ak` + `property_fuzz_extended_test.ak` 已涵蓋 25 個 property × 100 iter。V1 新增:
+V1 在 `lib/vault/tests/property_test.ak` 下提供一組 property-based 測試,使用 `aiken/fuzz` 的迭代紀律(預設每個 property 上限 100 iter,首次失敗 early-exit)。Pre-V1 既有套件涵蓋 peg-floor 與 asset-oracle lookup 不變量;V1 審計範圍規劃以下新增,每項採同 100 iter 上限(如有不同會註明):
 
-| Property | 說明 | Iterations |
-|----------|------|------------|
-| P26:Treasury 類別下限 | `audit_reserve_balance >= min_audit_reserve`(不可變下限) | 100 |
-| P27:Compound 費用拆分 | `keeper_fee + treasury_fee == total_fee` 必須完全相等(rounding 不得被 skim) | 100 |
-| P28:Treasury 比例總和 | `Σ category_ratios == 10000` 不變量 | 100 |
-| P29:保證金沒收界線 | `slash_amount <= posted_bond` | 100 |
-| P30:Keeper 授權轉移性 | 若 redeemer 聲稱 `WithdrawAsAuthorized`,則 `keeper_stake_script` output 必須顯示已更新的保證金狀態 | 100 |
+| Property | 說明 |
+|----------|------|
+| Treasury 類別下限 | `audit_reserve_balance >= min_audit_reserve`(不可變下限) |
+| Compound 費用拆分 | `keeper_fee + treasury_fee == total_fee` 必須完全相等(rounding 不得被 skim) |
+| Treasury 比例總和 | `Σ category_ratios == 10000` 不變量 |
+| 保證金沒收界線 | `slash_amount <= posted_bond` |
+| Keeper 授權轉移性 | 若 redeemer 聲稱 `WithdrawAsAuthorized`,則 `keeper_stake_script` output 必須顯示已更新的保證金狀態 |
 
-Fuzz 總跑量從 2,500 → 3,000(每次 build)。
-
-**跨引(測試計數度量)。** 本文件的「30 個 property × 100 iter = 3,000 fuzz runs」是**一個特定的度量**,只講 property-based fuzz 覆蓋。白皮書 §5.4 的「194 個 unit + property test / 每次 `aiken check` 跑 689 個隨機化 check」講的是**完整 Aiken 測試套件**(「689 checks」是 `aiken check` 的 summary 行輸出,把每個確定性案例 + `aiken/fuzz` 的每次 property 呼叫都算一個 check)。兩個數字不是互相矛盾——它們描述不同層(本文聚焦在 `aiken/fuzz` 的隨機化迭代;白皮書是總計)。本文 3,000 fuzz-runs 的數字是在「每個 property 都跑滿 100 iter」的上限假設下;實務上 early-exit on first failure 代表有些 property 可能會少跑。
+任何 commit 的精確 property 數、iteration 上限、以及完整 `aiken check` summary 都可從 source 重現——對應 commit 跑 `aiken check` 即可驗證。本文刻意不固定特定 test-count 數字,避免隨 property suite 成長與 source of truth 脫節;真正持久的描述是方法論(iteration-capped fuzzing + early-exit + per-property axiomatic invariants)。
 
 ---
 

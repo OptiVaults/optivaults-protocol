@@ -115,19 +115,17 @@ These are **read-only anchors** — no new redeemers, no state change. Audit: ve
 
 ## 3. Property-Based Test Additions
 
-Existing `property_fuzz_test.ak` + `property_fuzz_extended_test.ak` cover 25 properties × 100 iterations. V1 adds:
+V1 ships with a set of property-based tests under `lib/vault/tests/property_test.ak` using `aiken/fuzz` iteration discipline (default cap 100 iterations per property, early-exit on first failure). The pre-V1 heritage suite covered peg-floor + asset-oracle lookup invariants; V1 audit scope plans the following coverage additions, each at the same 100-iteration cap unless noted otherwise:
 
-| Property | Description | Iterations |
-|----------|-------------|------------|
-| P26: Treasury category floor | `audit_reserve_balance >= min_audit_reserve` (immutable floor) | 100 |
-| P27: Compound fee split | `keeper_fee + treasury_fee == total_fee` exactly (no rounding skim) | 100 |
-| P28: Treasury ratios sum | `Σ category_ratios == 10000` invariant | 100 |
-| P29: Bond slashing bounds | `slash_amount <= posted_bond` | 100 |
-| P30: Keeper authorization transitivity | If redeemer claims `WithdrawAsAuthorized`, then `keeper_stake_script` output must show updated bond state | 100 |
+| Property | Description |
+|----------|-------------|
+| Treasury category floor | `audit_reserve_balance >= min_audit_reserve` (immutable floor) |
+| Compound fee split | `keeper_fee + treasury_fee == total_fee` exactly (no rounding skim) |
+| Treasury ratios sum | `Σ category_ratios == 10000` invariant |
+| Bond slashing bounds | `slash_amount <= posted_bond` |
+| Keeper authorization transitivity | If redeemer claims `WithdrawAsAuthorized`, then `keeper_stake_script` output must show updated bond state |
 
-Total fuzz runs expand from 2,500 → 3,000 per build.
-
-**Cross-reference (test-count metrics).** This file's "30 properties × 100 iterations = 3,000 fuzz runs" is **one specific metric** about property-based fuzz coverage. The whitepaper §5.4 figure of "194 unit + property tests / 689 randomized checks per `aiken check` run" refers to the **full Aiken test suite** (the "689 checks" is what `aiken check` summary line emits, counting deterministic case + each `aiken/fuzz` property invocation as 1 check). The two metrics are not contradictory — they describe different layers (this doc focuses on `aiken/fuzz` randomized iterations specifically; the whitepaper aggregates). The 3,000 fuzz-runs figure here counts the maximum iterations possible if every property runs to its 100-iteration cap; in practice early-exit on first failure means some properties may report fewer.
+The exact property count, iteration cap, and full `aiken check` summary at any commit are reproducible from source — run `aiken check` against the deployed commit to verify. We deliberately do not pin specific test-count numbers in this document so it does not drift relative to the source of truth as the property suite grows; the methodology (iteration-capped fuzzing + early-exit + per-property axiomatic invariants) is the durable description.
 
 ---
 
