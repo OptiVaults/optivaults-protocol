@@ -1,6 +1,6 @@
 # OptiVaults V1 Whitepaper
 
-**Version 1.2 — Public Launch Candidate**
+**Version 1.3 — Public Launch Candidate**
 **Target Network: Cardano Mainnet**
 **Deposit Token: USDCx**
 
@@ -22,7 +22,7 @@ We have therefore organised the project as follows:
 - Whitepaper, documentation, and design specifications maintained openly
 - Three-axis trigger framework (§1.5) monitored and reported monthly
 - Parallel development of complementary products (fixed-rate vault, Pogun adapter) per §1.7
-- No mainnet deployment, no pre-audit "soft launch" for narrative purposes
+- **No V1 mainnet launch, no pre-audit "soft launch" for narrative purposes.** A separate **internal-verification-era deployment** (pre-V1 contract iteration) exists on Cardano mainnet with founder-gated frontend access for internal testing only — this is **not** the V1 design described in this whitepaper, and is disclosed here (rather than left implicit in §4.1 / §8.2) so readers understand which deployment they are reading about
 
 **Activation Phase (trigger-dependent)**
 - External audit initiated when launch readiness conditions begin to align
@@ -52,13 +52,15 @@ This document describes the V1 design as it will be deployed *when* launch condi
 
 ## Executive Summary
 
-OptiVaults V1 is a non-custodial **multi-stablecoin yield vault denominated in USDCx** on Cardano. Depositors send USDCx to a smart-contract-controlled vault address and receive vUSDCx share tokens whose share-price tracks the vault's blended position across USDCx, DJED, and USDM on Liqwid Finance. A keeper process compounds that yield and rebalances among the three stablecoins within governance-set bounds, with fees split between keeper operations and a transparent treasury. Governance is a 3-of-3 multisig (unanimity required at launch — rationale in §5.5 / §7.4) with 7- to 21-day timelocks and 1-of-n cancel veto. Depositors can withdraw at any time, even if the keeper goes offline, via a self-serve emergency path.
+OptiVaults V1 is a non-custodial **multi-stablecoin yield vault denominated in USDCx** on Cardano. Depositors send USDCx to a smart-contract-controlled vault address and receive vUSDCx share tokens whose share-price tracks the vault's blended position across USDCx, DJED, and USDM on Liqwid Finance. A keeper process compounds that yield and rebalances among the three stablecoins within governance-set bounds, with fees split between keeper operations and a transparent treasury. Governance is a **3-of-3 multisig** (unanimity required) **with a §5.5.1 founder-solo fallback** if independent-SPO recruitment lags — actual launch config will be 3-of-3-with-SPOs **or** founder-with-key-separation under the same contract guarantees; rationale and the three-layer safety design that makes either acceptable are in §5.5 / §5.5.1 / §7.4. Timelocks are 7–21 days with 1-of-n cancel veto. Depositors can withdraw at any time, even if the keeper goes offline, via a self-serve emergency path.
 
 **Important for depositors**: share price reflects the vault's current blended-stablecoin exposure, not a pure USDCx claim. Operational target at launch is 45% DJED + 25% USDM + 30% USDCx buffer (§5.2); depositors bear the depeg risk of whichever stablecoin the vault holds at any given moment.
 
-V1 launches with a 100,000 USDCx hard cap until a third-party audit completes (target: **Q2-Q3 2027**, reflecting Cardano Project Catalyst Round timing uncertainty — see §8.1). At 100K TVL, protocol revenue is roughly $270/year — insufficient to cover operating costs. V1 operates in a **bootstrapping phase**: initial operating shortfalls are absorbed by the project's founding capital, and the protocol becomes self-sustaining as TVL grows into the $500K–$2.5M range for baseline operations.
+V1 launches with a 100,000 USDCx hard cap until a third-party audit completes (target: **Q2-Q3 2027**, reflecting Cardano Project Catalyst Round timing uncertainty — see §8.1). At 100K TVL, protocol revenue is roughly $270/year — insufficient to cover operating costs. V1 operates in a **bootstrapping phase**: initial operating shortfalls are absorbed by the project's founding capital, and the protocol becomes self-sustaining as TVL grows into the **$135K–$1.8M sensitivity range (baseline ~$500K)** for baseline operations under §2.6 Default cadence — see §4.1 for the per-scenario breakdown.
 
-**V1's positioning: a Cardano DeFi public-goods reference implementation.** V1 is a **non-commercial public-goods artifact**, not a product optimized for growth or financial return. The 4.5% performance fee covers protocol operations, audit reserve, and long-term runway — **it is not revenue to the founder or investors**; the Apache 2.0 license allows other Cardano DeFi teams to fork and specialize (alternative stablecoin mixes, risk postures, regional variants). V1 may be the terminal state, or it may become the basis on which other teams build — both are acceptable outcomes. Depositors should enter with a **"contributing to a public good + being an early validator"** mindset, not as purchasers of a commercial service (see §12 Disclosure for full implications and depositor framing).
+**V1's positioning: a Cardano DeFi public-goods reference implementation.** V1 is a **non-commercial public-goods artifact**, not a product optimised for growth or equity-style return. The 4.5% performance fee covers protocol operations, audit reserve, and long-term runway — **there is no equity, no token, and no investor distribution**; the Apache 2.0 license allows other Cardano DeFi teams to fork and specialise (alternative stablecoin mixes, risk postures, regional variants). V1 may be the terminal state, or it may become the basis on which other teams build — both are acceptable outcomes. Depositors should enter with a **"contributing to a public good + being an early validator"** mindset, not as purchasers of a commercial service (see §12 Disclosure for full implications and depositor framing).
+
+**Disclosure on the keeper share.** The 4.5% performance fee splits 40% to the keeper and 60% to the treasury at V1 launch (see §2.4). Because the founder runs the keeper at launch (§7.4), the keeper 40% share (~1.8% of yield) flows to the **founder's keeper wallet** as operational compensation for keeper infrastructure, monitoring, and on-call responsibility. v1.3 surfaces this explicitly so the prior "no revenue to founder" phrasing is not read as "zero USDCx flows to the founder" — **USDCx does flow to the founder's keeper wallet**; what is also true is that the keeper position is a **net cost-centre to whoever operates it during Phase 1**: at the 100K cap the keeper share is ~$108/year while VPS + monitoring costs $400-1000/year (§4.3 — net loss $292-892/year for any operator, founder included). The founder absorbs that loss against founding-capital runway. So the honest reading is: there is no equity-style profit distribution and no token, but there is a small USDCx receipt line to the founder that does not cover its own operating costs — see §4.3 for the full keeper economics.
 
 **How this product came about.** OptiVaults's founder is a Cardano self-custody user: an ADA native staker, small-BTC holder, Midnight NIGHT redeem participant, Minswap V2 ADA/NIGHT LP, and current USDCx holder (USDCx launched on Cardano via Circle's xReserve in February 2026). V1 was not born from "spotting a market opportunity" — it was built because the founder wanted a non-custodial, auto-compounding USDCx vault that returns USDCx directly on small withdrawals (rather than forcing a full recall + swap-back dance for every exit), and no such thing existed on Cardano. So the founder built one. Core user protections are **contract invariants rather than operational promises**. See §1.6 for the full origin story plus why Cardano and why now, the four USDCx options the founder considered and their friction analysis, the qualifications on "withdraw always works" (§1.6.1), and V2's design direction.
 
@@ -90,6 +92,15 @@ USDCx is a USD-pegged stablecoin launched on Cardano in February 2026, issued by
 - Minswap V2 / SundaeSwap / Splash liquidity against DJED, USDM, ADA, NIGHT.
 
 **Important disclosure**: USDCx is functionally a Cardano representation of Circle's USDC, connected to other chains via the xReserve bridge mechanism. While the USDCx token on Cardano uses native asset format (no wrapping smart contract), the issuance and redemption flow relies on Circle's xReserve infrastructure, Circle's USD reserve management, and Circle's compliance and audit processes. USDCx is **not** a fully chain-isolated stablecoin — its trust chain extends to Circle and xReserve.
+
+**Issuance status (as of whitepaper version 1.3, 2026-05-11).** This section's description reflects USDCx + xReserve + Liqwid USDCx market operational state at v1.3 publication. Specifically:
+
+- USDCx token on Cardano: operational since February 2026 (native-asset format, no wrapping contract).
+- xReserve bridge: live for USDCx issuance / redemption flow; production-grade in Circle's xReserve infrastructure.
+- Liqwid USDCx market: live with thin borrow demand (supply APY 0.5–2% as of writing, per §4.4 snapshot).
+- Native USDC direct redemption path back to Circle: via Circle USDC redemption + xReserve bridge out of Cardano.
+
+V1 mainnet launch is contingent on USDCx remaining at the launch-readiness threshold described in §1.5 Axis B. If USDCx never reaches Axis B Yellow tier ($40M+ circulating), or its operational status materially regresses, V1's deposit token may be re-evaluated via governance `UpdateRegistry` (14-day timelock). Candidates include native USDC if Circle ships directly to Cardano without xReserve, or alternative Tier-1 fiat stablecoins reaching Cardano-native operation. Readers should verify current state via Circle's official channels and Liqwid's governance forum before deposit decisions.
 
 **V1's due diligence checklist for USDCx:**
 
@@ -145,22 +156,26 @@ Listed in rough order of how often a small-holder's wallet benefits:
 | Unwilling to accept m-of-n governance risk | ❌ governance layer exists | ✅ only Liqwid protocol risk |
 | Want to avoid ~0.02% SwapAda drag | ❌ V1 has it (§4.5) | ✅ no equivalent |
 
-**Honest break-even — sensitivity to your time value** (full math in §4.4). The break-even between V1's ~544 bps fee gap and the manual rebalance time it saves depends entirely on how you value your own hour. One hour/quarter of manual management (≈ 4 hours/year) × your hourly value = your annual time savings from V1; that breaks even against the 544 bps fee at different deposit sizes:
+**Honest break-even — two-component framing (canonical table)**. Choosing V1 over Direct Liqwid involves two distinct value components, and an honest break-even has to account for both. The same table also appears as the canonical reference in §4.4; the two sections now share one framing instead of presenting different numbers.
 
-| Your hourly time value | V1 break-even deposit | Honest implication for this user |
-|------------------------|-----------------------|----------------------------------|
-| $10/hr (student, emerging-market, retiree) | ~$8K | **Most target users should use Direct Liqwid DJED instead.** The 4 hrs/year you save is only $40, but at $8K deposit V1's 544 bps fee gap costs $435/year — you're paying ~10× more in fees than you're saving in time. |
-| $20/hr (typical small-deposit earner) | ~$16K | **Upper half of "target" range should prefer Direct Liqwid.** V1 is net-positive only above ~$16K. |
-| $50/hr (the figure used in earlier drafts) | ~$40K | V1 is net-positive for this user below $40K, but this hourly value is **above** what the $100-$10K target demographic plausibly earns. |
-| $100/hr (DeFi-professional / founder-tier) | ~$80K | V1 is net-positive up to $80K, **but this user profile is explicitly not the V1 target** (they run their own keepers). |
+**Component A: Pure time cost** — what manually managing a Direct Liqwid position actually costs you in time × your hourly value (15 hrs/year × hourly rate ÷ 5.44% gap).
 
-**Honest consequence**: for a meaningful share of the nominal "$100-$10K target" band, **Direct Liqwid DJED supply is the right product, not V1.** V1's genuine addressable segment narrows to users who fall into one of three categories:
+**Component B: Risk-management outsourcing** — the value V1 provides on top of yield: depeg monitoring, multi-stablecoin diversification, contract-level freeze response, automatic compounding, and self-serve emergency-withdraw. Direct Liqwid users must build these themselves or accept the unmitigated exposures.
 
-- Value avoiding DeFi complexity above their marginal hourly wage (reasonable for many users who treat DeFi as intimidating, not time-trade-off rational)
-- Refuse CEX custody on principle and therefore have no alternative
-- Want the dual-stablecoin-issuer allocation that manual Liqwid does not give them
+| User profile | (A) Pure time break-even | (B) Perceived risk-mgmt value | **Practical break-even** |
+|---|---|---|---|
+| $10/hr time value, low DeFi experience | ~$2,800 | ~$30K (high — building monitoring is daunting) | **~$33K** |
+| $20/hr time value, medium experience | ~$5,500 | ~$25K | **~$30K** |
+| $50/hr time value, high experience | ~$14K | ~$15K | **~$29K** |
+| $100/hr time value, DeFi professional | ~$28K | ~$5–10K (already has workflows) | **~$28–38K** |
 
-This is a smaller product-market than a single $40K break-even number suggests. We disclose it here rather than hide it behind an averaged figure.
+**Honest implications**:
+
+- For most realistic profiles, the practical break-even sits in the **$25K–$40K range** — not the Component-A-only $5K–$15K range. Below that range, V1 typically delivers net-positive value because building monitoring + response infrastructure yourself is real work, and a mistake during a depeg event can easily dwarf the yield gap.
+- Above ~$40K with relevant DeFi experience, **Direct Liqwid DJED is the better choice on pure math** — V1 stops adding net value above that point and we say so.
+- Users who explicitly **do not value Component B** (sophisticated holders with their own monitoring + response stack) should read the Component-A column only and pick Direct Liqwid above the lower break-even. V1 does not try to inflate Component B for these readers.
+
+V1's genuine addressable segment is therefore: depositors in the $25K–$40K-and-below range who do not already have their own DeFi operational stack, plus users who refuse CEX custody on principle, plus users who actively want the dual-stablecoin-issuer allocation. We disclose this in two places (here + §4.4) using the same numbers, rather than hide it behind an averaged figure.
 
 **Plainly**: you get Liqwid's 3-market supply yield + auto-rebalance + self-serve recovery in a single CIP-30 deposit TX. You pay 4.5% of realized yield for it. For $200–$10,000 positions, a direct-Liqwid setup costs about 1–2 % of principal in one-time entry + exit gas — V1's convenience saving is genuine, but whether it beats the 4.5% performance fee over your actual holding period still depends on your time horizon and hourly wage (see break-even table above).
 
@@ -269,7 +284,7 @@ Regardless of axis state, mainnet launch is blocked while any of the following h
 | State | A | B | C | Stage | TVL Cap |
 |-------|---|---|---|-------|---------|
 | Pre-Catalyst | 🔴 | * | * | Stage 0 — Preprod only | 0 (mainnet inactive) |
-| One-Yellow | 🟡 | * | * | Stage 1 — Closed Pilot | $10K (invitation only) |
+| One-Yellow | 🟡 | * | * | Stage 1 — Limited Pilot | $10K (permissionless, with prominent pre-audit risk warnings; **no invitation gate, no whitelist** — see §8.2) |
 | Two-Yellow / One-Green | varies | varies | varies, no Red | Stage 1.5 — Open Pilot | $25K (publicly accessible, capped) |
 | Two-Green, no Red | 🟢🟢🟡 in any combination | | | Stage 2 — Soft Launch | $100K |
 | All-Green, no Red | 🟢 | 🟢 | 🟢 | Stage 3 — Full Launch | $500K initial, ramp to $2M |
@@ -690,9 +705,67 @@ Compound schedule is driven by TVL tiers (internal-verification-era operational 
 - **Zero-yield Compound**: the 5-day heartbeat advances `last_realloc_time` even when there's no real yield, so off-chain indexers can see the vault remains active.
 - **Buffer-funded Compound**: when Liqwid `supplied_value` has grown since last Compound, the performance fee is deducted directly from buffer USDCx — no Recall needed first.
 
-V1 sits permanently in the 1,200+ weekly tier at the pre-audit 100K USDCx cap — the three lower-TVL tiers remain in keeper code only as recovery branches for a future V2 migration starting from a near-empty vault.
+**The 100K cap is a ceiling, not where Phase 1 actually sits.** §8.2 documents that realistic Phase 1 TVL is a $500–$25K range, and the (a) sub-scenario explicitly contemplates V1 operating at $500–$5K. The table above is therefore the **full** TVL-tier schedule the keeper uses — not legacy V2-migration recovery branches. The keeper picks the tier matching live `total_deposited` at each cadence decision. §2.6.1 describes the corresponding low-TVL operational mode.
 
 Keeper must sign each Compound TX. Fallback: if keeper is inactive for >7 days, governance can execute Compound via m-of-n signatures.
+
+### 2.6.1 Reference Implementation Mode (low-TVL operational policy)
+
+When V1 sustainably operates at TVL below the threshold where the §2.6 default cadence is economically rational, the keeper switches to **Reference Implementation Mode** — a relaxed operational policy that maintains contract liveness without consuming on-chain gas disproportionate to accrued yield. This mode is the operational counterpart of §0's "Cardano DeFi public-goods reference implementation" framing during the low-TVL period: V1 stays fully functional as a deployed reference without burning operating budget on cadence that the yield base cannot justify.
+
+#### Activation conditions
+
+Reference Implementation Mode activates when **both**:
+
+1. V1 mainnet TVL has been below $25K for 30+ consecutive days, AND
+2. The 4-week trailing average of accrued qToken yield per Compound interval would be less than 5× the on-chain TX cost (i.e., yield does not justify Compound frequency).
+
+Deactivation: triggered when TVL crosses $25K and remains above for 30+ days. Re-activation if TVL drops back. The mode is operational policy exercised by the keeper under §4.5 economic-rationality discretion — it does **not** require an `UpdateStrategy` governance action.
+
+#### Operational adjustments under this mode
+
+| Operation | §2.6 Default cadence | Reference Implementation Mode |
+|---|---|---|
+| Productive Compound | Weekly (Saturday-anchored) at 1,200+ tier | Only when accrued yield > $5 USDCx; typically quarterly to annually at $1–5K TVL |
+| Liveness heartbeat | Every 5 days | ~80-day cadence (kept below the 90-day §5.5.1 Layer 3 CommunitySunset threshold) |
+| Rebalance | When §2.5 trigger conditions met | When allocation drift exceeds §2.5 band; not scheduled |
+| SwapAda | When `vault.lovelace < 15 ADA` | Same trigger; pre-deposit ceremony seed extended to 20+ ADA to reduce first-call frequency |
+| Discord ops alerts | Per-Compound + per-heartbeat | Quarterly + annual summary; weekly digest dropped |
+
+#### What this preserves (no compromise)
+
+- All contract invariants — no fee changes, no governance shortcut, no validator bypass.
+- All depositor protections — `emergency-withdraw`, hard caps, `withdraw-cli`.
+- All §5.5.1 three-layer governance safety — Layer 1 freeze-only, Layer 2 swap-out, Layer 3 CommunitySunset all functional.
+- Share-price NAV accuracy — qToken value is read on demand; the `total_*` datum fields update at Compound time as designed.
+- 7-day keeper-inactivity gate (§5.4) works as documented — it reads `last_compound_time`, not affected by reduced heartbeat cadence.
+
+#### What this changes
+
+- **Off-chain indexer staleness**: `last_realloc_time` updates infrequently. Frontend dashboards must accommodate this — staleness is normal under Reference Implementation Mode, not a fault signal.
+- **Performance fee crystallization**: deferred to withdraw events or sparse Compounds. Cumulative perf-fee amount is identical; only timing differs.
+- **Treasury accrual rate**: same percentage of yield but less frequent transfers — treasury still accumulates correctly when Compound fires.
+
+#### Why this exists
+
+At $1–5K TVL, the §2.6 weekly Compound cadence costs approximately $50–75/year in keeper gas while harvesting only $1–4/year in performance fees. Operating at default cadence in this scenario is economically irrational and contradicts §4.5's stated principle that "Compound frequency is a ceiling, not a target."
+
+Reference Implementation Mode reduces operational cost by approximately 85–90% while preserving all contract guarantees, aligning V1's operational footprint with its §0 non-commercial public-goods positioning during the small-TVL period. This is the honest operational mode for a deposit-tier where V1 is functioning as a public reference rather than as a yield product.
+
+#### Disclosure requirements
+
+The keeper publishes the current operational mode on the OptiVaults dashboard. The disclosure includes: active mode (Default / Reference Implementation), the trigger condition that activated current mode, time since mode activation, next anticipated Compound (with estimated USDCx yield to be harvested), and next anticipated heartbeat. Depositors can independently verify mode activation by checking `last_compound_time`, `last_realloc_time`, and `total_deposited` on-chain against the dashboard's claims.
+
+#### Mode transition mechanics
+
+When TVL crosses $25K and the deactivation conditions are met:
+
+1. Keeper publishes intent to switch back to Default Mode on dashboard (depositor notification).
+2. Next productive Compound fires within 7 days, harvesting all accrued yield.
+3. Heartbeat cadence resumes to the §2.6 default (every 5 days).
+4. Rebalance triggers per §2.5 conditions.
+
+Transitions are keeper-initiated under §4.5 discretion. If a future governance deems automatic transition desirable, an `UpdateStrategy` action can codify the trigger; v1.3 spec does not require this.
 
 ---
 
@@ -809,19 +882,25 @@ At 100K USDCx TVL and ~5-6% net yield (current-reference scenario from `docs/eco
 
 **Reality: protocol revenue does not cover operating costs at 100K TVL.**
 
-V1 operates in a **bootstrapping phase** until TVL reaches the self-sustaining range of approximately $500K-$2.5M. Below that threshold, initial operating shortfalls are absorbed by the project's founding capital — this is a normal early-protocol state for new DeFi launches on Cardano. Above the threshold, OptiVaults' own revenue funds baseline operations, and higher TVL incrementally funds audit reserve, R&D, and buffer categories.
+V1 operates in a **bootstrapping phase** until TVL reaches the self-sustaining range, which spans approximately **$135K–$1.8M across the §4.1 sensitivity scenarios** (optimistic / baseline / conservative respectively) with **baseline centred around $500K**. Below that threshold, initial operating shortfalls are absorbed by the project's founding capital — this is a normal early-protocol state for new DeFi launches on Cardano. Above the threshold, OptiVaults' own revenue funds baseline operations, and higher TVL incrementally funds audit reserve, R&D, and buffer categories.
 
-**Phase 1 expectation reset** (to be clear with depositors up front). The $500K-$2.5M self-sustaining threshold is, by construction, a **Phase 2+ post-audit target** — it cannot be reached inside the pre-audit 100K USDCx cap. Our internal estimate for Phase 1 (pre-audit, under the 100K cap) TVL is a **$500-$25K** range over the first 6-12 months, based on conservative user-acquisition assumptions and the permissionless-only stance (no closed-beta gate, no invitation list — actual TVL depends entirely on organic discovery); this is a speculative range rather than a forecast, and we state it to be honest about modelling assumptions — not as a commitment. The 100K ceiling is a risk envelope, not a sales target. Founding-capital runway is sized assuming Phase 1 TVL **does not** fund operations — founding capital fully absorbs Phase 1 burn, and protocol self-sustainability begins in Phase 2 post-audit when the TVL cap is raised (§8.3). See §8.2 for the full Phase-1-is-protocol-validation framing.
+**Phase 1 expectation reset** (to be clear with depositors up front). The **$135K–$1.8M self-sustaining range (baseline ~$500K)** is, by construction, a **Phase 2+ post-audit target** under §2.6 Default cadence — it cannot be reached inside the pre-audit 100K USDCx cap. Our internal estimate for Phase 1 (pre-audit, under the 100K cap) TVL is a **$500-$25K** range over the first 6-12 months, based on conservative user-acquisition assumptions and the permissionless-only stance (no closed-beta gate, no invitation list — actual TVL depends entirely on organic discovery); this is a speculative range rather than a forecast, and we state it to be honest about modelling assumptions — not as a commitment. The 100K ceiling is a risk envelope, not a sales target. Founding-capital runway is sized assuming Phase 1 TVL **does not** fund operations — founding capital fully absorbs Phase 1 burn, and protocol self-sustainability begins in Phase 2 post-audit when the TVL cap is raised (§8.3). See §8.2 for the full Phase-1-is-protocol-validation framing.
 
-**Sensitivity of the self-sustaining TVL threshold** (as a function of Liqwid supply APY + operating cost). The $500K-$2.5M range in §4.1 is not a single point estimate; it is the lower and upper bounds of the following three scenarios:
+**Sensitivity of the self-sustaining TVL threshold** (as a function of Liqwid supply APY + operating cost). The **$135K–$1.8M range** in §4.1 spans the three sensitivity scenarios below (optimistic / baseline / conservative), computed for both the §2.6 Default cadence and the §2.6.1 Reference Implementation Mode; baseline self-sustain is ~$500K:
 
-| Scenario | Liqwid blended supply APY | Annual operating cost | Approx. self-sustaining TVL threshold |
-|----------|---------------------------|-----------------------|---------------------------------------|
-| Optimistic | 10% (strong borrow demand, slow audit-reserve growth) | $600 (low end) | ~$135K |
-| Baseline | 6% (recent Liqwid level, §4.1 primary scenario) | $1,200 | ~$500K |
-| Conservative | 3% (borrow-demand contraction, Cardano DeFi TVL compression) | $2,400 (high end, with audit-reserve expansion) | ~$1.8M |
+| Scenario | Liqwid APY | Operating cost (Default Mode) | Self-sustaining TVL (Default) | Operating cost (Reference Implementation Mode) | Self-sustaining TVL (Reference) |
+|----------|------------|--------------------------------|-------------------------------|------------------------------------------------|---------------------------------|
+| Optimistic | 10% (strong borrow demand) | $600 (low end) | ~$135K | $80 | ~$18K |
+| Baseline | 6% (recent Liqwid level) | $1,200 | ~$500K | $150 | ~$56K |
+| Conservative | 3% (borrow-demand contraction) | $2,400 (high end with audit-reserve expansion) | ~$1.8M | $250 | ~$185K |
 
-Formula: `self-sustaining TVL ≈ annual operating cost / (gross APY × performance fee rate 0.045)`. Under the conservative scenario, reaching the threshold from external-audit completion could take **3-5 years** of TVL ramp (post-audit cap lift + multiple marketing cycles + overall Cardano DeFi TVL growth) — if the founding-capital runway expires before the threshold is reached, the §9.2 sunset protocol activates. The 18-month runway suffices to cover "development + audit + 6-month post-audit ramp" under the **baseline scenario**; under a **conservative-scenario extension**, additional founding-capital injection or an accelerated sunset decision would be required. This structural uncertainty is something depositors should understand.
+Formula: `self-sustaining TVL ≈ annual operating cost / (gross APY × performance fee rate 0.045)`. Under the conservative-Default scenario, reaching the threshold from external-audit completion could take **3-5 years** of TVL ramp (post-audit cap lift + multiple marketing cycles + overall Cardano DeFi TVL growth) — if the founding-capital runway expires before the threshold is reached, the §9.2 sunset protocol activates. The 18-month runway suffices to cover "development + audit + 6-month post-audit ramp" under the **baseline Default scenario**; under a **conservative-scenario extension**, additional founding-capital injection or an accelerated sunset decision would be required. This structural uncertainty is something depositors should understand.
+
+**Interpretation of the Reference Implementation Mode column.** Under §2.6.1 cadence at baseline assumptions, V1's self-sustaining TVL drops from $500K to approximately $56K — a roughly 9× reduction. This makes V1's economics viable at a much smaller scale, supporting the §8.2 (b) "small organic" sub-scenario operational profile. This is not a free lunch — it simply reflects the operational reality that low-TVL vaults should not run at the same cadence as $100K+ vaults. Reference Implementation Mode aligns the cost base with the actual yield base. The Default and Reference columns are not alternatives the keeper picks for optics; the mode is governed by the §2.6.1 activation/deactivation conditions and tracked publicly on the dashboard.
+
+**The Reference $56K self-sustain does NOT change the sunset trigger.** The sunset condition stated below — "TVL < $500K at 6 months post external-audit completion" — is a **post-audit Default-cadence** threshold, set against V1's post-launch growth profile under §2.6 default cadence. The $56K figure describes **pre-audit / low-TVL** sustainability under §2.6.1; it does not lower the post-audit growth bar. v1.3 surfaces both numbers in the same table for transparency, but they describe different operational regimes and are not interchangeable. A reader who conflates them would mistakenly conclude V1 can "self-sustain at $56K" all the way through Phase 2 — which is not the case once §2.6 default cadence resumes.
+
+**The $25K–$500K gap (Default mode, not yet self-sustaining).** Between the §2.6.1 deactivation threshold ($25K — keeper exits Reference Implementation Mode) and the §4.1 baseline self-sustain figure (~$500K), V1 operates in §2.6 Default cadence **while still burning more than the protocol revenue covers**. Concretely: at $50K TVL × 6% gross × 4.5% perf fee = $135/year protocol revenue vs $1,200/year baseline Default operating cost = ~$1,065/year shortfall absorbed by founding capital. This gap is **expected behaviour during Phase 2 TVL ramp-up post-audit** — founding-capital runway is explicitly sized to cover this period (§4.1 line above: "6-month post-audit TVL-ramp window"). If TVL stalls in this gap for >6 months post-audit, the §9.2 sunset trigger described below activates. The §8.2 sub-scenario (c) "$25K–$100K cap-approach" sits inside this gap during the pre-audit window; sub-scenario (b) $5K–$25K does not (it stays in Reference Implementation Mode).
 
 **Founding-capital runway commitment.** Founding capital is sized for **operational runway ≥ 18 months** at the burn-rate methodology published in `docs/economics.md §7`, covering: (a) the pre-audit development window, (b) the external audit budget allocation (currently targeted Q2-Q3 2027 — see §8.1), and (c) a 6-month post-audit TVL-ramp window under the pessimistic operating-cost scenario. Capital is held off-chain by the founding entity; the `docs/economics.md §7` document contains the itemised monthly burn (infra + audit reserve + contractor + contingency) so readers can independently verify the 18-month figure. Specific total $ amount is not disclosed (per project policy — founder sunk cost is a private risk, not a trust anchor), but the runway calculation is reproducible from the published burn line items.
 
@@ -883,7 +962,7 @@ The "$2.5–5M" figure earlier in this section corresponds to tier (b) under **p
 
 **Three dimensions of self-sustain — read before the table.** The tier (a)/(b)/(c) breakevens above are computed on "keeper share covers keeper ops cost." That is **one of three distinct self-sustain dimensions**:
 
-- **(i) Keeper ops self-sustain** — keeper share (40% of 4.5% perf fee) ≥ keeper's own infra cost. **Tiers (a)/(b) above correspond to this dimension**. Keeper share doubled from the historical 20% to bring the Phase 2+ non-founder-keeper breakeven down to ~$1M TVL (vs ~$1.5M at the prior 25% cap).
+- **(i) Keeper ops self-sustain** — keeper share (40% of 4.5% perf fee) ≥ keeper's own infra cost. **Tiers (a)/(b) above correspond to this dimension**. Keeper share was raised from the historical **25% cap** to 40% to bring the Phase 2+ non-founder-keeper breakeven down to **~$1M TVL** (from ~$1.5M at the prior 25% cap; math: 25%/40% = 0.625, $1.5M × 0.625 ≈ $0.94M ≈ $1M).
 - **(ii) Treasury ops self-sustain** — the treasury 60% share covers basic ops ($360/yr) + R&D ($432/yr) + operational buffer. Tier (b) TVL ($740K–$1.48M) generates treasury inflow of ~$1,620–$3,240/yr, **still comfortably covering this second dimension** at the smaller treasury percentage because keeper share already absorbs per-keeper infra cost directly.
 - **(iii) Audit-reserve self-funding** — the yearly audit-reserve allocation (40% of treasury inflow under E2's 40/25/25/10 sub-allocation = 24% of total fee, identical to the prior 80%×30% = 24% accumulation rate) accumulates enough to cover the next audit cost ($30–50K every 18–24 months). This dimension still requires **$20M+ TVL**, corresponding to tier (c). The shift from 20%→40% keeper does not change the audit-reserve trajectory.
 
@@ -935,45 +1014,30 @@ The gap is real. Anyone with enough DeFi experience to safely manage their own D
 4. **Self-serve exit guarantees.** Principal is recoverable via `emergency-withdraw` even if the keeper is offline for 7+ days (§5.4). A manually-constructed position has no equivalent if the user loses access to the tooling they originally used.
 5. **Multi-stablecoin depeg monitor.** V1's keeper halts new Deploy on sustained depeg signals (§5.2). A manual position requires the user to build their own monitor.
 
-#### Break-even analysis: two-component framing
+#### Break-even analysis — see §1.3.1 for the canonical table
 
-The gap-to-direct-Liqwid is divisible into two components: **time cost** (what the user would spend doing it manually) and **risk-management premium** (what V1 delivers that direct Liqwid does not).
+The break-even between V1 and Direct Liqwid is the two-component framework introduced in §1.3.1 (time cost + risk-management outsourcing). **That table is the canonical reference; v1.3 consolidates both sections to use the same numbers** rather than presenting two parallel break-even calculations that drift. This section covers the math and rationale behind the components but does not re-print the table — read §1.3.1's table for the numbers.
 
-**Component 1: Pure time-cost break-even.**
-
-Approximating user time cost as 15 hours/year × hourly rate, divided by the 544 bps yield gap:
+**Component A: Pure time-cost break-even.** Approximating user time cost as 15 hours/year × hourly rate, divided by the 544 bps yield gap:
 
 ```
-break_even_deposit = (annual_hours_required × hourly_rate) / yield_gap_bps
-                   ≈ (15 × $20) / 5.44%
-                   ≈ $5,500
+break_even_deposit_A = (annual_hours_required × hourly_rate) / yield_gap_bps
+                     ≈ (15 × $20) / 5.44%
+                     ≈ $5,500
 ```
 
-By this calculation alone, users with deposits above ~$5K and 15 hours/year available for manual management could outperform V1 net-of-time-cost.
+By this calculation alone, users with deposits above ~$5K and 15 hours/year available for manual management would outperform V1 net-of-time-cost. **But Component A alone is not the right framing for most depositors** — it under-prices what V1 delivers beyond yield (Component B below).
 
-**Component 2: Risk-management outsourcing premium.**
+**Component B: Risk-management outsourcing premium.** V1 covers operational and risk-handling work that Direct Liqwid users must build themselves or accept un-mitigated:
 
-But the time-cost framing under-prices what V1 delivers vs Direct Liqwid:
-
-- **Diversification value**: holding 100% DJED carries concentration risk that V1's 45/25/30 split avoids. A user who would value 30% allocation reduction in a flash-crash scenario at, say, 1-2% of deposit/year is paying that as part of V1's fee.
-- **Auto-compounding NAV math**: Direct Liqwid users who do not manually compound lose ~30-50 bps/year vs theoretical-perfect compounding. V1 does it automatically.
-- **Depeg response infrastructure**: V1's contract-level freeze + keeper depeg monitoring + emergency-withdraw self-serve path. A direct user must build their own monitoring + response plan.
+- **Diversification value**: holding 100% DJED carries concentration risk that V1's 45/25/30 split avoids. A user who values 30% allocation reduction in a flash-crash scenario at, say, 1–2% of deposit/year is paying that as part of V1's fee.
+- **Auto-compounding NAV math**: Direct Liqwid users who do not manually compound lose ~30–50 bps/year vs theoretical-perfect compounding. V1 does it automatically.
+- **Depeg response infrastructure**: V1's contract-level freeze + keeper depeg monitoring + emergency-withdraw self-serve path. A Direct Liqwid user must build their own monitoring + response plan.
 - **Operational error avoidance**: failed Recall, batcher delays, swap routing, pool-shard migration — V1's keeper handles these. Direct user must learn + handle.
 
-A reasonable estimate for the risk-management premium component is 200-300 bps/year for deposits at $5K-$50K, declining to ~100-150 bps as user sophistication scales with deposit size (sophisticated $1M holders typically already have these workflows).
+A reasonable estimate for the Component B premium is 200–300 bps/year for deposits at $5K–$50K, declining to ~100–150 bps as user sophistication scales with deposit size (sophisticated $1M holders typically already have these workflows). The §1.3.1 table converts this into a perceived-value column per user profile.
 
-**Combined honest break-even**:
-
-| User profile | Pure time break-even | + Risk premium value | Practical break-even |
-|--------------|---------------------|---------------------|---------------------|
-| $10/hr time value, low DeFi experience | ~$2,800 | ~+$30K of perceived risk-mgmt value | ~$33K |
-| $20/hr time value, medium experience | ~$5,500 | ~+$25K | ~$30K |
-| $50/hr time value, high experience | ~$14K | ~+$15K | ~$29K |
-| $100/hr time value, DeFi professional | ~$28K | ~+$0–10K (already has the workflows) | ~$28-38K |
-
-For most realistic profiles, the **practical break-even is in the $25K-$40K range**, not $5K — because users below that range value the risk-management outsourcing more than the pure time-cost calculation captures.
-
-Above ~$40K with relevant DeFi experience, Direct Liqwid DJED is genuinely the better choice.
+**Combined honest break-even**: practical break-even sits in the **$25K–$40K range** for most realistic user profiles — see [§1.3.1 break-even table](#131-what-depositors-actually-get-product-advantages) for the full per-profile numbers. Above ~$40K with relevant DeFi experience, Direct Liqwid DJED is genuinely the better choice.
 
 #### When V1 is the right choice
 
@@ -1001,7 +1065,7 @@ The fixed-rate vault product described in §1.7 (V1.5) addresses a market segmen
 
 #### Economic honesty at 100K TVL
 
-At the pre-audit cap, V1's own revenue (~$270/year perf fee assuming 6% gross on 100K) does not cover operating costs (~$360–2,400/year, economics.md §4). The bootstrapping shortfall is absorbed by founding capital — **not** passed through to depositors as a higher fee. Depositors pay 4.5% regardless of how small V1 is when they deposit. As TVL grows toward the $500K–$2.5M self-sustaining range, the same 4.5% covers real operating costs + treasury accumulation.
+At the pre-audit cap, V1's own revenue (~$270/year perf fee assuming 6% gross on 100K) does not cover operating costs (~$360–2,400/year, economics.md §4). The bootstrapping shortfall is absorbed by founding capital — **not** passed through to depositors as a higher fee. Depositors pay 4.5% regardless of how small V1 is when they deposit. As TVL grows toward the **$135K–$1.8M self-sustaining range (baseline ~$500K, see §4.1)**, the same 4.5% covers real operating costs + treasury accumulation.
 
 If governance later activates a yield-bearing home for the USDCx buffer (see §2.3), the 0% buffer term lifts and the blended gross rises — e.g., a 30% × 1.5% buffer-side yield adds ~45 bps to gross. This would be disclosed publicly before the `UpdateStrategy` TX queues, narrowing but not closing the gap vs direct DJED supply.
 
@@ -1182,7 +1246,7 @@ Keeper is a trust delegation bounded on-chain by:
 
     "Code landed" + a passing `aiken check` does not substitute for Preprod E2E or external audit. All 22 artefacts (17 logic validators + 4 NFT mint policies + 1 DEX adapter) remain under the 16 KB Plutus V3 ceiling. The exact test count, property count, and per-validator bytecode size at any commit are reproducible from source — run `aiken check` and `aiken build` against the deployed commit to verify both the test summary and the validator hashes. We deliberately do not pin specific numbers in this document so it does not drift relative to the source of truth as the test suite grows over time (see `docs/audit-scope.md §3` for the coverage-area methodology).
 
-    **Audit scope + funding implication (summary).** The pre-audit slippage-enforcement work above adds roughly +$15-25K to the base $50-150K audit range and +6-12 weeks to Phase 3-5 development (detailed breakdown in `docs/economics.md §5.2`: scope additions, cost modelling, runway impact). Both increments are absorbed by founding capital and do not extend the 18-month runway commitment; they do narrow the post-launch runway buffer by ~1-2 months, which feeds through to the sunset-trigger thresholds in §4.1 / §9.2. The reason we ship the slippage work pre-audit rather than deferring to "V1.x post-audit" is trust posture: leaving a compromised-keeper wide-slippage attack path open during an advertised launch is a worse trade than the audit-scope delta.
+    **Audit scope + funding implication (summary).** The pre-audit slippage-enforcement work above adds roughly +$15-25K to the $50–$150K engaged-amount range (per-engagement, post-possible-discount; pre-discount base $100–$150K — see §8.1) and +6-12 weeks to Phase 3-5 development (detailed breakdown in `docs/economics.md §5.2`: scope additions, cost modelling, runway impact). Both increments are absorbed by founding capital and do not extend the 18-month runway commitment; they do narrow the post-launch runway buffer by ~1-2 months, which feeds through to the sunset-trigger thresholds in §4.1 / §9.2. The reason we ship the slippage work pre-audit rather than deferring to "V1.x post-audit" is trust posture: leaving a compromised-keeper wide-slippage attack path open during an advertised launch is a worse trade than the audit-scope delta.
 - **Destination whitelist** — `protocol_hashes` in Registry limits DeployToProtocol destinations to governance-approved scripts (Minswap V2 orderbook, Liqwid action validators). Any other address is rejected by `vault_protocol.ak`.
 - **Keeper inactivity fallback** — on-chain judged by `last_compound_time`. When `last_compound_time + 7d < tx.validity_range.upper`, three things happen automatically: (a) Direct Withdraw waives `early_withdraw_fee` at the contract level regardless of `min_hold_seconds`; (b) the `require_keeper_or_governance_fallback` gate on keeper-authorized redeemers (RecallFromLiqwid / RecallFromProtocol / AdminDeployNonDeposit) opens the governance m-of-n fallback path (same redeemer, governance signs in place of keeper); (c) `Emergency Withdraw` self-serve becomes economically rational since users pay no early-fee. No off-chain keeper-health oracle is needed — the absence of a keeper TX within the window is the signal. This comparison is **not** forgeable via a wide `validity_range.upper`: both `vault_user.ak` and `vault_keeper_hot.ak` enforce `validity_range.upper - validity_range.lower <= 1 hour` on every time-anchored redeemer (internal-verification width-cap family, per `spec/vault-datum.md` §3 item 11), so a TX claiming `upper = now + 10y` is simply rejected. The keeper-inactivity check therefore works on live ledger time, not TX-submitter claims.
 
@@ -1202,6 +1266,15 @@ Launch configuration is **3-of-3 multisig** (3 signers, threshold 3 — unanimit
 Independent SPO recruitment is the **target** for completion before mainnet ceremony but is **not a contract-level launch blocker** — the §5.5.1 three-layer governance safety design provides an acceptable fallback if recruitment lags (V1 may launch with founder-only governance, with SPO recruitment continuing in the post-launch window; this is a contingency path, not a target). Selection criteria: Cardano mainnet SPO operating ≥ 2 years, on-chain public identity (pool ticker + website), no prior commercial partnership with the founder, strong community / technical reputation, and ideally at least one signer outside the Asia time zone for governance response-time diversity.
 
 **SPO signer role framing — Cardano community service.** The two independent SPO signers at V1 launch are committing to a **Cardano community-service role, not an economic-incentive role**. Phase 2+ `UpdateFeeSplit` to 5-10% gov pool share (gated on $500K TVL) is upside, not primary motivation. SPOs take this role because: (a) they support Cardano DeFi public-goods infrastructure, (b) their stake-pool-operator identity provides structural dissent-veto protection for V1 depositors, (c) the role extends their reputation asset, analogous to DRep commitment. If V1 stays in Phase 1 terminal state (§1.6.3 + §8.2 scenario), SPO commitment is not expected to yield financial return — this aligns with V1's non-commercial public-goods positioning and community-service role framing. SPO recruitment outreach is conducted with this framing explicit to avoid signer expectation / actual-incentive-structure mismatch.
+
+**SPO recruitment phasing — tied to operational TVL.** SPO recruitment activity scales with V1's actual operational scope. The phases below replace any earlier framing where SPO seats were treated as a fixed mainnet-day deliverable:
+
+- **Phase 0 (Pre-mainnet)** — SPO recruitment **may be deferred** if §1.5 launch-readiness conditions are not yet met. Founder-solo governance + the §5.5.1 three-layer safety design provides the depositor protection floor. Inviting SPOs into pre-launch governance is acceptable but optional; SPOs who prefer to wait until mainnet operations begin are honoured.
+- **Phase 1 small-TVL ($500–$25K)** — V1 operates in Reference Implementation Mode (§2.6.1). Governance activity is minimal (occasional `UpdateStrategy`, possible emergency response). SPOs may be invited at this stage **with full disclosure that governance load will be light**. Recruiting SPOs purely for credibility-signalling without explaining the low expected workload is not appropriate.
+- **Phase 1 moderate-TVL ($25–100K)** — Active SPO recruitment with clear framing of expected governance load and timeframe to Phase 2.
+- **Phase 2 trigger ($100K+ TVL, post-audit)** — Full 3-of-3 multisig operational. All three SPO seats active. Governance load reflects the real depositor base.
+
+The founder retains the option to recruit SPOs earlier than TVL would warrant if doing so produces material credibility uplift for V1's external positioning (e.g., for audit-firm engagement, Cardano Foundation outreach, or Catalyst review panels). But the SPO commitment is honoured as community service per the framing above, and is **not expected to produce meaningful governance work until material TVL exists**. If V1 stays in Phase 1 indefinitely (the §1.6.3 terminal-state scenario), SPO involvement may remain symbolic / standby — with §5.5.1's three-layer safety design as the operational substitute. This is an acceptable terminal outcome and is **not** a failure of governance design.
 
 Disclosed:
 
@@ -1233,6 +1306,22 @@ Independent of signer slate composition, the V1 validator set carries three laye
 
 Any vUSDCx holder can then drive the full recovery chain — Recall → Swap → Withdraw — without any keeper or governance intervention. The 90-day threshold corresponds to ≈ 18 missed zero-yield heartbeats (5-day cadence), proving the keeper is fully dead. The sunset path **only opens recovery** — it cannot mutate `total_deposited`, `total_shares`, `idle_buffer`, `liqwid_positions`, or any policy / immutable field. Validator preservation invariants ensure the SwapAdapter destination + peg-floor + slippage bounds still apply during sunset, so an attacker cannot use the open recovery paths to drain value.
 
+**Corner case: heartbeat-only keeper behavior.** Because Layer 3 triggers on `max(last_compound_time, last_realloc_time) + 90d`, a keeper who maintains heartbeats but ceases productive Compound activity could theoretically delay Layer 3 indefinitely. This is not a defect — it is intentional design, and depositors remain adequately protected even in that scenario:
+
+1. **The 7-day inactivity gate (§5.4) reads `last_compound_time` only** and **does** activate after 7 days without productive Compound, regardless of heartbeats. This: (a) waives the early-withdraw fee for Direct Withdraw, (b) opens the governance m-of-n fallback for keeper-authorized redeemers, (c) makes Emergency Withdraw economical for depositors.
+2. **Direct Withdraw remains fully operational** with auto-waived fees, allowing depositors to exit without keeper cooperation.
+3. **Real yield not being compounded is reflected in stagnant share price**, visible in vault accounting at any time.
+4. **The Withdraw-Zero `vault_user` validator** is permissionless on Direct Withdraw — no keeper signature required.
+
+Layer 3 is therefore the **last-resort** recovery path, not the primary protection. Layers 1–2 + 7-day gate + self-serve withdraw infrastructure cover keeper-sabotage scenarios long before Layer 3 would trigger.
+
+**Why `max(both)` and not `last_compound_time` alone.** The Layer 3 trigger uses `max(last_compound_time, last_realloc_time)` rather than `last_compound_time` only. This choice is intentional and supports two legitimate operational scenarios:
+
+- **Reference Implementation Mode (§2.6.1)**: heartbeat-only cadence at low TVL is legitimate. Using `last_compound_time` alone would prematurely trigger Layer 3 in that mode.
+- **Migration / V2 deploy scenarios**: governance may legitimately pause productive Compound during migration windows while keeping vault state alive via RebalanceBuffer or `UpdateStrategy` actions, both of which update `last_realloc_time`.
+
+A keeper-sabotage scenario where the keeper maintains heartbeats specifically to delay Layer 3 is real but bounded by the other protections above. The cost-benefit analysis (legitimate use cases preserved vs. attack-delay extension) favored `max(both)`. This is documented for audit reviewers who will examine Layer 3 design choices.
+
 **What this means in practice.** If the founder is honest but solo-signing, the system runs as a normal 1-of-1 multisig with timelock + cancel safety primitives. If the founder's key is compromised, the attacker cannot extract value (Layer 1 closes the brick path; Layer 2 keeps recovery flowing; hard caps in §6.3 limit fee abuse). If the founder is incapacitated for 90+ days, depositors execute Layer 3 community sunset and recover their USDCx without any operator cooperation. Recovery does NOT cover the ~870 ADA in reference-script lockup nor the ~24 ADA in stake-credential deposits — those funds are bound to the founder's deploy wallet and to A2 governance, respectively, and accept their own residual loss as part of single-actor governance cost.
 
 This three-layer design is what makes founder-only governance an **acceptable Phase 1 fallback** rather than a critical risk. SPO recruitment remains the preferred path for the credibility + structural dissent benefits, but it is not a launch blocker.
@@ -1245,9 +1334,17 @@ Despite multi-round internal review, V1 has not yet had a third-party audit. **T
 
 ## 6. Trust Model and Governance
 
-### 6.1 Six-identity separation target
+### 6.1 Six-identity separation target (NOT achieved at launch — disclosed honestly)
 
-V1 targets six distinct human controllers: keeper, 3 governance signers, ref-script deployer, founder subsidy wallet. At launch, identities partially overlap — the founder controls 3 of the 6 directly (keeper operator + 1 of 3 governance signer seats + ref-script deployer + founder subsidy wallet, which collapse to 3 independent positions; the other 2 governance signer seats are held by independent Cardano SPOs outside founder control). Full map in `docs/security-model.md` §2.
+V1 targets six distinct human controllers: keeper, 3 governance signers, ref-script deployer, founder subsidy wallet. **At V1 launch this separation is partially achieved, not complete** — the section title is the long-term target, not the launch state.
+
+At launch the founder directly controls **3 of the 6 identity slots**, expressed by these four roles which map to 3 independent on-chain positions (the ref-script deployer and founder subsidy wallet share a single founder-controlled wallet at launch, hence the 4 → 3 collapse; full address mapping in `docs/security-model.md` §2):
+
+- **(1) Keeper operator** — runs the keeper instance; signs Compound / Recall / Supply / VaultSwap TXs.
+- **(2) 1 of 3 governance signer seats** — founder's signature on `MultisigGov` quorum.
+- **(3) Combined ref-script deployer + founder subsidy wallet** — single founder wallet that (a) holds the 18 ref-script UTXOs (§8.2 ~870 ADA lockup) and (b) funds the founding-capital subsidy flow into Phase 1 operations. The collapse to one wallet is an honest disclosure: separating them costs ceremony complexity without changing the underlying single-signer SPOF in Phase 1.
+
+The other 2 governance signer seats are held by independent Cardano SPOs outside founder control, **assuming the §5.5 SPO recruitment has landed**; under the §5.5.1 / §7.4 fallback the founder may hold all 3 signer seats with key separation. The §5.5.1 three-layer governance safety design exists precisely so depositor recovery does not depend on whether full six-identity separation has been reached. **V2 deployment ceremony plans a multi-sig ref-deployer wallet that splits role (3) into two distinct keys** — see §9.2 + `docs/security-model.md` §2 for the planned rotation.
 
 **Rotation path** (notation: `threshold-of-total` for signer configs):
 
@@ -1326,6 +1423,10 @@ The full bond + slashing state machine is specified in `spec/keeper-auth.md` and
 
 **Honest depositor framing:** Phase 1 governance is **"1 founder + 2 independent Cardano SPOs co-governing; keeper instance still operated solely by founder with on-chain-switchable authorization; structural protection comes from timelocks + hard caps + self-serve exit paths"**. Phase 2 (post-audit + TVL > $500K) expands to 5 signers and switches to 4-of-5, restoring the structural dissent-veto property.
 
+**Phase 1 small-TVL governance posture (operational contingency).** If V1 launches into a Phase 1 small-TVL scenario ($500–$25K — the (a) "personal reference" or (b) "small organic" sub-scenarios described in §8.2), SPO recruitment may be deferred or held in symbolic / standby form during this period, consistent with §5.5's TVL-phased recruitment framing. In this scenario, the founder operates governance as **de facto solo-signer** — with the option to consult invited SPOs, but not requiring their signature for routine governance actions. The §5.5.1 three-layer safety design provides the structural protection that would otherwise come from genuine multi-signer dissent veto.
+
+This is documented as a **contingency operational mode**, not a deviation from §5.5's 3-of-3 launch target. The 3-of-3 target remains correct for moderate-and-above TVL scenarios; in the small-TVL scenario, it is over-engineered relative to actual governance activity, and §5.5.1 fallback is the more appropriate operational posture. When TVL crosses the moderate-TVL threshold ($25K+ sustained), full SPO seating activates per the §5.5 phasing.
+
 **Founder's professional background — disclosed here as context, not as the primary origin story.** The founder's professional work before OptiVaults was in the wealth-management / private-client-services side of the traditional-finance industry. That background is disclosed in this section (not in §1.6) as **additional context for readers who find the information relevant**: some V1 design choices — 4-bucket treasury with audit-reserve floor, 21-day timelock specifically on `UpdateFeeSplit` (the longest timelock, because governance is adjusting its own pay), multi-tier Compound cadence aligned to traditional-finance product release cadence rather than crypto-launch cadence — draw on product-design patterns familiar from the traditional-finance side. But V1 is **not positioned as a traditional-finance-insight product**; the primary origin story (§1.6) is founder-as-user. Auditors, Catalyst reviewers, and investors who want the professional-background context can use this paragraph; depositors should evaluate V1 on what the contract does, not on the founder's résumé.
 
 ### 7.5 Conway-era DRep stance
@@ -1344,11 +1445,11 @@ V1's vault UTXO carries ADA only as min-UTXO and operational buffer (gas for reb
 - [ ] Audit findings resolved
 - [ ] Deploy ceremony dry-run on Preprod
 
-**External audit engagement (target Q2-Q3 2027).** The audit firm has not yet been selected or contracted at the time of this whitepaper; engagement is gated on V1 Aiken implementation being feature-complete with internal review passing. Candidate firms will be short-listed from the set of auditors with prior Cardano Plutus V3 + Aiken experience — this is a narrow set (Anastasia Labs, MLabs, Certik-Cardano, TxPipe, and a handful of independent Aiken reviewers at publication time). The engaged firm and scope will be announced publicly at least 2 weeks prior to audit kickoff.
+**External audit engagement (target Q2-Q3 2027).** The audit firm has not yet been selected or contracted at the time of this whitepaper; engagement is gated on V1 Aiken implementation being feature-complete with internal review passing. Candidate firms will be short-listed from the set of auditors with prior Cardano Plutus V3 + Aiken experience — this is a narrow set (Anastasia Labs, MLabs, TxPipe, and a handful of independent Aiken reviewers at publication time). The engaged firm and scope will be announced publicly at least 2 weeks prior to audit kickoff.
 
 **Audit contingency.** If external audit surfaces CRITICAL findings, findings requiring contract redesign, or systemic design flaws, mainnet launch is postponed until remediation + re-audit confirms resolution. If audit finds a systemic flaw that cannot be fixed within the current architecture, V1 launch is cancelled, the architectural reset is published publicly, and V1 has **no external-contributor funding / no token pre-sale / no SAFE / SAFT obligations** to settle — unspent founding capital stays with the founding entity for use in any revised design.
 
-Funding for the external audit is drawn from the project's founding capital (not from existing deposits — the internal-verification-phase deployment has a separate operational budget). The USD 50–150K per-engagement range in `docs/economics.md §5.2` is based on public pricing indications from Cardano-capable audit firms (Anastasia Labs, MLabs, Certik-Cardano, TxPipe) circa 2025-2026 for comparable Plutus V3 scopes; the actual engaged amount will be disclosed publicly at contract signing.
+Funding for the external audit is drawn from the project's founding capital (not from existing deposits — the internal-verification-phase deployment has a separate operational budget). The USD **$50–$150K per-engagement range** in `docs/economics.md §5.2` is based on public pricing indications from Cardano-capable audit firms (Anastasia Labs, MLabs, TxPipe) circa 2025-2026 for comparable Plutus V3 scopes — this range **spans pre-discount base price (~$100K–$150K) at the upper end and post-public-goods-discount engaged amount (~$50K–$90K) at the lower end**. The actual engaged amount will be disclosed publicly at contract signing.
 
 **Audit funding strategy (sustainability under the public-goods path).** V1's public-goods positioning allows us to tap multiple non-dilutive funding sources to reduce the audit cost burden:
 
@@ -1356,6 +1457,28 @@ Funding for the external audit is drawn from the project's founding capital (not
 - **(b) Audit firm public-goods pricing**: Apache 2.0 + non-commercial positioning may qualify for a **30-50% discount**, reducing full price $100K-$150K to approximately $50K-$90K;
 - **(c) Scope reduction via extensive internal audit**: the accumulated internal audit history serves as preparatory material, allowing external audit scope to focus on critical paths (2-3 most critical validators + cross-validator integration flows) rather than all 17 logic validators + 1 adapter, saving another **$15K-$25K**;
 - **(d) Founder self-fund remainder**: after these mitigations, founder individual out-of-pocket is expected to be **$20K-$40K** if (a) materialises, scaling up to **$50K-$90K** if (a) does not materialise before audit kickoff.
+
+**Funding worst case (transparent disclosure).** If all non-self-funding sources underperform expectations simultaneously, the founder's out-of-pocket commitment scales upward. The full distribution (audit base price $100K–$150K depending on engaged firm and scope):
+
+| Source | Best case | Middle case | Worst case |
+|--------|-----------|-------------|------------|
+| (a) Catalyst grant | $30–50K | $15–30K | $0 (Catalyst not resumed by audit start) |
+| (b) Audit-firm public-goods discount | 50% off (−$50–75K) | 30% off (−$30–45K) | 0% off (full price applied) |
+| (c) Scope reduction via internal-audit history | −$25K | −$15K | −$0 (auditor requires full scope) |
+| (d) Founder self-fund (residual) — derived | $20–30K | $40–60K | **$100–150K** |
+
+**Worst-case founder out-of-pocket: $100–150K**, which represents the entire base audit cost falling on the founder if no grant lands, no public-goods discount applies, and scope cannot be narrowed. This consumes the bulk of the founding-capital runway in a single allocation event and is a primary trigger for Options A–D below. v1.3 surfaces this number explicitly — rather than soft-pedalling the figure — so depositors, audit firms, and grant reviewers see the same downside the founder has already internalised.
+
+**Worst-case contingency plan.** If by 2027 Q1 the committed funding from (a)+(b)+(c) totals less than $30K, the following adjustments will be evaluated **publicly** (not silently absorbed):
+
+- **Option A — Timeline extension (preferred).** Audit timeline pushed to Q4 2027 or H1 2028. V1 stays in pre-audit posture with the 100K USDCx cap intact. Founding capital continues to fund development + minimal operations. This buys time for Catalyst Round resumption or for founder runway accumulation.
+- **Option B — Scope reduction.** Audit scope narrowed to "critical-path validators only" (typically the 5–7 most security-critical of the 17 logic validators). Remaining validators audited in a future Phase 2 round. This carries audit-coverage risk that must be transparently disclosed to depositors at launch.
+- **Option C — Indefinite deferral with explicit disclosure.** V1 launch deferred until funding is available. The reference implementation remains public on GitHub. The preprod deployment remains accessible for evaluation. Founder explores alternative paths (e.g., joining a Cardano Foundation development residency, applying for a different grant program). This is framed publicly as a failure-acceptance scenario, **not** soft-pedaled as "delayed launch."
+- **Option D — Sunset under §0 framing.** If all above fail and founding-capital runway approaches 6 months remaining, the founder publicly announces V1 will not reach mainnet audited state under current resources. The codebase remains as a public-goods artefact under Apache 2.0; the preprod deployment serves as the operational reference. This is the most honest possible outcome if funding truly does not materialise — and is consistent with §0's "V1 may be the terminal state" framing.
+
+We commit to transparency about the funding gap rather than soft-pedalling the issue. The public dashboard tracks the current state of (a)+(b)+(c)+(d) commitments monthly during the funding-stack period, so depositors and observers can independently evaluate which option is likely.
+
+**Linkage to §4.1 sunset trigger (honest acknowledgement).** §4.1 lists sunset triggers including "runway drops below 6 months of forward burn at any time". The §8.1 worst-case branch ($100–$150K founder out-of-pocket in a single allocation event) is a plausible **automatic trigger** for §4.1 sunset on its own: paying the full audit base price consumes the bulk of the remaining founding-capital runway and is likely to push the runway below the 6-month floor immediately after the audit invoice clears. Concretely, **a worst-case audit payment is, in effect, an Option-D-adjacent event** — even if the founder formally chose Option B (paying full price), the §4.1 sunset criterion may fire shortly after. This linkage is **not hidden** in Option D; it is the structural reason Option A (timeline extension) is the preferred branch and Option C (indefinite deferral) sits between the two. The dashboard tracking above is also how depositors will see this linkage materialise if it happens.
 
 **Audit timeline reflects funding-stack uncertainty.** The Q2-Q3 2027 target is set explicitly later than the original Q3 2026 plan to accommodate (i) Catalyst Round resumption probability, (ii) Cardano Foundation / Intersect / Aiken Foundation alternative grant outreach, and (iii) founder runway accumulation if (a)/(b) outcomes are conservative. V1 remains in pre-audit posture (100K USDCx hard cap) for the entire intervening period — see §4 (TVL cap) and §8.2 (Phase 1 framing). The audit itself is not cancelled under any plausible funding scenario; only the start date moves.
 
@@ -1369,9 +1492,21 @@ Status of each funding source is tracked in `docs/economics.md §5.2`. This stac
 
 **Phase 1 TVL is a range, not a target.** Earlier whitepaper drafts assumed Phase 1 TVL would land in $5K-$25K via ~10-15 founder-network depositors during what was framed as a "closed beta." That framing has been removed in favour of pure permissionless + risk-disclosure. As a consequence: **actual Phase 1 TVL will depend entirely on organic discovery and individual depositor risk-assessment**, with significantly lower predictability than the closed-beta framing implied. Possible outcomes: (a) **$500–$5K** (only founder + 1-2 community depositors; Phase 1 still served its validation purpose under smaller real-user volume — counts as a successful Phase 1 if no CRITICAL bug surfaces); (b) **$5K-$25K** (the prior expectation, now treated as a midpoint scenario); (c) **$25K-$100K** (above the prior expectation; would trigger additional frontend warnings reminding users of pre-audit risk density, but no contract-level limits beyond the existing 100K cap). All three outcomes are acceptable Phase 1 endings; none represents a "failure" by itself. Phase 1 success is measured by §8.2 success criteria (a)-(d) below, not by TVL achieved.
 
+**Sub-scenarios mapped to operational mode, SPO posture, and framing.** v1.3 makes the operational-mode mapping explicit so depositors can read the sub-scenario they are currently in directly off the table:
+
+| Sub-scenario | TVL range | Likely # of depositors | Operational mode | SPO governance | Audit / external framing |
+|---|---|---|---|---|---|
+| (a) Personal reference | $500–$5K | Founder + 1–2 community | Reference Implementation Mode (§2.6.1) — quarterly-to-annual Compound | Deferred / symbolic | "Cardano reference vault implementation" |
+| (b) Small organic | $5K–$25K | 5–20 depositors | Reference Implementation Mode (§2.6.1) — cadence tilts toward monthly–biweekly Compound as TVL approaches the $25K deactivation threshold | Optional SPO recruitment with full load disclosure | Standard non-commercial public-goods |
+| (c) Phase 1 cap-approach | $25K–$100K | 20–100 depositors | §2.6 Default cadence (weekly Compound) | Full 3-of-3 SPO seats active | Standard product audit |
+
+Each sub-scenario is an acceptable Phase 1 endpoint per the §8.2 success criteria (a)–(d) below. Transitions between modes are keeper-operational policy under §4.5 discretion; they do **not** require a governance action unless TVL repeatedly crosses thresholds (which would suggest formalizing as `UpdateStrategy`).
+
+If V1 launches at sub-scenario (a) and TVL grows organically into (b) over 6–12 months, the keeper publishes mode-transition notice on the dashboard and shifts cadence — depositors see the transition transparently. If TVL contracts back (e.g., from (c) to (b) after major withdrawals), the keeper shifts mode in the reverse direction with similar dashboard notice. This is the intended adaptive behaviour, not a sign of distress.
+
 This stance is grounded in two simultaneous facts:
 
-1. **The $500K-$2.5M self-sustaining TVL threshold is, by definition, a Phase 2+ post-audit goal.** It cannot be reached inside the $100K cap era. Pre-audit TVL growth beyond ~$25K would be ahead of the risk envelope depositors should accept.
+1. **The $135K–$1.8M self-sustaining TVL range (baseline ~$500K) is, by definition, a Phase 2+ post-audit goal under §2.6 Default cadence.** It cannot be reached inside the $100K cap era. Pre-audit TVL growth beyond ~$25K would be ahead of the risk envelope depositors should accept.
 2. **Pre-audit honest success criteria are NOT "fill the cap":**
    - (a) No CRITICAL exploits against the deployed contracts during the audit window
    - (b) Automation (keeper + API + frontend) operates correctly under real user traffic at meaningful-but-small scale
@@ -1427,7 +1562,7 @@ If a critical bug requires V2, migration follows the same fresh-deploy pattern d
 - **Governance actions public** — every QueueAction announced within 1 hour, on-chain history is canonical.
 - **Wind-down protocol public** — if the founder cannot continue, 90-day notice + fee-to-zero + Liqwid-positions-pre-recalled precondition (see §4.1 sunset mechanics) + EmergencyWithdraw governance path + `emergency-withdraw` self-serve tool. **Hard-failure backstop**: even if both founder and any SPO co-signers are completely unreachable for 90 days, any vUSDCx holder can invoke the permissionless `CommunitySunset` redeemer (vault_user) to atomically freeze the vault and open permissionless `RecallFromLiqwid` + swap-to-USDCx paths for full self-serve depositor recovery — see §5.5.1 Layer 3 + `docs/security-model.md` §5.4 scenario E.
 - **No rug-pull architecture.** Every invariant that could drain funds is closed at the validator level, not the social level.
-- **Founder incapacitation protocol.** The V1 launch has the founder simultaneously serving as keeper operator, 1-of-3 governance signer, and ref-deployer-wallet controller; individual-level single-point-of-failure risk is real. Response mechanisms: (a) **Short-term absence (< 7 days)** — the 7-day keeper-inactivity window in the contract automatically activates; Direct Withdraw remains fully operational and the early-withdraw fee is waived; (b) **Medium-term incapacity (7-30 days)** — the two independent SPOs can queue `UpdateKeeperAuth` (14-day timelock + 1-of-n cancel) to rotate the keeper PKH to a community successor; (c) **Permanent incapacity** — the two SPOs trigger the §4.1 sunset path (90-day notice + fee=0 + depositor self-serve exit). The ref-deployer wallet key is currently controlled solely by the founder; if that key is lost or inaccessible, approximately 420 ADA of ref-script capital is permanently locked (but **this does not block depositor withdrawals** — ref-scripts remain available as reference inputs). V2 deployment ceremony will incorporate a multi-sig ref-deployer wallet or community key-escrow mechanism to eliminate this SPOF.
+- **Founder incapacitation protocol.** The V1 launch has the founder simultaneously serving as keeper operator, 1-of-3 governance signer, and ref-deployer-wallet controller; individual-level single-point-of-failure risk is real. Response mechanisms: (a) **Short-term absence (< 7 days)** — the 7-day keeper-inactivity window in the contract automatically activates; Direct Withdraw remains fully operational and the early-withdraw fee is waived; (b) **Medium-term incapacity (7-30 days)** — the two independent SPOs can queue `UpdateKeeperAuth` (14-day timelock + 1-of-n cancel) to rotate the keeper PKH to a community successor; (c) **Permanent incapacity** — the two SPOs trigger the §4.1 sunset path (90-day notice + fee=0 + depositor self-serve exit). The ref-deployer wallet key is currently controlled solely by the founder; if that key is lost or inaccessible, approximately **~870 ADA** of ref-script capital + **~24 ADA** of stake-credential deposits are permanently locked (per §8.2 measured 871.51 ADA + 12 × 2 ADA) — but **this does not block depositor withdrawals**, since ref-scripts remain available as reference inputs. V2 deployment ceremony will incorporate a multi-sig ref-deployer wallet or community key-escrow mechanism to eliminate this SPOF.
 
 ### 9.3 What could still go wrong
 
@@ -1489,6 +1624,8 @@ Every governance QueueAction's payload hash can be reverse-engineered from CBOR 
 - `order-batch.md` — OrderDatum + BatchProcess, pre-batch snapshot pricing, user-set batcher tip
 - `ada-swap.md` — SwapAda redeemer (vault ADA replenishment closed loop), Charli3 + Orcfax oracle reading
 - `vault-nft.md` — Vault Identity NFT PlutusV3 UTXO-ref one-shot design
+- `swap-adapter.md` — Minswap V2 SwapAdapter interface (Tier 2 peg-floor decoder, byte-for-byte `SwapExactIn` / `SwapMultiRouting` validation; referenced by §3.4, §5.4 P4)
+- `rebalance-policy.md` — Complete rebalance algorithm (slippage budgets, DEX path selection, frequency limits; canonical source for the §2.5 high-level mechanism description)
 
 **Docs** (under `docs/`):
 - `security-model.md` — adversary classes, 6-identity separation target, attack surface catalog, residual-risk summary
@@ -1505,7 +1642,7 @@ Every governance QueueAction's payload hash can be reverse-engineered from CBOR 
 
 ## 12. Disclosure
 
-**Non-investment product / non-solicitation.** V1 is a Cardano DeFi public-goods reference implementation (see the positioning declaration in the Executive Summary); **it is not an investment product, not a fund, not a managed service**. The 4.5% performance fee covers protocol operations, audit reserve, and long-term runway — it does not generate profit to the founder or investors. This whitepaper is a **factual description** of V1's design and launch conditions, not investment advice or a solicitation of any kind. Smart contract deposits involve risk of total loss.
+**Non-investment product / non-solicitation.** V1 is a Cardano DeFi public-goods reference implementation (see the positioning declaration in the Executive Summary); **it is not an investment product, not a fund, not a managed service**. The 4.5% performance fee covers protocol operations, audit reserve, and long-term runway; **there is no equity, no token, no investor distribution**. **Disclosure on the keeper share**: 40% of the performance fee (~1.8% of yield) goes to the keeper wallet as operational compensation; because the founder runs the keeper at V1 launch (§7.4), **USDCx does flow to the founder's keeper wallet during Phase 1** (~$108/year at the 100K cap; <$30/year in the realistic Phase 1 sub-scenarios per §8.2). This is **below the keeper's own infra cost** ($400-1000/year VPS + monitoring per §4.3), so the keeper position is a **net cost-centre, not a profit line**, for the founder — the loss is absorbed against founding-capital runway. The honest reading is: no equity-style profit distribution, no token, but a small USDCx receipt that does not cover its own operating costs. §0 + §4.3 + §7.4 document the full structure. This whitepaper is a **factual description** of V1's design and launch conditions, not investment advice or a solicitation of any kind. Smart contract deposits involve risk of total loss.
 
 **Geographical posture.** V1 is a permissionless on-chain Cardano smart contract; technically any Cardano-wallet holder can interact with it. But V1 is designed for Cardano-native users, and **does not actively offer services to residents of any jurisdiction**. Depositors must determine on their own whether their jurisdiction (notably US, EU, UK, China, OFAC sanctions-list countries) permits use of non-custodial DeFi public-goods infrastructure; compliance responsibility rests entirely with the depositor. V1's frontend (optivaults.app) may, based on legal opinion, **display a warning or block access from specific jurisdictions**; this is a **frontend-only soft signal** and does not restrict the underlying on-chain smart contract — users who bypass the frontend and interact with the contract directly (e.g. via `withdraw-cli` or a hand-built TX) assume full jurisdictional-compliance responsibility. **The V1 contract itself does not implement address whitelisting or geographic restriction**; doing so would contradict the non-custodial + permissionless design and is not on the roadmap. Any frontend geoblock change is announced publicly (optivaults.app + Discord). If your jurisdiction explicitly prohibits use of non-custodial DeFi or unregistered financial services, **do not use V1** — even if you technically can by bypassing the frontend.
 
@@ -1518,6 +1655,39 @@ Every governance QueueAction's payload hash can be reverse-engineered from CBOR 
 ---
 
 ## Changelog
+
+### v1.3 — 2026-05-11
+
+**Added**
+- §1.2 "Issuance status (as of whitepaper version 1.3, 2026-05-11)" — timestamped snapshot of USDCx + xReserve + Liqwid USDCx market operational state at v1.3 publication, with re-evaluation path via `UpdateRegistry` if state regresses.
+- §2.6.1 Reference Implementation Mode — operational mode for sustained low-TVL (<$25K) periods; relaxed Compound + heartbeat cadence preserving all contract invariants while reducing operational cost ~85–90%; activated by keeper under §4.5 discretion when economically rational, not by governance action.
+- §5.5.1 corner-case discussion — explicit treatment of "heartbeat-only keeper" sabotage scenario, design rationale for `max(last_compound_time, last_realloc_time)` trigger semantics, alignment with §2.6.1 legitimate use cases.
+- §8.1 funding worst-case scenario — four-source best/middle/worst distribution showing founder out-of-pocket could reach **$100–$150K in worst case** (corrected during same-day internal review — see Corrections below); four contingency options (timeline extension / scope reduction / indefinite deferral / §0-framed sunset) with monthly public-dashboard tracking commitment.
+- §8.2 sub-scenario × operational-mode mapping table — links Phase 1 sub-scenarios (a)/(b)/(c) to specific operational modes, SPO governance posture, and external framing.
+- §4.1 Reference Implementation Mode threshold column — shows V1's self-sustaining TVL drops from $500K to ~$56K under §2.6.1, supporting sub-scenario (b) viability.
+- §7.4 Phase 1 small-TVL governance posture paragraph — documents the de facto solo-signer contingency when launch lands in the (a)/(b) sub-scenarios.
+
+**Replaced**
+- §1.3.1 + §4.4 break-even reconciliation — unified to a single two-component framing (time cost + risk-management premium → practical break-even $25–$40K) instead of the prior conflicting tables. §1.3.1 now carries the canonical break-even table; §4.4 references it rather than duplicating, removing the contradictory $10/hr conclusion that previously existed between the two sections.
+
+**Modified**
+- §2.6 — removed the misleading "lower tiers exist only for V2 migration recovery" framing; the full tier table is now documented as keeper's live policy, with §2.6.1 covering the low-TVL operational mode explicitly.
+- §5.5 SPO recruitment phasing — recruitment activity now explicitly tied to TVL sub-scenarios, with framing of governance-load expectations during pre-launch + Phase 1 small-TVL; SPO commitment honoured as community service if V1 stays in terminal Phase 1 state.
+
+**Tone shifts**
+- Reinforces v1.2's "public-goods reference implementation" positioning by adding operational counterparts (§2.6.1 mode, §5.5 phasing, §8.1 sunset option).
+- Acknowledges $500–$5K TVL personal-reference sub-scenario as a legitimate Phase 1 endpoint, not a failure.
+- Increases worst-case transparency in the audit funding section.
+
+**Corrections from internal consistency review (same date)**
+- §8.1 worst-case table — corrected arithmetic: (d) Founder self-fund worst case raised from $75–100K to **$100–150K** so the row reconciles with (a)+(b)+(c) all at $0 savings and full $100–150K audit base price.
+- §8.2 sub-scenario (b) operational mode — relabelled from "Transitional" to **Reference Implementation Mode (§2.6.1) with cadence tilting toward monthly–biweekly as TVL approaches $25K**, removing the §2.6.1 binary on/off contradiction.
+- §1.5 Stage matrix — Stage 1 renamed from "Closed Pilot (invitation only)" to **"Limited Pilot (permissionless, with prominent pre-audit risk warnings; no invitation gate, no whitelist)"** to match §8.2's removal of closed-beta framing in v1.1.
+- §0 + §12 — clarified that the "no revenue to founder/investors" phrasing applies to equity/token distributions only; **the 40% keeper share is a USDCx receipt line to the founder during Phase 1 as operational compensation** (initially phrased as "direct income line" in the same-day v1.3 first-pass; **revised in the second-pass to acknowledge net-loss reality**: at 100K cap keeper share $108/yr < VPS $400-1000/yr → keeper position is a net cost-centre even for the founder, loss absorbed against founding-capital runway; §4.3 + §7.4 cross-references).
+- §0 Pre-Catalyst Phase — explicitly disclosed that an **internal-verification-era deployment exists on Cardano mainnet** with founder-gated access, separate from the V1 design in this whitepaper.
+- §6.1 — section title amended to "Six-identity separation target (NOT achieved at launch — disclosed honestly)" with body text rewritten to state the launch state clearly rather than letting the "target" qualifier carry the entire disclosure burden.
+- §8.1 — removed "Certik-Cardano" from the candidate-firm short-list (no verifiable Cardano-Aiken practice under that brand at publication time); list is now **Anastasia Labs, MLabs, TxPipe + independent Aiken reviewers**.
+- §4.1 — added paragraph clarifying that the §2.6.1 Reference Implementation Mode $56K self-sustain figure does **not** alter the §4.1 / §9.2 $500K post-audit sunset trigger; the two numbers measure different operational regimes.
 
 ### v1.2 — 2026-05-08
 
@@ -1560,4 +1730,4 @@ Initial release. Production-ready V1 design specification. Single-protocol Liqwi
 
 ---
 
-**End of Whitepaper V1.2**
+**End of Whitepaper V1.3**
