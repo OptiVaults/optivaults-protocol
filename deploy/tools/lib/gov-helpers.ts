@@ -323,6 +323,64 @@ export async function fetchSingleUtxo(lucid: LucidEvolution, addr: string): Prom
 }
 
 /**
+ * Fetch the gov UTxO with stability polling — return only after 2
+ * consecutive polls return the same outRef + datum nonce. Hardens
+ * queueAction's idempotency check against the Blockfrost
+ * address-utxos indexer-lag bug class.
+ *
+ * Bug class: operator retries an h-* governance tool after a
+ * Blockfrost /txs/<hash> 404 polling timeout. On retry, queueAction's
+ * idempotency check runs against a STALE gov UTxO returned by
+ * Blockfrost (known 30-90s address-utxos indexer lag), misses the
+ * just-landed first-attempt action, and builds a duplicate Queue TX
+ * with a different action_id. Result: two stuck queued actions
+ * needing manual cleanup.
+ *
+ * awaitGovActionInQueue already documents the same lag pattern for
+ * the post-queue path; this helper closes the equivalent gap on the
+ * pre-queue idempotency check.
+ *
+ * Default 30s max wait, 5s poll interval = 6 attempts max. Returns
+ * after 2 consecutive identical observations (typical 10s overhead).
+ * If gov state doesn't stabilise, warns and returns the last seen
+ * UTxO so callers degrade to old behaviour rather than hang.
+ */
+export async function fetchStableGovUtxo(
+  lucid: LucidEvolution,
+  addr: string,
+  maxWaitMs = 30_000,
+  pollIntervalMs = 5_000,
+): Promise<UTxO> {
+  const t0 = Date.now();
+  let prevTxHash: string | null = null;
+  let prevOutIdx: number | null = null;
+  let prevNonce: bigint | null = null;
+  let last: UTxO | null = null;
+  while (Date.now() - t0 < maxWaitMs) {
+    const utxo = await fetchSingleUtxo(lucid, addr);
+    last = utxo;
+    const g = parseGovDatum(utxo.datum!);
+    if (
+      prevTxHash === utxo.txHash &&
+      prevOutIdx === utxo.outputIndex &&
+      prevNonce === g.nonce
+    ) {
+      return utxo;
+    }
+    prevTxHash = utxo.txHash;
+    prevOutIdx = utxo.outputIndex;
+    prevNonce = g.nonce;
+    await new Promise((r) => setTimeout(r, pollIntervalMs));
+  }
+  console.warn(
+    `[fetchStableGovUtxo] gov UTxO did not stabilise within ${maxWaitMs}ms — ` +
+    `proceeding with last observed (txHash=${last?.txHash.slice(0, 16) ?? "??"}…). ` +
+    `Risk: queueAction idempotency check may miss a recently-landed action.`,
+  );
+  return last ?? (await fetchSingleUtxo(lucid, addr));
+}
+
+/**
  * Re-fetch the gov UTxO with polling until a specific action_id appears
  * in the queued list. Mitigates Blockfrost address-utxos indexer lag —
  * Blockfrost commonly returns the pre-Queue gov UTxO for 30-90s after
@@ -429,7 +487,11 @@ export async function queueAction(args: QueueArgs): Promise<QueueResult> {
   const { lucid, state, mnemonic } = ctx;
 
   const govAddr = state.stateUtxos.governance.address;
-  let govIn = await fetchSingleUtxo(lucid, govAddr);
+  // Stability poll instead of single fetch — closes the
+  // Blockfrost address-utxos indexer-lag bug where the idempotency
+  // check below ran against a stale gov UTxO and missed a
+  // just-landed action. See fetchStableGovUtxo docstring.
+  let govIn = await fetchStableGovUtxo(lucid, govAddr);
   let g = parseGovDatum(govIn.datum!);
   console.log(`gov: nonce=${g.nonce}, queued.length=${g.queued.length}`);
 
