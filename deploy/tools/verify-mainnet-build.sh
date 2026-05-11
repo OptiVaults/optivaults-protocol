@@ -26,6 +26,35 @@ fi
 
 mkdir -p deploy/state
 
+# Pre-flight: audit off-chain h-* tool TIMELOCK_MS constants. The
+# on-chain `preprod_fast_timelocks` flag governs validator-side timelock
+# enforcement, but each h-* tool ALSO hardcodes its own TIMELOCK_MS at
+# Queue commit time. A 60_000 left in any tool means a mainnet operator
+# would commit a Queue with a 60-second timelock that the validator
+# rejects — the failed Execute wastes the queue fee. Caught here at
+# code-review time instead.
+echo "[audit] h-* tool TIMELOCK_MS (must not be 60_000 for mainnet release)..."
+TOOL_AUDIT_FAIL=0
+while IFS= read -r line; do
+  if echo "$line" | grep -q "= 60_000"; then
+    echo "  FATAL: $line"
+    TOOL_AUDIT_FAIL=1
+  else
+    echo "  OK:    $line"
+  fi
+done < <(grep -nE "const TIMELOCK_MS = " deploy/tools/h-*.ts)
+if [ "$TOOL_AUDIT_FAIL" = "1" ]; then
+  echo ""
+  echo "FATAL: One or more h-* tools still have TIMELOCK_MS = 60_000."
+  echo "Restore each to its production value per constants.ak::timelock_*_ms:"
+  echo "  h-update-registry.ts       → 14 * 86_400 * 1_000 (14d)"
+  echo "  h-update-fee-split.ts      → 21 * 86_400 * 1_000 (21d)"
+  echo "  h-update-slippage-policy.ts→ 48 * 60 * 60 * 1_000 (48h)"
+  echo "  h-rotate-signers.ts        → 14 * 86_400 * 1_000 (14d)"
+  exit 1
+fi
+echo ""
+
 trap 'if [ -f "$BACKUP" ]; then mv "$BACKUP" "$CONST"; echo "[restored] $CONST"; fi' EXIT INT TERM
 
 cp "$CONST" "$BACKUP"
