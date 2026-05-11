@@ -3,9 +3,7 @@
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![Aiken](https://img.shields.io/badge/aiken-v1.1.x-red)
 [![CI](https://github.com/OptiVaults/optivaults-protocol/actions/workflows/aiken-check.yml/badge.svg?branch=v1)](https://github.com/OptiVaults/optivaults-protocol/actions/workflows/aiken-check.yml)
-![Tests](https://img.shields.io/badge/tests-194%20passing-brightgreen)
-![Checks](https://img.shields.io/badge/randomized%20checks-689-brightgreen)
-![Audit Status](https://img.shields.io/badge/audit-RFP%20in%20progress-yellow)
+![Audit Status](https://img.shields.io/badge/audit-pending%20Q2--Q3%202027-yellow)
 ![Mainnet](https://img.shields.io/badge/mainnet-pre--launch-orange)
 
 > **Active development branch: `v1`.** There is no `main` branch — V1 is the first public release, and we use the version tag as the branch name by convention. Future major versions (V2, V3, ...) will live on their own parallel branches.
@@ -79,7 +77,7 @@ Articles are mirrored on Medium with canonical URLs pointing back to this reposi
 │   ├── ada-swap.md             SwapAda redeemer + dual-feed oracle reader
 │   ├── vault-nft.md            Vault Identity NFT one-shot mint pattern
 │   └── swap-adapter.md         SwapAdapter interface + B@launch=1 post-launch DEX addition lifecycle
-├── contracts/                  V1 Aiken PlutusV3 source — 17 logic validators + 4 NFT mint policies + 1 DEX adapter; 194 unit + property tests / 689 randomized checks; `aiken check` clean
+├── contracts/                  V1 Aiken PlutusV3 source — 17 logic validators + 4 NFT mint policies + 1 DEX adapter; `aiken check` passing (run against the deployed commit for the current test summary)
 ├── deploy/                     Deploy pipeline
 │   ├── README.md               Deploy pipeline overview + checklist
 │   ├── deploy.ts               Single-command ceremony orchestrator (idempotent + resumable)
@@ -134,58 +132,28 @@ For audit engagement: the V1 audit baseline is the `v1-postphase77d-preprod` tag
 
 ## Status
 
-V1 is in **early implementation phase**:
+V1 is in **mainnet pre-flight phase**:
 
 - ✅ Spec / docs / whitepaper complete (15 markdown files under `spec/` + `docs/` + `whitepaper/`).
 - ✅ All 17 Aiken logic validators + 4 NFT mint policies + 1 DEX adapter (`minswap_v2_adapter`, §B@launch=1 SwapAdapter) implemented and `aiken check` passes (`contracts/`). Partitioning rationale documented in `spec/architecture.md` §4.1. `UpdateSlippagePolicy` + 2 VaultDatum fields (§5.4 Phase 2) and ref-script SwapAdapter dispatch + `minswap_v2_adapter` + Registry `swap_adapter_hashes` (§B@launch=1) all on-chain.
-- ✅ Unit + property test suite — **194 tests passing, 689 total checks per `aiken check` run** (8 property tests × up to 100 iterations + deterministic cases including R72 + R73 + R74 regression coverage; R74 adds 24 inline tests in `minswap_v2_adapter` plus `tests/r74_test.ak` with 10 structural tests).
+- ✅ Unit + property test suite — `aiken check` passes against the deployed commit (run `cd contracts && aiken check` for the current summary; property tests use `aiken/fuzz` iteration discipline with early-exit on first failure).
 - ✅ Preprod E2E test plan drafted (`tests/preprod-e2e-plan.md`) with 100+ scenarios across all vault validators + 4 NFT one-shot policies + cross-validator integration flows.
-- ✅ Preprod E2E test scripts — 16 executable TS scripts covering ceremony health + Phase B (Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw) + Phase C (zero-yield Compound) + Phase D (MergeUtxo donation paths including 2 negative-path rejections), published in `optivaults-reference` (operator repo). Phase E (real Minswap V2) / Phase F (mock Liqwid stack) / Phase H (governance state machine) pending.
-- ✅ Two Preprod ceremonies executed — see "Preprod deploy status" below. 38 TX per ceremony, all phases verified on-chain.
+- ✅ Preprod E2E test scripts — multi-phase coverage including ceremony health + user flows (Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw) + zero-yield Compound + MergeUtxo donation paths (including negative-path rejections) + governance state-machine flows + oracle / SwapAdapter chain replay. Scripts published in the operator reference repo.
+- ✅ Multiple Preprod ceremonies executed — 38 TX per ceremony, all phases verified on-chain. Recent ceremonies have exercised governance Queue/Execute multisig flows, mock-Liqwid Supply/Recall/Compound/Distribute end-to-end, oracle E2E with stale-feed / disagreement / no-entry rejection paths, and the R77 F-1 attacker-recipient chain-replay defence.
 - ✅ A2 governance-gated stake deregister tools (`deploy/tools/a2-{queue,execute,cancel}-deregister.ts`) with idempotency + CBOR-Constr payload encoding.
 - ✅ Mainnet ceremony runbook drafted (`deploy/runbooks/v1-mainnet-ceremony.md`, 501 lines) — capital budget + pre-flight + phase-by-phase + partial-failure handling + post-ceremony backfill + sunset path.
 - ✅ Off-chain byte-for-byte decoder `deploy/tools/verify-minswap-v2-decode.ts` exposes the Minswap V2 adapter's decode logic for pre-mainnet decode verification against historical on-chain TXs without re-submitting.
 - ⏳ Keeper reference implementation — lives in `optivaults-reference` (operator repo), not started.
-- ⏳ Internal audit rounds (coverage areas A-F, see `docs/audit-scope.md`) — R72 (post-Phase-77d, 1 MEDIUM + 3 LOW fixed), R73 (`valid_allocs × MergeUtxo` donation gap, 1 MEDIUM fixed), and R74 (pre-mainnet Minswap V2 decoder `lp_asset` format mismatch, 1 HIGH fixed — see `SECURITY.md §"Recently fixed"`) complete; areas A-F walkthrough pending.
+- ⏳ Internal audit rounds (coverage areas A-F, see `docs/audit-scope.md`) — multiple rounds complete and documented in `SECURITY.md` with severity breakdown + fix evidence. Most recent CRITICAL closure: R77 F-1 (Minswap V2 order datum recipient field unconstrained — fixed via `SwapAdapterRedeemer.expected_recipient_addr` + Layer-1/Layer-2 enforcement). Coverage-area A-F walkthrough pending.
 - ⏳ External audit engagement — target Q2-Q3 2027, firm not yet selected.
 
 ### Preprod deploy status
 
-| Release tag | Date | Vault address | Vault NFT policy | Notes |
-|-------------|------|---------------|------------------|-------|
-| `v1-preprod-p3` | 2026-04-23 | `addr_test1wz87t7qnkpk3cgy2057rsrnsz6px88ks23y3ktd46q0jzfg5zfddz` | `7a0eea53cfa90b949009729bd0eaa73e3cb9f2f8056cc235d57218c5` | Preprod E2E ceremony built with shortened timelocks for iteration speed (constants subsequently restored to production values). B1 Deposit + B2 Partial Withdraw + A2 Queue on vault_user verified on-chain. |
-| `v1-postphase77d-preprod` | 2026-04-22 | `addr_test1wqca8hpe87tcfx0r0q7ju3uxf2thpr4jjcyjg44cc8kpvngysgja2` | — | Earlier Preprod ceremony covering B1-B9 user flow + D1/D2/D4/D5/D6 MergeUtxo + C1 Compound zero-yield + H1-H5 governance Queue/Cancel verified on-chain. |
+Multiple Preprod ceremonies have been executed against the V1 contract set to exercise the full deploy pipeline + governance state machine + Liqwid integration + SwapAdapter dispatch + oracle E2E. Each ceremony's per-validator hashes and on-chain TX evidence are captured in the ceremony's state JSON under `deploy/state/<network>-<release-tag>.json` (operator-only, gitignored). The most recent ceremony's `mainnet-hash-preview.txt` snapshot is regenerated via `deploy/tools/verify-mainnet-build.sh` (which now includes a pre-flight TIMELOCK_MS audit gate on every `h-*.ts` operator tool).
 
-Both ceremonies' stake-registration deposits (12 × 2 ADA = 24 ADA per ceremony) + ref-script min-ADA lockups (~870 ADA per ceremony) are reclaimable via `deploy/tools/a2-{queue,execute}-deregister.ts` + `deploy/tools/reclaim-refs.ts`, contingent on the A2 governance flow (14d production timelock).
+Stake-registration deposits (12 × 2 ADA = 24 ADA per ceremony) + ref-script min-ADA lockups (~870 ADA per ceremony) are reclaimable via `deploy/tools/a2-{queue,execute}-deregister.ts` + `deploy/tools/reclaim-refs.ts`, contingent on the A2 governance flow (14d production timelock).
 
-Compiled validator sizes (all under the 16 KB PlutusV3 limit, sorted largest → smallest). Measured from the `v1-preprod-p3` build. Constants have since been reverted to production timelock values (see `contracts/lib/vault/constants.ak` git history); the production build differs only at `multisig_gov` (and consequently at the `vault_proxy` applied form), the 21 other validators are byte-identical. Mainnet hash preview at `deploy/state/mainnet-hash-preview.txt` (operator-only, gitignored).
-
-| Validator | Size (bytes) | Headroom |
-|-----------|-------------:|---------:|
-| vault_liqwid | 13,392 | 2,992 B |
-| vault_recall | 13,337 | 3,047 B |
-| vault_admin_deploy | 13,157 | 3,227 B |
-| vault_protocol | 13,130 | 3,254 B |
-| vault_gov_policy | 12,584 | 3,800 B |
-| vault_keeper_hot | 12,381 | 4,003 B |
-| vault_swap_ada | 12,164 | 4,220 B |
-| vault_user | 11,885 | 4,499 B |
-| vault_batcher | 11,553 | 4,831 B |
-| vault_gov_emergency | 10,861 | 5,523 B |
-| treasury | 9,851 | 6,533 B |
-| keeper_stake_script | 8,774 | 7,610 B |
-| registry | 8,504 | 7,880 B |
-| multisig_gov | 8,233 | 8,151 B |
-| minswap_v2_adapter | 5,020 | 11,364 B |
-| vault_proxy | 4,912 | 11,472 B |
-| order | 3,788 | 12,596 B |
-| vusdcx | 1,255 | 15,129 B |
-| gov_signer_nft | 399 | 15,985 B |
-| vault_nft | 337 | 16,047 B |
-| governance_nft | 319 | 16,065 B |
-| registry_auth_nft | 319 | 16,065 B |
-
-Tightest headroom is `vault_liqwid` at 2,992 B free (18.3% from ceiling). Production-timelock rebuild will shift `multisig_gov` back up by ~100-200 B (const-inlined constants are larger) but does not change non-multisig_gov validator hashes.
+Compiled validator sizes — all 22 artefacts remain under the 16 KB Plutus V3 ceiling. The exact per-validator bytes at any commit are reproducible via `cd contracts && aiken build && node -e "..."` against `plutus.json`; we intentionally do not pin specific sizes in this document so it does not drift relative to the source of truth as the contract surface evolves across audit-round fixes.
 
 See [docs/audit-scope.md](docs/audit-scope.md) for the development / audit / launch timeline.
 
