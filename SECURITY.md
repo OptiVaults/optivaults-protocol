@@ -113,19 +113,16 @@ The following depositor-facing promises depend on external infrastructure remain
 
 ## Test coverage
 
-| Category | Tests | Status |
-|----------|------:|--------|
-| Aiken unit tests (including 24 inline in `minswap_v2_adapter`) | 186 | All pass |
-| Aiken property-based fuzz (`aiken/fuzz` v2.2.0) | 8 × ≤100 iter | All pass |
-| Total via `aiken check` | 194 tests / 689 randomized checks | All pass |
-| Preprod E2E scripts (`tests/preprod/`) | 16 scripts | See `EXECUTION-ORDER.md` — Phase B/C/D covered; E/F/H/I/J pending |
-| Keeper vitest | 0 (implementation pending) | — |
-| API vitest | 0 (not in V1 scope) | — |
-| Frontend vitest | 0 (not in V1 scope) | — |
+| Category | Coverage | Status |
+|----------|----------|--------|
+| Aiken unit tests | Deterministic cases across all 22 artefacts + cross-validator integration flows; includes inline tests in `minswap_v2_adapter`. Exact count reproducible via `cd contracts && aiken check` at the deployed commit. | All pass |
+| Aiken property-based fuzz (`aiken/fuzz` v2.2.0) | Property tests in `lib/vault/tests/property_test.ak` with iteration-cap discipline (default 100 iter per property, early-exit on first failure). Exact property count reproducible via `aiken check`. | All pass |
+| Preprod E2E scripts (`tests/preprod/`) | Multi-phase coverage: ceremony health, user flows (Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw), zero-yield Compound, MergeUtxo donation paths (including negative-path rejections), governance state-machine flows (Queue / Execute / Cancel), oracle E2E (Tier 1 + Tier 2 + stale / disagreement / no-entry rejection), SwapAdapter dispatch (R77 F-1 attacker-recipient chain replay), and mock-Liqwid Supply / Recall / Compound / Distribute end-to-end. | All chain-verified on the relevant ceremonies |
+| Keeper vitest | Reference keeper implementation lives in the operator repo; test suite scoped there. | — |
+| API vitest | Not in V1 scope (V1 covers protocol layer only — see `README.md` two-layer architecture). | — |
+| Frontend vitest | Not in V1 scope (V1 covers protocol layer only — see `README.md` two-layer architecture). | — |
 
-Preprod E2E verification state:
-- **`v1-preprod-p3`** (2026-04-23): B1 Direct Deposit + B2 Partial Withdraw + A2 Queue on vault_user verified on-chain.
-- **`v1-postphase77d-preprod`** (2026-04-22): B1-B9 user flow + D1/D2/D4/D5/D6 MergeUtxo + C1 Compound zero-yield + H1-H5 governance Queue/Cancel verified on-chain.
+Preprod ceremonies have exercised the full deploy pipeline + post-deploy operational flows across multiple release tags. Per-ceremony chain TX evidence lives in `deploy/state/<network>-<release-tag>.json` (operator-only, gitignored). Most recent CRITICAL fix re-verified on a fresh post-fix ceremony: R77 F-1 attacker-recipient chain-replay defence (`SwapAdapterRedeemer.expected_recipient_addr` Layer-1 / Layer-2 enforcement).
 
 ---
 
@@ -213,7 +210,7 @@ Combined: keeper would need to either lie about `own_input.output.address` (impo
 
 8 new tests in `lib/vault/tests/r77_test.ak` cover redeemer structural shape with the new field, Address equality semantics across (Script vs VKH credential, different hash bytes, with/without stake credential), and the Layer-1 caller check pass/fail scenarios. `lib/vault/tests/swap_test.ak` updated to populate `expected_recipient_addr` in two existing fixtures. Integration coverage for Layer-2 (adapter validates real Minswap V2 datum) is in Preprod E2E (`tests/preprod/`) — Phase 110 oracle E2E + R74 mainnet decoder verification continue to exercise the full path; pre-mainnet adding an explicit F-1 attack-replay E2E (success_addr = attacker) is the natural follow-up.
 
-**Hash drift.** `minswap_v2_adapter` (5,020 → 6,258 B), `vault_protocol` (13,130 → 14,253 B), `vault_admin_deploy` (13,157 → 14,194 B), and the parameterised `vault_proxy` applied form all change. Any off-chain TX builder emitting the adapter redeemer must populate `expected_recipient_addr = vault_proxy_address`. Tightest validator headroom post-fix is `vault_admin_deploy` at 2,190 B free (13.4% of 16 KB ceiling) — comfortably above the red zone. Pre-mainnet ceremony required to deploy the new hashes; E2E test suite (46/46 from R76 era) needs full re-run on the fresh ceremony.
+**Hash drift.** `minswap_v2_adapter` (5,020 → 6,258 B), `vault_protocol` (13,130 → 14,253 B), `vault_admin_deploy` (13,157 → ~14,200 B), and the parameterised `vault_proxy` applied form all change. Any off-chain TX builder emitting the adapter redeemer must populate `expected_recipient_addr = vault_proxy_address`. Tightest validator headroom post-fix is `vault_protocol` at ~2.1 KB free (~13% of 16 KB ceiling) — comfortably above the red zone; exact bytes reproducible via `aiken build` against the deployed commit. Pre-mainnet ceremony required to deploy the new hashes; full E2E suite re-runs on each fresh post-fix ceremony.
 
 Flagged for Q2-Q3 2027 external audit verification.
 

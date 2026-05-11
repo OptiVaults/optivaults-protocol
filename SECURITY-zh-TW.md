@@ -113,19 +113,16 @@
 
 ## 測試覆蓋
 
-| 類別 | 測試數 | 狀態 |
-|-----|------:|------|
-| Aiken 單元測試(含 `minswap_v2_adapter` 內 24 個 inline) | 186 | 全過 |
-| Aiken property-based fuzz(`aiken/fuzz` v2.2.0) | 8 × ≤100 iter | 全過 |
-| 透過 `aiken check` 的總數 | 194 個 test / 689 個隨機化 check | 全過 |
-| Preprod E2E 腳本(`tests/preprod/`) | 16 個腳本 | 見 `EXECUTION-ORDER.md`——Phase B/C/D 覆蓋;E/F/H/I/J 尚未 |
-| Keeper vitest | 0(實作尚未開始) | — |
-| API vitest | 0(不在 V1 scope) | — |
-| Frontend vitest | 0(不在 V1 scope) | — |
+| 類別 | 覆蓋面 | 狀態 |
+|-----|--------|------|
+| Aiken 單元測試 | 全部 22 個 artefact 的確定性案例 + 跨 validator 整合流程；含 `minswap_v2_adapter` 內的 inline test。實際數可在部署 commit 跑 `cd contracts && aiken check` 取得。 | 全過 |
+| Aiken property-based fuzz（`aiken/fuzz` v2.2.0） | `lib/vault/tests/property_test.ak` 內 property test，使用 iteration cap 紀律（預設每 property 100 iter，首次失敗 early-exit）。實際 property 數可在 `aiken check` 取得。 | 全過 |
+| Preprod E2E 腳本（`tests/preprod/`） | 多階段覆蓋：ceremony health、用戶流程（Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw）、zero-yield Compound、MergeUtxo 捐贈路徑（含負測路徑）、治理狀態機（Queue / Execute / Cancel）、oracle E2E（Tier 1 + Tier 2 + stale / disagreement / no-entry 拒絕）、SwapAdapter dispatch（R77 F-1 攻擊接收方鏈上重演）、以及 mock-Liqwid Supply / Recall / Compound / Distribute 端對端。 | 全部已在對應 ceremony 鏈上驗證 |
+| Keeper vitest | 參考 keeper 實作位於 operator repo，測試套件設於該 repo。 | — |
+| API vitest | 不在 V1 scope（V1 只涵蓋協議層——見 `README.md` 雙層架構）。 | — |
+| Frontend vitest | 不在 V1 scope（V1 只涵蓋協議層——見 `README.md` 雙層架構）。 | — |
 
-Preprod E2E 驗證狀態:
-- **`v1-preprod-p3`**(2026-04-23,目前):vault_user 上的 B1 Direct Deposit + B2 Partial Withdraw + A2 Queue 均已鏈上驗證。
-- **`v1-postphase77d-preprod`**(2026-04-22):B1-B9 + D1/D2/D4/D5/D6 + C1 + H1-H5 Queue/Cancel 均已驗證(Phase 84 session)。
+Preprod ceremony 已跨多個 release tag 演練完整 deploy pipeline + 部署後操作流程。每次 ceremony 鏈上 TX 證據存於 `deploy/state/<network>-<release-tag>.json`（operator-only，gitignored）。近期 CRITICAL 修補已在 post-fix 全新 ceremony 重新驗證：R77 F-1 攻擊接收方鏈上重演防線（`SwapAdapterRedeemer.expected_recipient_addr` Layer-1 / Layer-2 強制檢查）。
 
 ---
 
