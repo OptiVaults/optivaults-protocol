@@ -195,8 +195,13 @@ validator vault_protocol(
           get_mint_quantity(tx, old_datum.vusdcx_policy) == 0,
           check_immutable_fields(old_datum, new_datum),
           check_policy_fields_unchanged(old_datum, new_datum),
-          valid_destination,
-          valid_swap,
+          // `?` markers emit Aiken traces on False return so trace-
+          // instrumented ceremony builds surface whitelist /
+          // adapter-dispatch failures directly instead of producing an
+          // empty `traces: []` dead-end. Zero size impact on production
+          // builds without `--trace-level verbose`.
+          valid_destination?,
+          valid_swap?,
           valid_non_deposit,
           val_has_no_order_inputs(tx.inputs, old_datum.order_script_hash),
         }

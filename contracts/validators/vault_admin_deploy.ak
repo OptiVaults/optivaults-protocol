@@ -159,9 +159,14 @@ validator vault_admin_deploy(
           verify_other_tokens_preserved(own_input.output, cont_output, deploy_token_policy, deploy_token_name, #"", #""),
           validate_allocations(new_allocations, new_datum.total_deposited, new_datum.idle_buffer),
           get_mint_quantity(tx, old_datum.vusdcx_policy) == 0,
-          verify_destination_whitelisted(tx.outputs, whitelist, deploy_amount, deploy_token_policy, deploy_token_name, dest_output_idx),
-          // R77 F-1 (2026-05-08): see vault_protocol.ak for the same
-          // expected_recipient_addr argument rationale.
+          // `?` marker emits an Aiken trace on False return so trace-
+          // instrumented ceremony builds surface whitelist-mismatch
+          // failures directly instead of producing an empty `traces: []`
+          // dead-end. Zero size impact on production builds without
+          // `--trace-level verbose`.
+          verify_destination_whitelisted(tx.outputs, whitelist, deploy_amount, deploy_token_policy, deploy_token_name, dest_output_idx)?,
+          // See vault_protocol.ak for the same expected_recipient_addr
+          // argument rationale.
           verify_swap_via_adapter(
             tx,
             adapter_hashes,
@@ -171,7 +176,7 @@ validator vault_admin_deploy(
             old_datum.min_swap_peg_bps,
             old_datum.max_slippage_bps,
             own_input.output.address,
-          ),
+          )?,
           val_has_no_order_inputs(tx.inputs, old_datum.order_script_hash),
         }
       }
