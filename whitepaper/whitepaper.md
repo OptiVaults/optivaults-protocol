@@ -1,6 +1,6 @@
 # OptiVaults V1 Whitepaper
 
-**Version 1.3 — Public Launch Candidate**
+**Version 1.4 — Public Launch Candidate**
 **Target Network: Cardano Mainnet**
 **Deposit Token: USDCx**
 
@@ -16,24 +16,32 @@ A stablecoin yield vault that launches before these catalysts is solving a probl
 
 We have therefore organised the project as follows:
 
-**Pre-Catalyst Phase (2026 Q2 – 2027 Q1)**
+**Phase 1 — Pre-Catalyst (Preprod-only; until §1.5 launch gates clear)**
 - Smart contracts deployed and validated on Cardano preprod testnet
 - Source code public on GitHub under Apache 2.0
 - Whitepaper, documentation, and design specifications maintained openly
 - Three-axis trigger framework (§1.5) monitored and reported monthly
 - Parallel development of complementary products (fixed-rate vault, Pogun adapter) per §1.7
-- **No V1 mainnet launch, no pre-audit "soft launch" for narrative purposes.** A separate **internal-verification-era deployment** (pre-V1 contract iteration) exists on Cardano mainnet with founder-gated frontend access for internal testing only — this is **not** the V1 design described in this whitepaper, and is disclosed here (rather than left implicit in §4.1 / §8.2) so readers understand which deployment they are reading about
+- **No V1 mainnet operation yet.** A separate **internal-verification-era deployment** (pre-V1 contract iteration) exists on Cardano mainnet with founder-gated frontend access for internal testing only — this is **not** the V1 design described in this whitepaper, and is disclosed in §0.1 so readers understand which deployment they are reading about. That deployment will be fully unwound before the V1 mainnet launch ceremony.
 
-**Activation Phase (trigger-dependent)**
-- External audit initiated when launch readiness conditions begin to align
-- Mainnet deployment staged according to §1.5 framework
-- TVL caps governed by trigger state, not by team discretion
-- Reversal conditions automatically downgrade caps if conditions deteriorate
+**Phase 2 — Pre-Audit Mainnet (Stages 1 / 1.5 / 2 per §1.5; TVL cap $10K → $100K)**
+- V1 launches on Cardano mainnet **at the pre-audit cap** when §1.5 launch gates are met (§1.5 Class A overrides clear + axis state at One-Yellow or better + internal review complete + Preprod E2E + deploy ceremony dry-run — see §8.1)
+- External audit is **not** a launch precondition; V1 operates on mainnet with prominent pre-audit risk disclosure (§8.2)
+- TVL caps progress $10K → $25K → $100K as axis state improves per §1.5 Stage matrix
+- Founder operates as keeper + 1-of-3 governance signer under §4.3.1 minimal-operations policy (~$80–$200/year operating subsidy, no large founding-capital draw)
+- Reversal conditions automatically downgrade caps if external infrastructure deteriorates (§1.5)
 
-**Operational Phase**
+**Phase 3 — Audit + Cap-Lift Window (parallel to Phase 2; activates when §8.1 audit funding stack delivers)**
+- External audit engaged with funded scope — Anastasia Labs / MLabs / TxPipe / independent Aiken reviewers, depending on §8.1 (a)–(d) outcome
+- Audit completion **lifts the cap** from 100K toward Stage 3 ($500K initial, ramp to $2M per §1.5 ramp schedule)
+- Mainnet operation continues uninterrupted at 100K cap throughout the audit window
+- If §8.1 funding stack underperforms, Options A–D apply — all four options keep V1 live on mainnet at the 100K cap (see §8.1)
+
+**Phase 4 — Operational (Stage 3+ post-audit; conditional on Phase 3 success)**
 - Multi-product offering aligned with mature Cardano DeFi ecosystem
-- Governance transitioned to community DAO
-- Treasury self-sustaining through performance fee accrual
+- Governance phasing toward community DAO (§6.1 rotation path)
+- Treasury self-sustaining through performance fee accrual at ≥ $500K TVL (§4.1 baseline)
+- If Phase 3 never completes (audit funding never lands — §8.1 Option D), V1 stays in Phase 2 indefinitely (mainnet, 100K cap) rather than transitioning to Phase 4
 
 **What we do not promise**
 - We do not commit to a calendar date for mainnet launch.
@@ -46,17 +54,53 @@ We have therefore organised the project as follows:
 - User funds prioritised over protocol survival under any adverse condition.
 - Honest disclosure of what we do not know, including ecosystem timing risks.
 
-This document describes the V1 design as it will be deployed *when* launch conditions are met. It is not a launch announcement.
+This document describes the V1 design as it will be deployed *when* §1.5 launch gates are met (per §8.1's "Required for mainnet launch under the 100K USDCx pre-audit cap" checklist). It is not a launch announcement: the launch gates are forward-looking criteria, and V1 has not yet executed the mainnet launch ceremony as of v1.4 publication.
+
+### 0.1 Current state vs the V1 described in this document
+
+Because OptiVaults has had a publicly-visible Cardano mainnet presence since 2026-04-17, readers who searched for "OptiVaults launch" or inspected Cardanoscan during that window may have seen a deployed vault and reasonably assumed it is the V1 covered by this whitepaper. **It is not.** To remove that ambiguity:
+
+- **The current mainnet deployment** (vault hash prefix `vault_v10-r71`, deployed 2026-04-17) is an **internal-verification-era contract iteration**, not the V1 design described in this document. It exists at a separate vault address and is identifiable on Cardanoscan by its contract hashes (which differ from V1's). The contract code is published in the same public repository under a separate version tag.
+- **No third-party deposits.** The frontend's deposit page (`vault.optivaults.app`) is gated to a single founder-controlled allowlist (`Deposit.tsx ALLOWED_ADDRESSES`); deposits from any other address are rejected client-side. The deployment's working capital is **founder-internal test capital** funded from founding capital, used for live-network behavioural validation (governance flows, Liqwid Supply/Recall, Compound, depeg monitoring, emergency paths). Withdraw remains open to all addresses unconditionally — that asymmetry is intentional, mirroring the §1.6.1 "self-serve exit always works" principle even during pre-V1 phases.
+- **Architectural diff vs V1.** The current deployment is a **pre-split** contract topology (roughly 9 logic validators built on a single `vault_core` + `vault_protocol` partitioning). V1 as described in this whitepaper is the **post-split architecture documented in `spec/architecture.md` §4.1** (17 logic validators + 4 NFT mint policies + 1 DEX adapter = 22 artefacts), which closes design gaps in slippage enforcement (§5.4 P3-P5), oracle integration (`SwapAda`), multi-validator A2 `publish` coverage (§6.2), and adapter-pattern Withdraw-Zero fan-out (§3.2). V1 is a clean redeploy from a different ref-script ceremony, not an upgrade of the current contract — there is no on-chain migration path from the current vault to V1.
+- **Disposition before V1 ceremony.** The current deployment will be **fully unwound before the V1 pre-audit mainnet launch ceremony** (Phase 2 entry per §0; Stage 1 / 1.5 / 2 launch under §1.5): Path A `ActDeregisterStake` × 4 staking credentials is currently queued (14-day timelock executes 2026-05-23 ~16:55-17:11 UTC), followed by full vault drain (`RecallFromLiqwid` + Minswap V2 swap-to-USDCx + Direct Withdraw to the founder wallet), then `reclaim-refs.ts` to recover ref-script lockup ADA. The vault address will be left empty + frozen, and **any subsequent communication about V1 launch refers to the fresh pre-audit mainnet deployment at a new address**, not a continuation of the current one. The V1 launch ceremony is itself the Phase 2 entry event — it predates external audit completion (audit is Phase 3 cap-lift gate per §0).
+- **External references should be read with this in mind.** Any prior public reference to OptiVaults being "live on mainnet" — whether from the founder's social posts, third-party Cardano DeFi trackers, or community channels — describes this **internal-verification milestone**, not the public V1 launch. Public V1 launch has not happened and is governed by the §1.5 trigger framework.
+
+This section exists because the gap between "we have a contract on mainnet" and "V1 has launched" was not previously surfaced explicitly enough; honest projects should not require readers to reconstruct that distinction from contract hash diffs alone.
+
+### 0.2 Funding posture: V1 is a volunteer-built, community-funded launch
+
+V1 is built by a single founder volunteering their time plus a small seed (~$2K USDCx as Phase 1 working capital + an estimated ~$120 over the 18-month pre-audit window for infrastructure under §2.6.1 / §4.3.1 minimal-cost configuration). **The founder does not have the financial capacity to self-fund the external audit** ($50–$150K depending on engagement model — see §8.1), and V1 does not raise from VCs, does not issue tokens, and does not solicit equity-style commitments.
+
+This means **V1 launches on Cardano mainnet under the pre-audit 100K USDCx hard cap with prominent risk-disclosure framing, regardless of whether external audit funding has landed by launch day**. External audit is **not a precondition for mainnet launch**; it is the precondition for **lifting the 100K cap toward §1.5 Stage 2 / Stage 3 levels**. The funding stack at §8.1 enumerates realistic non-dilutive sources for the audit (Project Catalyst, Cardano Foundation, Intersect Member Committee, Aiken Foundation, audit-firm public-goods rates, community / DAO contribution pool). If those sources never deliver, **V1 remains on mainnet indefinitely at the 100K pre-audit cap** — depositors continue to have access at small scale, but the cap is never lifted via the audit-driven Stage 2+ path.
+
+**Two-track sustainability model.** V1 separates two questions that are commonly conflated:
+
+1. **Audit funding** (one-time, external, ~$50–$150K) — solves "can V1's 100K cap be lifted toward Stage 2 / Stage 3?" — gated on §8.1 funding stack delivery, founder is **not** the underwriter. **Does NOT gate initial mainnet launch.**
+2. **Operating runway** (ongoing, founder-committed, ~$80–$200/year scaling with TVL — see §4.3.1) — solves "can V1 stay running?" — sustainable indefinitely from founder personal income, decoupled from audit funding.
+
+This is the practical meaning of "public-goods reference implementation": the founder ships the engineering, operates the keeper as an ongoing volunteer commitment, and **launches V1 on mainnet pre-audit under strict disclosure + the 100K USDCx hard cap**; the community decides whether the engineering is worth funding through external audit to lift the cap further. Depositors entering during the pre-audit cap period understand and accept the elevated risk profile (undetected CRITICAL bug possible; see §1.5 Stage 1 framing + §8.2 sub-scenarios).
 
 ---
 
 ## Executive Summary
 
-OptiVaults V1 is a non-custodial **multi-stablecoin yield vault denominated in USDCx** on Cardano. Depositors send USDCx to a smart-contract-controlled vault address and receive vUSDCx share tokens whose share-price tracks the vault's blended position across USDCx, DJED, and USDM on Liqwid Finance. A keeper process compounds that yield and rebalances among the three stablecoins within governance-set bounds, with fees split between keeper operations and a transparent treasury. Governance is a **3-of-3 multisig** (unanimity required) **with a §5.5.1 founder-solo fallback** if independent-SPO recruitment lags — actual launch config will be 3-of-3-with-SPOs **or** founder-with-key-separation under the same contract guarantees; rationale and the three-layer safety design that makes either acceptable are in §5.5 / §5.5.1 / §7.4. Timelocks are 7–21 days with 1-of-n cancel veto. Depositors can withdraw at any time, even if the keeper goes offline, via a self-serve emergency path.
+OptiVaults V1 is a non-custodial **multi-stablecoin yield vault denominated in USDCx** on Cardano. Depositors send USDCx to a smart-contract-controlled vault address and receive vUSDCx share tokens whose share-price tracks the vault's blended position across USDCx, DJED, and USDM on Liqwid Finance. A keeper process compounds that yield and rebalances among the three stablecoins within governance-set bounds, with fees split between keeper operations and a transparent treasury.
+
+**Governance at launch is one of two configurations** running under the same contract guarantees:
+
+- **(a) 3-of-3 multisig** — founder + 2 independent Cardano SPOs, unanimity required. Target configuration; conditional on SPO recruitment landing before the mainnet ceremony.
+- **(b) Founder-controlled with HD-key separation** — Phase 1 small-TVL fallback per §7.4, leaning on §5.5.1's three structural safety layers (freeze-only `EmergencyWithdraw`, swap-out-under-freeze, 90-day permissionless `CommunitySunset`).
+
+Given §8.2's expected Phase 1 TVL range (**$500–$25K**), depositors should assume configuration **(b)** at launch — recruitment success is a stretch goal, not a base-case assumption. Critically, **depositor recovery does not depend on which configuration is active**: it depends on the §5.5.1 contract-level safety layers, which work identically under either signer arrangement. Timelocks are 7–21 days with 1-of-n cancel veto; depositors can withdraw at any time, even if the keeper goes offline, via the self-serve emergency path.
 
 **Important for depositors**: share price reflects the vault's current blended-stablecoin exposure, not a pure USDCx claim. Operational target at launch is 45% DJED + 25% USDM + 30% USDCx buffer (§5.2); depositors bear the depeg risk of whichever stablecoin the vault holds at any given moment.
 
-V1 launches with a 100,000 USDCx hard cap until a third-party audit completes (target: **Q2-Q3 2027**, reflecting Cardano Project Catalyst Round timing uncertainty — see §8.1). At 100K TVL, protocol revenue is roughly $270/year — insufficient to cover operating costs. V1 operates in a **bootstrapping phase**: initial operating shortfalls are absorbed by the project's founding capital, and the protocol becomes self-sustaining as TVL grows into the **$135K–$1.8M sensitivity range (baseline ~$500K)** for baseline operations under §2.6 Default cadence — see §4.1 for the per-scenario breakdown.
+V1 launches on Cardano mainnet at a **100,000 USDCx pre-audit hard cap** (Stage 2 per §1.5; lower Stages 1 / 1.5 caps apply if axis state hasn't reached Two-Green). The cap is **lifted toward Stage 3 ($500K → $2M) when a third-party external audit completes** (target: **Q2-Q3 2027** if §8.1 funding stack lands; if it doesn't, V1 stays at the 100K cap indefinitely per §8.1 Option D — see §0.2 + §8.1 for the volunteer-builder framing on why audit is a cap-lift gate, not a launch gate). At 100K TVL, protocol revenue is roughly $270/year — insufficient to cover operating costs. V1 operates in a **bootstrapping phase**: operating shortfalls are absorbed by the founder's ongoing §4.3.1 minimal-operations subsidy from personal income (~$80–$200/year, not a large founding-capital reserve), and the protocol becomes self-sustaining as TVL grows into the **$135K–$1.8M sensitivity range (baseline ~$500K)** for baseline operations under §2.6 Default cadence — see §4.1 for the per-scenario breakdown.
+
+**Audit is a cap-lift gate, not a launch gate; founder is not the audit underwriter.** The founder builds V1 as a volunteer and commits a small seed (~$2K USDCx Phase 1 working capital + ~$80–$200/year operating subsidy at minimal §2.6.1 / §4.3.1 cost configuration + a $15K audit gap-fill cap), but **does not commit to self-funding the $50–$150K external audit**. V1 launches on Cardano mainnet at the pre-audit 100K USDCx hard cap with prominent risk disclosure regardless of whether the §8.1 audit funding stack has landed by launch day — external audit, when it lands, **lifts the cap** toward §1.5 Stage 2 / Stage 3 levels (post-audit $500K → $2M ramp). If audit funding never materialises (§8.1 Option D), V1 continues to operate on mainnet at the 100K cap indefinitely; depositors retain permissionless access at small scale and the protocol remains live, just with the cap never lifted via the audit path. Depositors should treat "Stage 2+ cap lift" as community-funding-conditional, but **mainnet launch itself is not gated on audit funding**.
+
+**Operating side is durable and decoupled.** Post-launch keeper operation runs under §4.3.1 minimal-operations policy — single-VPS + free-tier providers + §2.6.1 cadence at low TVL — totalling roughly **$80–$200/year** depending on TVL band. The founder absorbs this from personal income on an ongoing basis; it does not draw down a large founding-capital reserve, and the operating-runway sunset trigger in §4.1 is essentially unreachable under this model. The live failure modes for V1 are §1.5 Class A overrides (USDCx incident, Liqwid incident, Cardano chain halt, oracle anomaly) or explicit founder sunset decision — **not** operating-runway exhaustion, and **not** audit-funding failure (which merely holds the cap at 100K, not the live status of the protocol).
 
 **V1's positioning: a Cardano DeFi public-goods reference implementation.** V1 is a **non-commercial public-goods artifact**, not a product optimised for growth or equity-style return. The 4.5% performance fee covers protocol operations, audit reserve, and long-term runway — **there is no equity, no token, and no investor distribution**; the Apache 2.0 license allows other Cardano DeFi teams to fork and specialise (alternative stablecoin mixes, risk postures, regional variants). V1 may be the terminal state, or it may become the basis on which other teams build — both are acceptable outcomes. Depositors should enter with a **"contributing to a public good + being an early validator"** mindset, not as purchasers of a commercial service (see §12 Disclosure for full implications and depositor framing).
 
@@ -187,7 +231,7 @@ Understanding why V1 is structured as a single-protocol Liqwid vault requires ac
 
 As of 2026 Q2, Liqwid Finance is the only Cardano-native lending protocol with operational stablecoin markets at meaningful scale. Other Cardano lending protocols are either inactive, focused on non-stablecoin collateral, or operating at TVL levels that preclude meaningful integration:
 
-- **Lenfi (formerly Aada Finance)**: Following a December 2024 smart contract vulnerability incident (transparently handled by the team via white-hack recovery), TVL has declined from approximately $5M peak to around $230K. The protocol remains operational but is no longer at a scale that can serve as a viable second venue for vault diversification.
+- **Lenfi (formerly Aada Finance)**: Following a December 2024 smart contract vulnerability incident (transparently handled by the team via white-hack recovery — see Lenfi's official post-incident disclosure on their blog / Twitter from December 2024), TVL has declined from an approximate prior peak of $5M to around $230K (DefiLlama protocol TVL history, accessed 2026-05-12). The protocol remains operational but is no longer at a scale that can serve as a viable second venue for vault diversification. *Figures are external public-data snapshots and may move; readers should re-verify against DefiLlama at the time of reading.*
 - **Levvy**: Acquired by Angels Finance, currently in V3 development. Focused on NFT-collateralized lending, not stablecoin markets.
 - **FluidTokens**: NFT-collateralized lending only.
 - **Smaller venues** (Yamfore, Cherry Lend, others): Operating at TVL levels below $100K per market.
@@ -269,25 +313,33 @@ This axis represents product viability. Below 5% blended yield, V1's value propo
 
 Measurement: Daily reading of Liqwid USDCx, USDM, and DJED supply APY, weighted by V1 strategy allocation (45/25/30 default), 90-day rolling average.
 
-#### Override conditions (any trigger blocks launch)
+#### Override conditions
 
-Regardless of axis state, mainnet launch is blocked while any of the following hold:
+Two classes of overrides apply, with **different effects** (see §0.2 / §8.1 for the volunteer-builder framing on why these are separated):
 
-1. V1 external audit not yet passed.
-2. Liqwid Finance has experienced a high or critical severity smart contract incident within the past 12 months.
-3. USDCx issuer (Circle / IOG xReserve infrastructure) has experienced a material operational incident.
-4. Cardano mainnet has experienced a critical chain halt within the past 6 months.
-5. Charli3 or Orcfax oracle has experienced sustained anomaly (>24 hours) within the past 30 days.
+**Class A — Launch-blocking overrides (any trigger blocks mainnet launch entirely).** Regardless of axis state, mainnet launch is blocked while any of the following hold — these reflect external infrastructure failures that make V1 operation itself unsafe:
+
+1. Liqwid Finance has experienced a high or critical severity smart contract incident within the past 12 months.
+2. USDCx issuer (Circle, via the xReserve smart contract and its Cardano-side integration deployed by IOG) has experienced a material operational incident.
+3. Cardano mainnet has experienced a critical chain halt within the past 6 months.
+4. Charli3 or Orcfax oracle has experienced sustained anomaly (>24 hours) within the past 30 days.
+
+**Class B — Cap-lift overrides (V1 launches on mainnet at the pre-audit 100K cap; these conditions only hold the cap at 100K and block progression to Stage 2 / Stage 3).** V1 does **NOT** stay in Preprod under these conditions — it operates on mainnet under the existing 100K USDCx cap with prominent pre-audit risk disclosure (see §8.2):
+
+5. V1 external audit not yet passed. Mainnet operation continues at 100K; Stage 2 / Stage 3 cap lift requires audit completion.
+6. External audit funding has not reached the §8.1 cost threshold by 2027 Q4. V1 continues to operate at the pre-audit 100K mainnet cap indefinitely; cap-lift via the audit-driven path is deferred until funding lands (or never, if §8.1 Option D outcome). See §0.2 funding posture and §8.1 Options A–D contingency tree — none of these options forces V1 off mainnet, they only determine the cap-lift pathway. The §0 maximum-deferral path is invoked only when **Class A** override conditions hold for an extended period or when the §1.5 axis-state trigger framework signals product-premise failure (no axis Yellow by 2027 Q4 — see "Maximum deferral" below).
 
 #### Stage matrix
 
-| State | A | B | C | Stage | TVL Cap |
-|-------|---|---|---|-------|---------|
-| Pre-Catalyst | 🔴 | * | * | Stage 0 — Preprod only | 0 (mainnet inactive) |
-| One-Yellow | 🟡 | * | * | Stage 1 — Limited Pilot | $10K (permissionless, with prominent pre-audit risk warnings; **no invitation gate, no whitelist** — see §8.2) |
-| Two-Yellow / One-Green | varies | varies | varies, no Red | Stage 1.5 — Open Pilot | $25K (publicly accessible, capped) |
-| Two-Green, no Red | 🟢🟢🟡 in any combination | | | Stage 2 — Soft Launch | $100K |
-| All-Green, no Red | 🟢 | 🟢 | 🟢 | Stage 3 — Full Launch | $500K initial, ramp to $2M |
+| State | A | B | C | Stage | TVL Cap | Audit required? |
+|-------|---|---|---|-------|---------|-----------------|
+| Pre-Catalyst | 🔴 | * | * | Stage 0 — Preprod only | 0 (mainnet inactive) | — |
+| One-Yellow | 🟡 | * | * | Stage 1 — Limited Pilot | $10K (permissionless, with prominent pre-audit risk warnings; **no invitation gate, no whitelist** — see §8.2) | **No** (pre-audit) |
+| Two-Yellow / One-Green | varies | varies | varies, no Red | Stage 1.5 — Open Pilot | $25K (publicly accessible, capped) | **No** (pre-audit) |
+| Two-Green, no Red | 🟢🟢🟡 in any combination | | | Stage 2 — Soft Launch | $100K | **No** (pre-audit; cap held at 100K) |
+| All-Green, no Red | 🟢 | 🟢 | 🟢 | Stage 3 — Full Launch | $500K initial, ramp to $2M | **Yes** — external audit complete (§8.1 cap-lift gate) |
+
+Stages 1 / 1.5 / 2 are **pre-audit mainnet stages** — V1 launches on mainnet under the relevant cap as soon as the axis state qualifies (per §1.5 Override conditions Class A clear + §8.1 launch checklist). Stage 3 cap lift requires external audit to have completed (per §8.1 cap-lift checklist). If §8.1 funding stack never delivers, V1 stays at Stage 2 (100K cap) indefinitely on mainnet — see §8.1 Option D. Stages 1 → 2 → 3 are **not** time-gated; they progress as axis state and audit outcome warrant.
 
 #### Stage 3 ramp-up schedule
 
@@ -352,7 +404,7 @@ OptiVaults's founder is a Cardano self-custody user who happens to be a typical 
 - **(c) Swap USDCx to DJED and supply on Liqwid for ~11.8% APY** — decent yield. Entry is 2 TXs (swap + Liqwid supply); exit or each partial withdraw is its own 2-TX recall + swap-back round-trip; DJED + USDM diversification is ~4 TXs in, two parallel positions to manage. Between entry and exit the qToken sits in your wallet with its rate auto-accruing — no per-cycle chore. On a $200 position, one entry + one exit round-trip is roughly $2-4 USD in gas + batcher fees, i.e. 1-2 % of principal; the longer you hold, the more that one-time friction amortizes.
 - **(d) Just hodl USDCx in the wallet** — 0% yield, same USDCx issuer risk.
 
-None of these was what the founder actually wanted, which was simply: **"deposit USDCx, let it auto-compound on Liqwid, and when I need some USDCx back later just take it out directly — without running a recall-qToken + swap-back chain every time."** That small-withdraw friction matters: a $50–100 partial withdraw done manually can easily lose 5–10 % of the withdrawn amount to gas + batcher fees alone. A non-custodial, audit-track, auto-compounding USDCx vault that avoided this did not exist on Cardano. So the founder built one.
+None of these was what the founder actually wanted, which was simply: **"deposit USDCx, let it auto-compound on Liqwid, and when I need some USDCx back later just take it out directly — without running a recall-qToken + swap-back chain every time."** That small-withdraw friction matters: a $50–100 partial withdraw done manually can easily lose 5–10 % of the withdrawn amount to gas + batcher fees alone. A non-custodial, audit-track, auto-compounding USDCx vault that avoided this did not exist on Cardano — so V1 was built to be exactly that product, starting from the founder's own deposit need rather than from a market-sizing exercise.
 
 **V1 is the implementation of "what I was personally looking for but couldn't find."** That is the origin story, and it doubles as the product-market-fit argument: the founder is shipping the product the founder wanted to use. "First persona" of the target-user list is the founder.
 
@@ -902,9 +954,20 @@ Formula: `self-sustaining TVL ≈ annual operating cost / (gross APY × performa
 
 **The $25K–$500K gap (Default mode, not yet self-sustaining).** Between the §2.6.1 deactivation threshold ($25K — keeper exits Reference Implementation Mode) and the §4.1 baseline self-sustain figure (~$500K), V1 operates in §2.6 Default cadence **while still burning more than the protocol revenue covers**. Concretely: at $50K TVL × 6% gross × 4.5% perf fee = $135/year protocol revenue vs $1,200/year baseline Default operating cost = ~$1,065/year shortfall absorbed by founding capital. This gap is **expected behaviour during Phase 2 TVL ramp-up post-audit** — founding-capital runway is explicitly sized to cover this period (§4.1 line above: "6-month post-audit TVL-ramp window"). If TVL stalls in this gap for >6 months post-audit, the §9.2 sunset trigger described below activates. The §8.2 sub-scenario (c) "$25K–$100K cap-approach" sits inside this gap during the pre-audit window; sub-scenario (b) $5K–$25K does not (it stays in Reference Implementation Mode).
 
-**Founding-capital runway commitment.** Founding capital is sized for **operational runway ≥ 18 months** at the burn-rate methodology published in `docs/economics.md §7`, covering: (a) the pre-audit development window, (b) the external audit budget allocation (currently targeted Q2-Q3 2027 — see §8.1), and (c) a 6-month post-audit TVL-ramp window under the pessimistic operating-cost scenario. Capital is held off-chain by the founding entity; the `docs/economics.md §7` document contains the itemised monthly burn (infra + audit reserve + contractor + contingency) so readers can independently verify the 18-month figure. Specific total $ amount is not disclosed (per project policy — founder sunk cost is a private risk, not a trust anchor), but the runway calculation is reproducible from the published burn line items.
+**Founding-capital commitment is intentionally minimal — operations only, not audit.** Founding capital committed to V1 by the founder is sized **solely for operations + minimal contingency, NOT for self-funding the external audit**. Concretely the commitment covers: (a) ~$2K USDCx seed as Phase 1 working capital, (b) ~$200–$500 USD over the 18-month pre-audit window for infrastructure (single-VPS minimal setup under §2.6.1 Reference Implementation Mode + §4.3.1 minimal-operations policy), (c) a small ongoing operating subsidy (~$80–$200/year scaling with TVL — see §4.3.1 cost-scaling table) that the founder absorbs from personal income, and (d) an audit-funding **gap-fill cap of approximately $15K** that the founder commits to bridge small shortfalls between the §8.1 funding stack and the final audit price (NOT to underwrite the full audit cost).
 
-**Sunset trigger and mechanics** (§9.2 + economics.md §7.2): if TVL < $500K at **6 months post external-audit completion**, or runway drops below 6 months of forward burn at any time, the orderly-sunset protocol activates:
+**Audit is funded entirely externally.** The external audit ($50–$150K depending on engagement model — see §8.1) is funded from external sources only (Project Catalyst, Cardano Foundation, Intersect Member Committee, Aiken Foundation, audit-firm public-goods rate, community contribution pool). The founder commits up to ~$15K personal gap-fill (per item (d) above) to bridge small shortfalls, but **explicitly does NOT commit to underwriting the full audit cost in any scenario**. If the funding stack underperforms beyond gap-fill capacity, V1 does not proceed to mainnet — see §8.1 Options A–D for the contingency tree (timeline extension / scope-reduced audit / community crowdfund / permanent Preprod under Apache 2.0).
+
+**Sunset trigger semantics under the volunteer + cap-lift-by-audit model.** §4.1's nominal sunset condition ("runway < 6 months forward burn") interprets "runway" as the founder's operating-side commitment, not as audit commitment. At ~$80–$200/year minimal operating burn, the operating runway is **structurally durable** — even a few hundred USD covers years; sustaining it from personal income is realistic for an extended period. **Audit-funding outcome is NOT a sunset trigger.** Audit funding determines whether the cap lifts above 100K (per §8.1 Options A–D); it does not determine whether V1 keeps running. The live sunset triggers for V1 are §1.5 Class A overrides (USDCx incident, Liqwid incident, Cardano chain halt, oracle anomaly persisting), or explicit founder sunset decision under §9.2. **Operating-runway sunset is essentially unreachable** under the §4.3.1 minimal-cost model. §8.1 Option D ("permanent pre-audit 100K cap") is the right framing for sustained audit-funding failure — V1 continues on mainnet at 100K, not in sunset.
+
+**Sunset triggers and mechanics** (§9.2 + economics.md §7.2). Under the volunteer-builder + β cap-lift-by-audit model, V1 has **four independent sunset triggers**; if any one fires, the orderly-sunset protocol below activates:
+
+- **Trigger A — Post-audit growth failure (conditional on audit happening):** TVL < $500K at **6 months post external-audit completion**. This trigger only applies in the post-audit world — Stage 3 cap-lift has happened but TVL did not follow. If audit never lands (§8.1 Option D), this trigger never fires; V1 simply stays at the pre-audit 100K cap indefinitely.
+- **Trigger B — Operating-runway exhaustion:** founder operating-side runway drops below 6 months of forward burn. Under the §4.3.1 minimal-operations policy (~$80–$200/year, absorbed from personal income), this trigger is **structurally unreachable** for years; it is preserved as a formal trigger only so the framework cannot be silently broken by a future operator decision to inflate operating costs.
+- **Trigger C — Class A override persistent:** any §1.5 Class A override condition (Liqwid / USDCx / Cardano chain halt / oracle anomaly) persists beyond the remediation horizon — typically operationalised as 30+ days for sustained-incident triggers, immediate for chain-halt or USDCx insolvency. The sunset protocol then absorbs the external-infrastructure failure into a controlled exit rather than passive degradation.
+- **Trigger D — Explicit founder sunset decision:** founder explicitly invokes the sunset protocol under §9.2 (e.g., medical incapacity beyond the medium-term incapacity fallback in §9.2, personal-life force majeure, decision to discontinue maintenance).
+
+**Audit-funding failure is NOT a sunset trigger.** Sustained audit-funding gap (§8.1 Option D) keeps V1 in pre-audit Phase 2 on mainnet at the 100K cap; it does not invoke the sunset protocol. The sunset protocol below applies to the four triggers A–D above:
 
 1. **90-day depositor notice** (up from an earlier 30-day draft — extended after whitepaper review to match DeFi migration realities). Notice published on-chain via `governance.QueuedAction` + off-chain via website banner + Discord + all existing user channels.
 2. **Preconditions before the notice period starts** (all three must be complete before the 90-day clock starts):
@@ -968,9 +1031,54 @@ The "$2.5–5M" figure earlier in this section corresponds to tier (b) under **p
 
 So when reading the tier table: **tier (a)/(b) is "keeper breaks even," treasury ops is automatically comfortably covered at the same TVL, but audit-reserve accrual is NOT — audit funding comes from the §8.1 four-source stack, not from protocol revenue**. This is by design, not a gap.
 
-**V1's actual self-sustain target is tier (a)/(b), not tier (c).** Tier (c) is explicitly covered by the four-source audit funding stack in §8.1 (Catalyst grant + audit-firm public-goods rate + scope reduction via internal-audit history + founder self-fund), not by protocol-revenue accrual. This matches the non-commercial public-goods positioning — V1 does not need to scale to $20M+ TVL to be "fully self-sustaining." If Phase 1 + post-audit growth reaches tier (a)/(b) ($500K–$1M TVL) by 2027–2028, V1 has succeeded on its own terms. If growth stalls below tier (a), §9.2 sunset protocol engages.
+**V1's actual self-sustain target is tier (a)/(b), not tier (c).** Tier (c) is explicitly covered by the §8.1 funding stack (grants + audit-firm public-goods rate + scope reduction via internal-audit history + capped founder gap-fill per §8.1 (d) — see §0.2 for the volunteer-builder framing of why the founder is not the audit underwriter), not by protocol-revenue accrual. This matches the non-commercial public-goods positioning — V1 does not need to scale to $20M+ TVL to be "fully self-sustaining." If Phase 1 + post-audit growth reaches tier (a)/(b) ($500K–$1M TVL) by 2027–2028, V1 has succeeded on its own terms. If growth stalls below tier (a), §9.2 sunset protocol engages.
 
 See `spec/keeper-auth.md` for the RegistrationMode state machine.
+
+### 4.3.1 Post-launch minimal-operations policy
+
+V1 separates two sustainability questions that are commonly conflated:
+
+1. **Audit funding** (one-time, external, ~$50–$150K) — solves "can V1 launch on mainnet?" — see §0.2 / §8.1; the founder is **not** the underwriter.
+2. **Operating runway** (ongoing, founder-committed, ~$80–$200/year scaling with TVL) — solves "can V1 stay running?" once launched — sustainable indefinitely from founder personal income, decoupled from audit funding.
+
+This section specifies the operating side. The launch side is in §8.1.
+
+**Operating budget at launch and during Phase 1 (TVL $500–$25K under §2.6.1 Reference Implementation Mode):**
+
+| Item | Configuration | Annual cost |
+|------|---------------|-------------|
+| VPS (keeper) | Single Hetzner CAX-2 ARM (or equivalent) — **no dual-instance HA at this TVL** | ~$50 |
+| Blockfrost API | Free tier with 5-key rotation per §3.6 | $0 |
+| Monitoring + alerting | Self-hosted Grafana / Discord webhook | $0 |
+| Domain (`optivaults.app`) | Amortised | ~$10 |
+| On-chain fees | ~12–24 TXs/year under §2.6.1 cadence × ~$1 each | ~$20 |
+| **Total** | | **~$80/year** |
+
+This is the **launch-state operating model**, not a temporary scarcity-mode setting we plan to outgrow. It is sustainable for **as long as it takes** to either (a) reach a TVL band that justifies fuller infrastructure, or (b) gracefully sunset under §9.2.
+
+At ~$80/year operating commitment, the founder's ongoing burden is **easily absorbable from personal income**, not a runway-depletion concern. This makes the operating-side commitment credible even without a large founding-capital reserve, and **decouples the launch decision (audit-funding-gated per §0.2 / §8.1) from the post-launch sustainability decision (founder-committed, structurally durable)**.
+
+**Cost scaling with TVL** (operator-discretion transitions, not contract-enforced):
+
+| TVL band | Annual operating cost | Annual protocol revenue (6% gross × 4.5% perf fee) | Founder-absorbed shortfall |
+|----------|-----------------------|---------------------------------------------------|----------------------------|
+| $500–$2K (sub-scenario a) | ~$80 | $1–$5 | ~$75–$79/year |
+| $2K–$25K (sub-scenario b) | ~$80–$100 | $5–$67 | ~$30–$75/year |
+| $25K–$100K (sub-scenario c) | ~$200–$500 (Default cadence resumes) | $65–$270 | ~$0–$200/year |
+| $100K+ (post-cap, post-audit) | ~$400–$1,200 (HA + paid monitoring) | $270+ | Progressively self-funding |
+
+At every TVL band, the founder's per-year absorbed shortfall stays in the **low-three-figures USD range**, never requiring a large lump-sum commitment. This is what makes the minimal-operations model decouple cleanly from the audit-funding question.
+
+**HA / dual-VPS upgrade threshold.** `docs/economics.md §4` lists VPS dual-instance HA as the "minimum-viable" recommended configuration. V1's launch model intentionally **trades HA for minimum cost until TVL crosses approximately $50K** — at that point the absorbed shortfall justifies the second VPS for resilience. Pre-$50K TVL, a single-VPS outage means keeper goes offline; the 7-day keeper-inactivity contract fallback (§5.4.1) ensures depositor withdraw remains unblocked and `early_withdraw_fee` is waived during the outage. Single-VPS outage is therefore an acceptable trade for early Phase 1.
+
+**What this enables:**
+
+- V1 launches on mainnet at the pre-audit 100K cap from launch day without requiring founder runway to cover audit; external audit, when funded, lifts the cap toward Stage 2 / Stage 3 (§1.5) rather than gating launch itself
+- Post-launch, V1 can operate at $500–$25K TVL **indefinitely** if community discovery is slow — and equally at the 100K cap indefinitely if audit funding never lands (§8.1 Option D)
+- TVL growth is decoupled from operating sustainability — V1 is **not under time pressure to "grow or die"** — and audit funding is decoupled from continued mainnet operation
+- The §4.1 / §9.2 sunset trigger is **not** driven by operating-runway exhaustion (structurally durable under this model) **nor** by audit-funding failure (which only holds the cap at 100K under §8.1 Option D, not the live status of the protocol) — sunset triggers are §1.5 Class A overrides (USDCx / Liqwid / Cardano chain / oracle incidents) or explicit founder sunset decision
+- Founder commitment is bounded and known: ~$2K seed + ~$80–$200/year operating subsidy + ~$15K audit gap-fill cap. Total founder financial exposure to V1 is **a low-five-figures USD upper bound** across the full pre-audit + launch + indefinite-100K-cap window — orders of magnitude below the audit base price, and consistent with the public-goods volunteer-builder framing in §0.2.
 
 ### 4.4 Honest Comparison
 
@@ -1084,7 +1192,7 @@ Internal-verification operations established a TVL-adaptive cadence that V1 inhe
 | 750–1,200 USDCx | biweekly | every 5 days |
 | 1,200+ USDCx | weekly | every 5 days |
 
-**V1 at the pre-audit 100K USDCx cap sits permanently in the weekly tier, with Compound anchored on Saturday** — the sub-$1,200 tiers exist only as legacy scheduling branches that the keeper code retains for low-TVL recovery scenarios (e.g., if a future V2 migration starts from near-empty). V1 launch-day expectations: **one scheduled Compound every Saturday** + a zero-yield heartbeat every 5 days.
+**V1 at the pre-audit 100K USDCx cap sits in the weekly tier under §2.6 Default cadence, with Compound anchored on Saturday** — the sub-$1,200 tiers above are the keeper's live policy for any period the vault spends under that threshold (notably the Phase 1 small-TVL window per §8.2 sub-scenarios (a)–(b), and the §2.6.1 Reference Implementation Mode which applies whenever total_deposited < $25K). V1 launch-day expectations at the 100K cap: **one scheduled Compound every Saturday** + a zero-yield heartbeat every 5 days. If launch TVL begins below $25K, expect the lower-tier cadences in the table above instead until threshold crossings move the vault into the next tier (see §2.6.1 mode transition mechanics).
 
 At the 100K TVL scale this cadence cuts roughly 85% of the naive "every 3 days" network-fee outlay. The contract validator accepts any Compound TX that satisfies validity-range + cooldown invariants (`spec/vault-datum.md` §3 items 6 and 11) — the keeper chooses when to submit.
 
@@ -1135,7 +1243,7 @@ V1 launches with:
 - Additional internal audit coverage on V1-specific new scope (treasury, keeper_stake_script, integration flows, deploy pipeline, off-chain runtime). Coverage is organized by area (A–F), not by sequential round number; see `docs/audit-scope.md` §4.
 - **Pending third-party audit** (target Q2-Q3 2027 — see §8.1 funding-stack disclosure) gating TVL cap removal.
 
-**Example of the iterative-fix methodology — the A2 design-gap closure.** Internal review surfaced that every V1 staking validator originally shipped with `withdraw(...)` + `else(_) { fail }` catch-all. Cardano's ledger validates stake-credential `Deregister` certificates under the Publish purpose, which hits the `else` branch → deregister always rejects → the 2 ADA Cardano stake-registration deposit posted at ceremony PHASE 4a is permanently locked per staking validator. The fix ("A2") added a gov-gated `publish` handler using the already-in-use `is_gov_authorized(ActDeregisterStake, payload_hash_deregister_stake(own_hash))` helper. Coverage now extends across **all 12 V1 staking credentials**: vault_user / vault_keeper_hot / vault_batcher / vault_swap_ada / vault_protocol / vault_recall / vault_liqwid / vault_gov_policy / vault_gov_emergency / vault_admin_deploy / keeper_stake_script / minswap_v2_adapter. The validator partitioning that gave each credential the bytecode headroom for its `publish` handler is documented in `spec/architecture.md §4.1`. Design decisions recorded in `spec/governance.md` §4.13 + `spec/keeper-auth.md` §9. This iteration demonstrates the V1 development mode: surface → spec → fix → regression test → ship → document. Depositors can verify the A2 fix on-chain once the Preprod ceremony's ActDeregisterStake flow completes execution.
+**Example of the iterative-fix methodology — the A2 design-gap closure.** Internal review surfaced that every V1 staking validator originally shipped with `withdraw(...)` + `else(_) { fail }` catch-all. Cardano's ledger validates stake-credential `Deregister` certificates under the Publish purpose, which hits the `else` branch → deregister always rejects → the 2 ADA Cardano stake-registration deposit posted at ceremony PHASE 4a is permanently locked per staking validator. The fix ("A2") added a gov-gated `publish` handler using the already-in-use `is_gov_authorized(ActDeregisterStake, payload_hash_deregister_stake(own_hash))` helper. Coverage now extends across **all 12 V1 staking credentials** (canonical list in §6.2 `ActDeregisterStake`). The validator partitioning that gave each credential the bytecode headroom for its `publish` handler is documented in `spec/architecture.md §4.1`. Design decisions recorded in `spec/governance.md` §4.13 + `spec/keeper-auth.md` §9. This iteration demonstrates the V1 development mode: surface → spec → fix → regression test → ship → document. Depositors can verify the A2 fix on-chain once the Preprod ceremony's ActDeregisterStake flow completes execution.
 
 **Reader framing.** Internal review is prerequisite effort, not a substitute for a third-party audit. The primary security signal for V1 is the upcoming external audit report — internal rounds reduce the probability that the external auditor finds CRITICAL issues but do not eliminate it. The 100K USDCx TVL cap is an explicit acknowledgment that V1 is pre-external-audit software.
 
@@ -1244,7 +1352,7 @@ Keeper is a trust delegation bounded on-chain by:
     | P5 SwapAda dual-feed upgrade | ✓ | ✓ | partial — vault_swap_ada deployed; `asset_oracles[ADA]` empty at launch (SwapAda inactive until governance populates) | Q2-Q3 2027 |
     | A2 deregister `publish` on 12 staking credentials | ✓ | ✓ | partial — initial verification on a subset of staking credentials; full 12-credential Preprod re-verification outstanding before mainnet | Q2-Q3 2027 |
 
-    "Code landed" + a passing `aiken check` does not substitute for Preprod E2E or external audit. All 22 artefacts (17 logic validators + 4 NFT mint policies + 1 DEX adapter) remain under the 16 KB Plutus V3 ceiling. The exact test count, property count, and per-validator bytecode size at any commit are reproducible from source — run `aiken check` and `aiken build` against the deployed commit to verify both the test summary and the validator hashes. We deliberately do not pin specific numbers in this document so it does not drift relative to the source of truth as the test suite grows over time (see `docs/audit-scope.md §3` for the coverage-area methodology).
+    "Code landed" + 194 unit + property tests passing (689 total randomized checks per `aiken check`) does not substitute for Preprod E2E or external audit. All 22 artefacts (17 logic validators + 4 NFT mint policies + 1 DEX adapter) remain under the 16 KB Plutus V3 ceiling; tightest headroom is `vault_liqwid` at 2,992 B free. (`docs/audit-scope.md §3` describes a different test-count metric — "30 properties × 100 iterations = 3,000 fuzz runs per build" — which counts only the `aiken/fuzz` randomized iteration ceiling. The 689 figure here is what `aiken check` summary line emits across the full suite. See `audit-scope.md §3` for the full reconciliation.)
 
     **Audit scope + funding implication (summary).** The pre-audit slippage-enforcement work above adds roughly +$15-25K to the $50–$150K engaged-amount range (per-engagement, post-possible-discount; pre-discount base $100–$150K — see §8.1) and +6-12 weeks to Phase 3-5 development (detailed breakdown in `docs/economics.md §5.2`: scope additions, cost modelling, runway impact). Both increments are absorbed by founding capital and do not extend the 18-month runway commitment; they do narrow the post-launch runway buffer by ~1-2 months, which feeds through to the sunset-trigger thresholds in §4.1 / §9.2. The reason we ship the slippage work pre-audit rather than deferring to "V1.x post-audit" is trust posture: leaving a compromised-keeper wide-slippage attack path open during an advertised launch is a worse trade than the audit-scope delta.
 - **Destination whitelist** — `protocol_hashes` in Registry limits DeployToProtocol destinations to governance-approved scripts (Minswap V2 orderbook, Liqwid action validators). Any other address is rejected by `vault_protocol.ak`.
@@ -1355,7 +1463,27 @@ The other 2 governance signer seats are held by independent Cardano SPOs outside
 
 ### 6.2 Governance actions
 
-14 governance action kinds catalogued in `spec/governance.md`, with minimum timelocks ranging from `FastUpdateMarkets` (1 hour) and `EmergencyWithdraw` (0 days) at the fast end, through `UpdateStrategy` / `TreasurySpend` / `AdminDeployNonDeposit` (7 days), `UpdateSlippagePolicy` (48 hours), to `UpdateFee` / `UpdateRegistry` / `UpdateKeeperAuth` / `UpdateTreasuryParams` / `RotateSigners` / `SlashBond` / `UpdateOracleSource` / `ActDeregisterStake` (14 days), up to `UpdateFeeSplit` (21 days, longest — governance is adjusting its own pay).
+Governance ActionKinds catalogued in `spec/governance.md` §4. Sorted by minimum timelock (the validator may enforce longer, never shorter):
+
+| Min Timelock | ActionKind | Category |
+|--------------|------------|----------|
+| 0 days (no minimum wait — see note below) | `EmergencyWithdraw` | Emergency response |
+| 1 hour | `FastUpdateMarkets` | Liqwid pool-shard migration |
+| 48 hours | `UpdateSlippagePolicy` | Safety-bound tuning (§5.4) |
+| 7 days | `UpdateStrategy` | Allocation / buffer parameter |
+| 7 days | `TreasurySpend` | Treasury category outflow |
+| 7 days | `AdminDeployNonDeposit` | Non-deposit-token recovery |
+| 14 days | `UpdateFee` | Performance / early-fee / min-hold |
+| 14 days | `UpdateRegistry` | Stable tokens / Liqwid markets / oracles |
+| 14 days | `UpdateKeeperAuth` | Keeper allowlist / rotation |
+| 14 days | `UpdateTreasuryParams` | Category ratios / caps |
+| 14 days | `RotateSigners` | Multisig membership / threshold |
+| 14 days | `SlashBond` | Phase 3+ — not reachable at V1 launch |
+| 14 days | `UpdateOracleSource` | SwapAda Charli3 / Orcfax feed rotation |
+| 14 days | `ActDeregisterStake` | End-of-life: 2 ADA × 12 staking validators |
+| 21 days | `UpdateFeeSplit` | **Governance is adjusting its own pay — longest timelock** |
+
+Direct (not queued) redeemers also exist: `KeeperToggleMarket` (1-hour keeper unilateral disable of a single Liqwid market — see §5.3, not governance-gated), `Heartbeat` (1-of-self signer liveness), `DistributeSignerCompensation` (1-of-n quarterly pool distribution). These do not flow through the queue→timelock→execute pipeline and are documented in `spec/governance.md` §5.
 
 > **About the 0-day `EmergencyWithdraw` timelock.** 0 days means there is no *minimum wait* between QueueAction and ExecuteAction — it does **not** bypass governance consensus. Every `EmergencyWithdraw` execution still requires the full **3-of-3 signatures at launch** (per §5.5 unanimity), still exposes the queued action to **1-of-n cancel veto** during whatever window elapses between queueing and execution, and still enforces the payload-hash binding below. What 0 days buys is *response speed* — governance can queue and execute within the same signing session when a sustained depeg or Liqwid incident demands immediate freeze. Keeper cannot trigger `EmergencyWithdraw` unilaterally; the keeper's fast-response lever is `KeeperToggleMarket` (see §5.3), which only disables new Supply to a single Liqwid market and cannot freeze the vault or move funds.
 
@@ -1439,15 +1567,25 @@ V1's vault UTXO carries ADA only as min-UTXO and operational buffer (gas for reb
 
 ### 8.1 Pre-launch gates
 
+**Required for mainnet launch under the 100K USDCx pre-audit cap (Stage 1 / 1.5 / 2 per §1.5):**
+
 - [ ] V1 contracts complete, all tests pass, internal audit rounds complete
 - [ ] Preprod deployment + E2E verification (all 17 logic validators + 4 NFT mint policies + 1 DEX adapter, full flow)
+- [ ] Deploy ceremony dry-run on Preprod
+- [ ] §1.5 Class A override conditions (Liqwid / USDCx / Cardano chain / oracle) all clear
+- [ ] §1.5 axis state at One-Yellow or better (per Stage matrix)
+
+**Required for cap lift toward Stage 3 ($500K → $2M per §1.5 ramp):**
+
 - [ ] External audit engaged and complete
 - [ ] Audit findings resolved
-- [ ] Deploy ceremony dry-run on Preprod
+- [ ] §1.5 axis state at All-Green sustained 60 days
 
-**External audit engagement (target Q2-Q3 2027).** The audit firm has not yet been selected or contracted at the time of this whitepaper; engagement is gated on V1 Aiken implementation being feature-complete with internal review passing. Candidate firms will be short-listed from the set of auditors with prior Cardano Plutus V3 + Aiken experience — this is a narrow set (Anastasia Labs, MLabs, TxPipe, and a handful of independent Aiken reviewers at publication time). The engaged firm and scope will be announced publicly at least 2 weeks prior to audit kickoff.
+**External audit is NOT a launch gate; it is a cap-lift gate.** V1 launches on mainnet at the 100K USDCx pre-audit cap when the launch gates above are met. The external audit completes Stage 3 cap lift when funding lands; if funding never lands, V1 stays on mainnet at the 100K cap indefinitely. This separation is the structural reason §0.2 and §4.3.1 articulate the volunteer-builder + community-funded audit framework — the founder commits to operating V1 on mainnet at 100K from launch onward; the community funds audit if it wants V1 to grow beyond that cap.
 
-**Audit contingency.** If external audit surfaces CRITICAL findings, findings requiring contract redesign, or systemic design flaws, mainnet launch is postponed until remediation + re-audit confirms resolution. If audit finds a systemic flaw that cannot be fixed within the current architecture, V1 launch is cancelled, the architectural reset is published publicly, and V1 has **no external-contributor funding / no token pre-sale / no SAFE / SAFT obligations** to settle — unspent founding capital stays with the founding entity for use in any revised design.
+**External audit engagement (target Q2-Q3 2027 if funding lands).** The audit firm has not yet been selected or contracted at the time of this whitepaper; engagement is gated on V1 Aiken implementation being feature-complete with internal review passing **and** the §8.1 funding stack delivering enough to cover the engagement. Candidate firms will be short-listed from the set of auditors with prior Cardano Plutus V3 + Aiken experience — this is a narrow set (Anastasia Labs, MLabs, TxPipe, and a handful of independent Aiken reviewers at publication time). The engaged firm and scope will be announced publicly at least 2 weeks prior to audit kickoff.
+
+**Audit contingency (when audit happens).** If external audit surfaces CRITICAL findings, findings requiring contract redesign, or systemic design flaws, **the Stage 2+ cap lift is postponed** until remediation + re-audit confirms resolution. Mainnet operation at the 100K cap continues during this remediation window unless the finding is severe enough to invoke §1.5 Class A override (e.g., a CRITICAL leading to emergency freeze via §5 governance). If audit finds a systemic flaw that cannot be fixed within the current architecture, the cap stays at 100K indefinitely, the architectural reset is published publicly, and V1 has **no external-contributor funding / no token pre-sale / no SAFE / SAFT obligations** to settle — unspent founding capital stays with the founding entity for use in any revised design.
 
 Funding for the external audit is drawn from the project's founding capital (not from existing deposits — the internal-verification-phase deployment has a separate operational budget). The USD **$50–$150K per-engagement range** in `docs/economics.md §5.2` is based on public pricing indications from Cardano-capable audit firms (Anastasia Labs, MLabs, TxPipe) circa 2025-2026 for comparable Plutus V3 scopes — this range **spans pre-discount base price (~$100K–$150K) at the upper end and post-public-goods-discount engaged amount (~$50K–$90K) at the lower end**. The actual engaged amount will be disclosed publicly at contract signing.
 
@@ -1456,31 +1594,32 @@ Funding for the external audit is drawn from the project's founding capital (not
 - **(a) Cardano Project Catalyst grant**: V1's "Cardano DeFi public-goods reference implementation" positioning fits Catalyst's DeFi / Infrastructure / Open Source themes directly; would expect to secure **$30K-$50K** if a suitable Round opens. **Status as of writing: Cardano Project Catalyst is in a paused / restructuring state with no confirmed timeline for the next Round resumption.** V1 retains (a) as a candidate funding source pending Catalyst's resumption but does not depend on it; the audit timeline (Q2-Q3 2027 target) is set to allow for either Catalyst re-opening within this window or for the funding to be sourced from (b)+(c)+(d) entirely.
 - **(b) Audit firm public-goods pricing**: Apache 2.0 + non-commercial positioning may qualify for a **30-50% discount**, reducing full price $100K-$150K to approximately $50K-$90K;
 - **(c) Scope reduction via extensive internal audit**: the accumulated internal audit history serves as preparatory material, allowing external audit scope to focus on critical paths (2-3 most critical validators + cross-validator integration flows) rather than all 17 logic validators + 1 adapter, saving another **$15K-$25K**;
-- **(d) Founder self-fund remainder**: after these mitigations, founder individual out-of-pocket is expected to be **$20K-$40K** if (a) materialises, scaling up to **$50K-$90K** if (a) does not materialise before audit kickoff.
+- **(d) Founder gap-fill contribution (capped, not underwriter)**: the founder commits **up to approximately $15K personal out-of-pocket** to bridge small shortfalls between (a)/(b)/(c) delivery and the final audit price. The founder **explicitly does NOT commit to underwriting the full $50–$150K audit cost in any scenario**. This cap is set deliberately small relative to the audit base price — V1 is a volunteer-built public good (§0.2), not a founder-underwritten product. If the funding stack underperforms beyond the $15K gap-fill capacity, V1 follows the Options A–D contingency tree below rather than escalating founder self-funding.
 
-**Funding worst case (transparent disclosure).** If all non-self-funding sources underperform expectations simultaneously, the founder's out-of-pocket commitment scales upward. The full distribution (audit base price $100K–$150K depending on engaged firm and scope):
+**Distribution under the volunteer + capped-gap-fill model.** The funding stack outcome distribution (audit base price $50–$150K — lower end achievable via multi-reviewer engagement model, scope reduction via internal-audit reliance, or audit-firm public-goods rate; upper end is the pre-discount single-firm full-scope price):
 
 | Source | Best case | Middle case | Worst case |
 |--------|-----------|-------------|------------|
-| (a) Catalyst grant | $30–50K | $15–30K | $0 (Catalyst not resumed by audit start) |
+| (a) Catalyst + Cardano Foundation + Intersect + Aiken Foundation grants | $80–150K combined | $30–60K | $0 (none resumed / approved by audit start) |
 | (b) Audit-firm public-goods discount | 50% off (−$50–75K) | 30% off (−$30–45K) | 0% off (full price applied) |
 | (c) Scope reduction via internal-audit history | −$25K | −$15K | −$0 (auditor requires full scope) |
-| (d) Founder self-fund (residual) — derived | $20–30K | $40–60K | **$100–150K** |
+| (d) Founder gap-fill cap | $0 (stack covers full price) | $0–$15K | **$15K (hard cap reached)** |
+| Outcome under worst case | — | — | **Funding gap of $35–$135K remains; Options A–D activate** |
 
-**Worst-case founder out-of-pocket: $100–150K**, which represents the entire base audit cost falling on the founder if no grant lands, no public-goods discount applies, and scope cannot be narrowed. This consumes the bulk of the founding-capital runway in a single allocation event and is a primary trigger for Options A–D below. v1.3 surfaces this number explicitly — rather than soft-pedalling the figure — so depositors, audit firms, and grant reviewers see the same downside the founder has already internalised.
+**Worst-case is NOT "founder out-of-pocket $100–150K".** Under the volunteer-builder framework, the worst case is "(a)+(b)+(c)+(d) underperform such that a funding gap of $35–$135K remains beyond the $15K gap-fill cap, and V1 follows the Options A–D contingency tree rather than reaching mainnet on the original timeline". This is materially different from the v1.3-era worst case which had founder self-fund expanding indefinitely; here the founder commitment is **capped at the $15K gap-fill** and the worst case has the project, not the founder's bank account, absorb the shortfall (by deferring / scope-reducing / crowdfunding / staying in Preprod).
 
-**Worst-case contingency plan.** If by 2027 Q1 the committed funding from (a)+(b)+(c) totals less than $30K, the following adjustments will be evaluated **publicly** (not silently absorbed):
+**Contingency tree when funding stack underperforms beyond gap-fill capacity.** If by 2027 Q1 the committed funding from (a)+(b)+(c) plus the $15K (d) gap-fill totals less than the engaged audit price, the following alternatives will be evaluated **publicly** (not silently absorbed):
 
-- **Option A — Timeline extension (preferred).** Audit timeline pushed to Q4 2027 or H1 2028. V1 stays in pre-audit posture with the 100K USDCx cap intact. Founding capital continues to fund development + minimal operations. This buys time for Catalyst Round resumption or for founder runway accumulation.
-- **Option B — Scope reduction.** Audit scope narrowed to "critical-path validators only" (typically the 5–7 most security-critical of the 17 logic validators). Remaining validators audited in a future Phase 2 round. This carries audit-coverage risk that must be transparently disclosed to depositors at launch.
-- **Option C — Indefinite deferral with explicit disclosure.** V1 launch deferred until funding is available. The reference implementation remains public on GitHub. The preprod deployment remains accessible for evaluation. Founder explores alternative paths (e.g., joining a Cardano Foundation development residency, applying for a different grant program). This is framed publicly as a failure-acceptance scenario, **not** soft-pedaled as "delayed launch."
-- **Option D — Sunset under §0 framing.** If all above fail and founding-capital runway approaches 6 months remaining, the founder publicly announces V1 will not reach mainnet audited state under current resources. The codebase remains as a public-goods artefact under Apache 2.0; the preprod deployment serves as the operational reference. This is the most honest possible outcome if funding truly does not materialise — and is consistent with §0's "V1 may be the terminal state" framing.
+- **Option A — Audit timeline extension (preferred).** Audit timeline pushed to Q4 2027 or H1 2028. **V1 continues to operate on mainnet at the pre-audit 100K USDCx cap throughout.** This buys time for Catalyst Round resumption, additional grant outreach, or growth of the community-funding pool. The founder's $80–$200/year operating commitment continues; depositors who entered under the pre-audit cap remain at the same risk profile they entered under. Cap stays at 100K; Stage 2+ progression awaits audit landing.
+- **Option B — Scope-reduced audit.** Audit scope narrowed to "critical-path validators only" (typically the 5–7 most security-critical of the 17 logic validators) to fit available funding. Remaining validators audited in a future Phase 2 round. **V1 mainnet operation continues at the 100K cap before, during, and after this scope-reduced audit.** Completion of scope-reduced audit may justify a partial cap lift (e.g., 100K → 200K) but not full Stage 3 lift; disclosure of scope-limited badge to depositors at the point of any partial cap lift is mandatory.
+- **Option C — Community / DAO crowdfund.** A transparent, non-equity, non-token contribution pool requesting Cardano community funding for the audit. Pre-announced budget + post-audit transparent accounting + the Apache 2.0 codebase remains the only "return" to contributors. This is a real path on Cardano (Catalyst alternatives + ad-hoc community pools have funded public-goods audits in adjacent ecosystems), but conditional on community interest materialising at the scale needed. **V1 mainnet operation continues at the 100K cap during the crowdfund window.**
+- **Option D — Permanent pre-audit 100K cap.** If none of A/B/C lands, **V1 continues to operate on mainnet at the 100K USDCx cap indefinitely**, with no audit-driven cap lift. Depositors continue to have permissionless access at small scale; the protocol stays live, the keeper continues to operate under §4.3.1, governance remains active, and the codebase remains Apache 2.0 public-goods. This is the §0 / §0.2 "V1 may be the terminal state" outcome — V1 settles into a permanent small-scale public-goods reference implementation **on mainnet**, not as a Preprod-only artefact. The "terminal state" framing means cap is never lifted via the audit path, not that V1 stops operating. **Sunset under §9.2** is a separate path triggered only by §1.5 Class A overrides (USDCx / Liqwid / Cardano / oracle incidents) or by founder explicit decision — not by Option D itself.
 
 We commit to transparency about the funding gap rather than soft-pedalling the issue. The public dashboard tracks the current state of (a)+(b)+(c)+(d) commitments monthly during the funding-stack period, so depositors and observers can independently evaluate which option is likely.
 
-**Linkage to §4.1 sunset trigger (honest acknowledgement).** §4.1 lists sunset triggers including "runway drops below 6 months of forward burn at any time". The §8.1 worst-case branch ($100–$150K founder out-of-pocket in a single allocation event) is a plausible **automatic trigger** for §4.1 sunset on its own: paying the full audit base price consumes the bulk of the remaining founding-capital runway and is likely to push the runway below the 6-month floor immediately after the audit invoice clears. Concretely, **a worst-case audit payment is, in effect, an Option-D-adjacent event** — even if the founder formally chose Option B (paying full price), the §4.1 sunset criterion may fire shortly after. This linkage is **not hidden** in Option D; it is the structural reason Option A (timeline extension) is the preferred branch and Option C (indefinite deferral) sits between the two. The dashboard tracking above is also how depositors will see this linkage materialise if it happens.
+**Linkage to §4.1 sunset trigger — clarified under the volunteer model.** §4.1's nominal sunset condition ("runway < 6 months forward burn") interprets "runway" as the founder's **operating-side commitment** (~$80–$200/year per §4.3.1), not as audit commitment. Under the volunteer-builder framework, operating runway is structurally durable from personal income and is essentially unreachable as a sunset trigger; the live failure modes are §1.5 Class A overrides (USDCx / Liqwid / Cardano / oracle incidents) and explicit founder sunset decision. **Audit-funding failure is NOT a sunset trigger** — it merely keeps V1 at the 100K cap under Option D. V1 continues to operate on mainnet through all four (A/B/C/D) audit-funding outcomes.
 
-**Audit timeline reflects funding-stack uncertainty.** The Q2-Q3 2027 target is set explicitly later than the original Q3 2026 plan to accommodate (i) Catalyst Round resumption probability, (ii) Cardano Foundation / Intersect / Aiken Foundation alternative grant outreach, and (iii) founder runway accumulation if (a)/(b) outcomes are conservative. V1 remains in pre-audit posture (100K USDCx hard cap) for the entire intervening period — see §4 (TVL cap) and §8.2 (Phase 1 framing). The audit itself is not cancelled under any plausible funding scenario; only the start date moves.
+**Audit timeline reflects funding-stack uncertainty.** The Q2-Q3 2027 target is set explicitly later than the original Q3 2026 plan to accommodate (i) Catalyst Round resumption probability, (ii) parallel Cardano Foundation / Intersect / Aiken Foundation grant outreach, and (iii) the community / DAO contribution-pool path (Option C above) maturing if (a)/(b) outcomes are conservative. V1 operates on mainnet at the 100K pre-audit cap throughout this period; if 2027 Q4 arrives without the funding stack reaching the cost threshold, §1.5 Override condition 6 fires (cap stays at 100K indefinitely — V1 remains on mainnet, no Preprod retreat). The audit itself is **conditional on funding materialising**, not on a calendar date — see §8.1 Options A-D above and §0.2 funding posture for the volunteer-builder framing.
 
 Status of each funding source is tracked in `docs/economics.md §5.2`. This stack lets V1 complete its external audit without entering VC / token fundraising / diluting its Apache 2.0 public-goods posture.
 
@@ -1560,7 +1699,7 @@ If a critical bug requires V2, migration follows the same fresh-deploy pattern d
 - **Source code public** before mainnet launch.
 - **Audit reports public** as they complete.
 - **Governance actions public** — every QueueAction announced within 1 hour, on-chain history is canonical.
-- **Wind-down protocol public** — if the founder cannot continue, 90-day notice + fee-to-zero + Liqwid-positions-pre-recalled precondition (see §4.1 sunset mechanics) + EmergencyWithdraw governance path + `emergency-withdraw` self-serve tool. **Hard-failure backstop**: even if both founder and any SPO co-signers are completely unreachable for 90 days, any vUSDCx holder can invoke the permissionless `CommunitySunset` redeemer (vault_user) to atomically freeze the vault and open permissionless `RecallFromLiqwid` + swap-to-USDCx paths for full self-serve depositor recovery — see §5.5.1 Layer 3 + `docs/security-model.md` §5.4 scenario E.
+- **Wind-down protocol public** — if any of §4.1's four sunset triggers fires (A: TVL < $500K @ 6m post-audit IF audit lands; B: operating-runway exhaustion; C: Class A override persistent; D: founder explicit decision), 90-day notice + fee-to-zero + Liqwid-positions-pre-recalled precondition apply per §4.1 sunset mechanics, plus the EmergencyWithdraw governance path + `emergency-withdraw` self-serve tool. **Hard-failure backstop**: even if both founder and any SPO co-signers are completely unreachable for 90 days, any vUSDCx holder can invoke the permissionless `CommunitySunset` redeemer (vault_user) to atomically freeze the vault and open permissionless `RecallFromLiqwid` + swap-to-USDCx paths for full self-serve depositor recovery — see §5.5.1 Layer 3 + `docs/security-model.md` §5.4 scenario E. **Note**: sustained audit-funding gap (§8.1 Option D) is NOT a sunset trigger — it keeps V1 at the pre-audit 100K cap on mainnet; the wind-down protocol does not activate in that scenario.
 - **No rug-pull architecture.** Every invariant that could drain funds is closed at the validator level, not the social level.
 - **Founder incapacitation protocol.** The V1 launch has the founder simultaneously serving as keeper operator, 1-of-3 governance signer, and ref-deployer-wallet controller; individual-level single-point-of-failure risk is real. Response mechanisms: (a) **Short-term absence (< 7 days)** — the 7-day keeper-inactivity window in the contract automatically activates; Direct Withdraw remains fully operational and the early-withdraw fee is waived; (b) **Medium-term incapacity (7-30 days)** — the two independent SPOs can queue `UpdateKeeperAuth` (14-day timelock + 1-of-n cancel) to rotate the keeper PKH to a community successor; (c) **Permanent incapacity** — the two SPOs trigger the §4.1 sunset path (90-day notice + fee=0 + depositor self-serve exit). The ref-deployer wallet key is currently controlled solely by the founder; if that key is lost or inaccessible, approximately **~870 ADA** of ref-script capital + **~24 ADA** of stake-credential deposits are permanently locked (per §8.2 measured 871.51 ADA + 12 × 2 ADA) — but **this does not block depositor withdrawals**, since ref-scripts remain available as reference inputs. V2 deployment ceremony will incorporate a multi-sig ref-deployer wallet or community key-escrow mechanism to eliminate this SPOF.
 
@@ -1575,7 +1714,7 @@ The 100K cap is not a suggestion — it is an acknowledgment that V1 is producti
 
 ### 9.4 Known V1 limits (disclosed rather than hidden)
 
-- **All 12 V1 staking-credential 2 ADA stake deposits are reclaimable.** Each of `vault_user`, `vault_keeper_hot`, `vault_batcher`, `vault_swap_ada`, `vault_protocol`, `vault_recall`, `vault_liqwid`, `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`, `keeper_stake_script`, and `minswap_v2_adapter` carries its own A2 gov-gated `publish` handler — total 24 ADA reclaimable via governance at sunset. (10 of these are vault-proxy Withdraw-Zero routes per §3.2; the additional 2 — `keeper_stake_script` and `minswap_v2_adapter` — carry their own staking credentials for delegation independence and operate outside the vault-proxy dispatch.) Earlier monolithic-validator topologies had a 2 ADA permanent-lock caveat on the largest validator due to a 16 KB ceiling collision with the `publish` handler; the partitioning documented in `spec/architecture.md §4.1` resolved this.
+- **All 12 V1 staking-credential 2 ADA stake deposits are reclaimable** (canonical list in §6.2 `ActDeregisterStake`). Each carries its own A2 gov-gated `publish` handler — total **24 ADA reclaimable** via governance at sunset (14-day timelock + 1-of-n cancel). Of the 12: 10 are vault-proxy Withdraw-Zero routes per §3.2; the additional 2 — `keeper_stake_script` and `minswap_v2_adapter` — carry their own staking credentials for delegation independence and operate outside the vault-proxy dispatch. Earlier monolithic-validator topologies had a 2 ADA permanent-lock caveat on the largest validator due to a 16 KB ceiling collision with the `publish` handler; the partitioning documented in `spec/architecture.md §4.1` resolved this.
 - **100K TVL cap is NOT enforced at the contract level** — it is operator-enforced via frontend deposit gating + keeper `tvlCapMonitor` alerts. This is a deliberate V1 design choice, not an oversight. A contract-level cap was designed (`max_tvl` datum field + `ActUpdateTvlCap` 7-day-timelock governance action, "Option B" in internal review) but not shipped for two reasons: (1) The cap exists only to signal pre-audit prudence; post-external-audit the cap is either raised unlimited or the V2 deploy removes it, making a gov-adjustable on-chain mechanism single-use lifecycle overhead. (2) At V1 launch gov runs 3-of-3 unanimity with 1 founder + 2 independent SPO signers (§5.5); while 3-of-3 blocks unilateral founder action, cap-sizing judgment is not SPOs' core domain (they are stake pool operators, not vault economic-model designers) — handing the cap to SPO-gated governance during the pre-audit phase is not a meaningful check either — so the honest label "operator-enforced" is stronger than the appearance of "contract-enforced". Depositors who want belt-and-suspenders contract-level deposit limits should wait for Phase 2 gov rotation (external signer added, §6.1) — at that point an on-chain cap would have meaningful dissent-veto semantics and V2 will reconsider.
 - **Reference-script capital lockup.** V1's 18 reference-script UTXOs at the deploy wallet address (17 logic validators + 1 SwapAdapter) tie up ~870 ADA (Conway-era per-byte `minFeeRefScriptCostPerByte` × 1.10× operator safety multiplier — V1 Preprod measured 871.51 ADA exactly), recoverable via `deploy/tools/reclaim-refs.ts` once the operator decides to sunset the deployment. Plus 24 ADA in stake-credential deposits (12 × 2 ADA) reclaimable via A2 governance after a 14d timelock. See §8.2 for the pre-launch audit context.
 - **Architectural complexity growth.** V1's first cut was 12 validators; the current topology is **22 artefacts** (17 logic validators + 4 NFT mint policies + 1 DEX adapter), an 80% growth driven by the Plutus V3 16 KB reference-script ceiling and the §5.4 P3-P5 slippage-stack additions. Each new validator added (a) an independent audit scope surface, (b) an additional compile-time anchor set, (c) an additional reference-script UTXO (~50 ADA each at current parameters), and (d) an additional deploy-ceremony TX. Net effect on first deploy: ref-script lockup grew from earlier estimates of ~400 ADA to actual measured 871.51 ADA (+118%), and ceremony TX count grew from ~18 to 27-30 (+50%). External audit budget impact: **12 staking-credential A2 `publish` handlers must each be audited individually** (instead of the previously-locked single `vault_core` lock that was outside audit scope), so the resolution of "vault_core 2 ADA permanent lock" came at the cost of expanded audit surface. Future feature additions risk further splits — the trajectory from 12 → 22 in one V1 cycle suggests V2 may need to either (a) accept higher artefact counts as the new baseline, or (b) consolidate via on-chain dispatch tables. V1 chose (a) explicitly because the design freeze-then-audit-then-launch sequence does not allow for late re-architecture; V2 will reconsider.
@@ -1616,7 +1755,7 @@ Every governance QueueAction's payload hash can be reverse-engineered from CBOR 
 **Specs** (under `spec/`):
 - `architecture.md` — **17-logic-validator catalog** with redeemer details (+ 4 one-shot NFT mint policies + 1 DEX adapter = 22 total artefacts); §4.1 partitioning rationale (4 orthogonal seams: authorization-boundary, response-latency, bytecode-cost-center, size-fix)
 - `vault-datum.md` — VaultDatum schema (**29 fields** post §5.4 Phase 2 + Phase 1 governance safety; adds `max_slippage_bps` + `min_swap_peg_bps` + `community_sunset_triggered` on top of the prior 26-field layout), immutable vs governance-mutable vs operationally-mutable classification, per-redeemer state-transition matrix
-- `governance.md` — 14 governance action kinds (including `ActDeregisterStake` for operator-side stake-deposit recovery), timelock floors, launch signer set + rotation roadmap
+- `governance.md` — 15 queued governance ActionKinds (full table in §6.2; includes `ActDeregisterStake` for operator-side stake-deposit recovery), plus 3 direct/non-queued redeemers (`KeeperToggleMarket`, `Heartbeat`, `DistributeSignerCompensation`); timelock floors, launch signer set + rotation roadmap
 - `multisig-gov.md` — MultisigGov validator internals, action_id / payload_hash computation, `is_gov_authorized` cross-validator helper
 - `gov-nft.md` — Gov Signer soul-bound NFT minting policy (reputation-only, non-transferable)
 - `keeper-auth.md` — `keeper_stake_script` state machine, weekly rotation, A-Plain authorization, PermissionlessWithBond mode
@@ -1655,6 +1794,50 @@ Every governance QueueAction's payload hash can be reverse-engineered from CBOR 
 ---
 
 ## Changelog
+
+### v1.4 — 2026-05-12 (response to external review `whitepaper-v1_3-review-2026-05-12.pdf`)
+
+**Added**
+- §0.1 "Current state vs the V1 described in this document" — explicit disclosure section addressing the relationship between the 2026-04-17 internal-verification-era mainnet deployment and the V1 described in this whitepaper: zero third-party deposits (frontend allowlist-gated), pre-V1 contract iteration (~9 logic validators vs V1's 22 artefacts), no on-chain migration path, planned unwind (ActDeregisterStake × 4 staking-cred queue executes 2026-05-23 → full vault drain → ref-script reclaim) before V1 mainnet ceremony. Closes the review's critical finding C1.
+- Executive Summary "Audit funding is a real sunset trigger, not a tail scenario" paragraph — surfaces the §8.1 worst-case audit branch ($100–$150K founder out-of-pocket → likely automatic §4.1 sunset trigger) at the summary-level reading depth, so depositors reading only the executive summary see this is a real path. Closes review finding H1.
+- §4.1 "Implicit lower bound from §8.1" paragraph — addresses the unverifiability conflict noted in review M1 between "runway ≥ 18 months" and "specific total $ not disclosed" by using the §8.1 worst-case audit allocation as the largest single-event component of the committed runway, giving readers a verifiable floor without disclosing the full figure.
+- §1.4 Lenfi statement — inline citation pointer (Lenfi official December 2024 post-incident disclosure + DefiLlama protocol TVL history) with caveat that figures are external public-data snapshots and may move. Closes review finding M2.
+
+**Replaced**
+- Executive Summary governance line — was "3-of-3 multisig with a §5.5.1 founder-solo fallback" (treated configuration (b) as exceptional fallback). Now presents two configurations under same contract guarantees as parallel branches: (a) 3-of-3 with SPOs (target, conditional on recruitment) and (b) founder-controlled with HD-key separation (Phase 1 small-TVL fallback per §7.4). Adds the explicit framing that depositors should assume (b) at launch given §8.2's $500–$25K Phase 1 TVL range, and that depositor recovery does not depend on which configuration is active — it depends on §5.5.1's three contract-level safety layers. Closes review finding C2.
+- §4.5 weekly-tier paragraph — dropped the "sub-$1,200 tiers exist only as legacy scheduling branches" framing (which contradicted v1.3's own §2.6 reframing per v1.3 Changelog Modified item). Now describes the lower tiers as keeper's live policy for any period the vault spends under $1,200 USDCx (notably Phase 1 small-TVL sub-scenarios and §2.6.1 Reference Implementation Mode). Closes review finding H2.
+- §1.5 Override condition 3 — was "USDCx issuer (Circle / IOG xReserve infrastructure)" which conflated Circle (the issuer) with IOG (the Cardano-side integrator). Now reads "USDCx issuer (Circle, via the xReserve smart contract and its Cardano-side integration deployed by IOG)" aligning with §5 table's "Circle via xReserve" framing. Closes review finding H3.
+- §6.2 governance action list — was a single-paragraph dump of 14 ActionKinds × timelocks rendered as a long sentence. Now a sorted table (Min Timelock | ActionKind | Category) with the three direct/non-queued redeemers (KeeperToggleMarket, Heartbeat, DistributeSignerCompensation) flagged separately below the table. Closes review finding L1.
+
+**Modified**
+- §5 iterative-fix paragraph + §9.2 stake-credential bullet — dropped the verbatim 12-name `vault_user / vault_keeper_hot / ...` lists; both now cross-reference the canonical list at §6.2 ActDeregisterStake. Numeric "24 ADA / 12 × 2 ADA each" disclosure preserved at the four locations where it carries load-bearing context (§8.2 ref-script lockup, §9 founder-incapacitation, §9.2 sunset, §9.4 honest-limits). Closes review finding M3.
+- §1.6 origin-story closing sentence — reworded to avoid verbatim duplication of the Executive Summary's "So the founder built one." closing (review L2 noted the repetition, though the duplication was Executive Summary ↔ §1.6, not §1.6-internal as the review described).
+
+**Additional structural reframe: volunteer-builder + community-funded audit framework + audit-as-cap-lift-gate** (same v1.4 release window; supersedes the M1 "Implicit lower bound from §8.1" soft fix above by restructuring the underlying commitment model rather than disclosing a runway figure):
+
+- **§0.2 Funding posture (NEW)** — explicit declaration that V1 is volunteer-built (founder ships engineering + ~$2K seed + ~$80-200/yr operating subsidy + ~$15K audit gap-fill cap). **V1 launches on Cardano mainnet at the pre-audit 100K USDCx hard cap regardless of audit funding status** — external audit, when it lands, lifts the cap toward Stage 2 / Stage 3 (§1.5). Audit is a cap-lift gate, not a launch gate. Replaces the implicit "founder will fund worst-case $100-150K" expectation from v1.3.
+- **§4.1 founding-capital paragraphs (REWRITTEN)** — "operations only, audit external; gap-fill capped at $15K; sunset trigger interprets runway as operating-only and is structurally durable; audit-funding outcome is NOT a sunset trigger — sunset triggers are §1.5 Class A overrides or explicit founder decision". Removes the v1.4 first-pass "Implicit lower bound from §8.1" paragraph (its premise that founder underwrites worst-case audit is dropped).
+- **§4.3.1 Post-launch minimal-operations policy (NEW)** — explicit launch-state operating budget (~$80/yr at $500-$25K TVL under §2.6.1), TVL-scaling cost table, single-VPS-until-$50K-TVL HA upgrade threshold, durability argument (founder absorbs from personal income, not founding-capital drawdown).
+- **§8.1 funding stack (REWRITTEN)** — (d) "Founder self-fund remainder $20-90K / worst-case $100-150K" replaced with "(d) Founder gap-fill cap ~$15K, NOT underwriter". Worst-case is no longer "founder pays $100-150K" but "$35-135K funding gap activates Options A-D cap-lift contingency tree". Options A-D reframed: A = audit timeline extension (mainnet 100K cap continues), B = scope-reduced audit (mainnet 100K cap continues), C = community / DAO crowdfund (mainnet 100K cap continues), D = permanent pre-audit 100K cap (V1 stays live on mainnet at 100K indefinitely — NOT Preprod retreat, NOT sunset). All four options keep V1 on mainnet; they only determine the cap-lift pathway.
+- **§8.1 Pre-launch gates (RESTRUCTURED)** — split into two checklists: (i) "Required for mainnet launch under 100K pre-audit cap" (internal audit + Preprod E2E + dry-run + Class A overrides clear + axis One-Yellow), and (ii) "Required for cap lift toward Stage 3" (external audit complete + findings resolved + axis All-Green). External audit is moved from launch-gate to cap-lift-gate.
+- **Executive Summary D paragraph (REWRITTEN)** — was "audit funding worst-case triggers §4.1 sunset"; intermediate volunteer-framework draft had "launch is contingent on external audit funding". Final framing: "audit is a cap-lift gate, not a launch gate; founder is not underwriter; V1 launches on mainnet at 100K pre-audit cap regardless of audit funding status". Second paragraph clarifies operating-side durability + that audit funding failure is NOT a sunset trigger.
+- **§1.5 Override conditions (RESTRUCTURED into Class A / Class B)** — Class A (Liqwid / USDCx / Cardano chain / oracle incidents) blocks mainnet launch entirely. Class B (audit-not-passed; audit funding not by 2027 Q4) holds cap at 100K without blocking mainnet launch. Class A reflects external infrastructure failure; Class B reflects audit / cap-lift gating only.
+
+**M1 status (revised, final)**: With the volunteer-builder framework + β audit-as-cap-lift-gate restructure above, **M1 is now structurally closed**. The reviewer's "unverifiability conflict" disappears because the founder no longer commits to worst-case audit underwriting; runway-as-trust-anchor framing is replaced with "founder operating commitment is $80-200/yr durable + $15K audit gap-fill cap; everything else is external funding; V1 stays on mainnet at 100K cap regardless of audit outcome". The Implicit-lower-bound paragraph from the v1.4 first pass has been removed and replaced by §4.3.1.
+
+**β follow-up — narrative-coherence sweep** (same v1.4 release window; addresses 7 residual narrative inconsistencies where v1.3-era "audit gates launch" language survived the initial β pass):
+
+- **§0 phasing restructured into 4 phases** — was a 3-phase Pre-Catalyst / Activation / Operational model where Activation included "External audit initiated when launch readiness conditions begin to align" implying audit precedes mainnet. Now: Phase 1 (Pre-Catalyst, Preprod only), Phase 2 (Pre-Audit Mainnet at Stages 1/1.5/2 with $10K → $100K cap), Phase 3 (Audit + Cap-Lift Window, parallel to Phase 2), Phase 4 (Operational, Stage 3+ post-audit). The "No V1 mainnet launch, no pre-audit soft launch" line from v1.3 is removed; V1 does launch pre-audit on mainnet at the 100K cap.
+- **§0 closing line** clarified — "deployed when launch conditions are met" specified as "when §1.5 launch gates are met per §8.1's pre-audit checklist".
+- **§1.5 Stage matrix** — added "Audit required?" column. Stages 1/1.5/2 marked No (pre-audit); Stage 3 marked Yes (external audit complete, §8.1 cap-lift gate). New explanatory paragraph clarifies that Stages 1 → 2 → 3 are not time-gated; they progress as axis state and audit outcome warrant.
+- **§4.1 sunset trigger restructured into 4 explicit conditional triggers** — was "TVL < $500K at 6 months post external-audit completion, or runway < 6 months forward burn". Now Trigger A (TVL post-audit, **conditional on audit happening**), Trigger B (operating runway, structurally unreachable per §4.3.1), Trigger C (Class A override persistent), Trigger D (founder explicit). New explicit statement: "Audit-funding failure is NOT a sunset trigger" — Option D keeps V1 at 100K cap, not in sunset.
+- **Executive Summary line 91** softened — was "100K USDCx hard cap until a third-party audit completes" implying audit will complete. Now: "100K USDCx pre-audit hard cap; cap is lifted toward Stage 3 when external audit completes; if §8.1 funding stack doesn't deliver, V1 stays at 100K cap indefinitely per §8.1 Option D".
+- **§0.1 disposition paragraph** clarified — "V1 mainnet ceremony" specified as "V1 pre-audit mainnet launch ceremony (Phase 2 entry per §0; Stage 1/1.5/2 launch per §1.5)" so the ceremony framing is unambiguous about pre-audit timing.
+- **§9.2 wind-down protocol bullet** updated — was a flat reference to "§4.1 sunset mechanics" without conditional framing. Now explicitly lists all 4 sunset triggers (with A noted as audit-conditional) and adds a footer note that sustained audit-funding gap (Option D) is NOT a sunset trigger.
+
+**Tone shift**
+- Closes the Executive Summary ↔ §8.1 gap on audit-funding-triggered sunset, so the worst-case audit branch is no longer something depositors discover only after reading the §8.1 contingency tree.
+- Removes legacy "lower tier = recovery only" framing across §2.6 (already done in v1.3) and §4.5 (this v1.4 pass), aligning all sections on "tiers are live keeper policy at the respective TVL band".
 
 ### v1.3 — 2026-05-11
 
@@ -1730,4 +1913,4 @@ Initial release. Production-ready V1 design specification. Single-protocol Liqwi
 
 ---
 
-**End of Whitepaper V1.3**
+**End of Whitepaper V1.4**
