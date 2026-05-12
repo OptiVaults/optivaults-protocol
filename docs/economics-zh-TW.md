@@ -133,12 +133,12 @@ V1 的公共財定位(見白皮書 §8.1 + Executive Summary)支援一個非稀�
 
 | 來源 | 預期金額 | 狀態 | 出處 |
 |------|---------|------|------|
-| (a) Cardano Project Catalyst 撥款 | $30K-$50K | **撰寫時 Catalyst 處於暫停 / 重組狀態——下一個 Round 何時恢復尚無明確時程。** V1 把 (a) 列為候選、等 Catalyst 恢復,但**不依賴**。 | 白皮書 §8.1 |
-| (b) 審計事務所公共財費率 | 在 $100K-$150K 全價上折 30-50% | 接洽中 | 白皮書 §8.1 |
+| (a) Grant 堆疊 — Catalyst + Cardano Foundation + Intersect Member Committee + Aiken Foundation | 合計潛在 $30K-$150K，Catalyst 單一可取得 $30K-$50K | **撰寫時 Catalyst 處於暫停 / 重組狀態——下一個 Round 何時恢復尚無明確時程。** 並行接洽 Cardano Foundation、Intersect、Aiken Foundation 以降低單一來源依賴。V1 把 (a) 列為候選、等恢復 / 核准，但**不依賴任何單一 grant 來源**。 | 白皮書 §8.1 |
+| (b) 審計事務所公共財費率 | 在 $50K-$150K base 上折 30-50%；多 reviewer 委託模式可把 base 壓到 $70K-$100K | 接洽中 | 白皮書 §8.1 |
 | (c) 藉大量 heritage 內部審計史縮減範圍 | 自全範圍省 $15K-$25K | Heritage 審計工作 | `audit-scope.md §1` |
-| (d) 創辦人自付殘額 | (a) 達成則 $20K-$40K;**若 (a) 在審計啟動前未達成則 $50K-$90K** | 啟動資金分配 | 白皮書 §4.1 |
+| (d) 創辦人 gap-fill 補貼（有上限、非 underwriter） | **最多約 $15K 個人自掏**用於 bridging 微額短缺；創辦人**明確不承諾在任何情境下 underwriting 完整審計成本** — 見白皮書 §0.2 + §4.1 volunteer-builder framing | 啟動資金分配（封頂） | 白皮書 §0.2 / §4.1 / §8.1 |
 
-審計時程(目標 Q2-Q3 2027——見 `audit-scope.md §5`)明確比原 Q3 2026 計畫晚,刻意預留時間以容納 (i) Catalyst Round 恢復的概率、(ii) Cardano Foundation / Intersect / Aiken Foundation 等 alternative grant 的接洽、(iii) 若 (a)/(b) 結果保守時 founder runway 累積的時間。堆疊組合後,(a) 達成情境下創辦人預期自付 **$20K-$40K**,(a) 未達成情境下 **$50K-$90K**。這個堆疊讓 V1 能在**不 VC / 不發 token / 不稀釋 Apache 2.0 公共財姿態**的前提下完成外部審計。各來源狀態更新,以 `audit-funding-status` 標籤的 GitHub issue 公開發布。
+審計時程（目標 Q2-Q3 2027——見 `audit-scope.md §5`）明確比原 Q3 2026 計畫晚，刻意預留時間以容納 (i) Catalyst Round 恢復的概率、(ii) 並行 Cardano Foundation / Intersect / Aiken Foundation 接洽、(iii) 若 (a)/(b) 結果保守時，社群 / DAO 資助池路徑（白皮書 §8.1 Option C）的成熟時間。堆疊組合後，創辦人在任何情境下自付金額 **$0-$15K**，硬封頂在 gap-fill 上限。若資金堆疊低於 $15K 短缺以上，V1 走白皮書 §8.1 Options A-D contingency tree（時程延後 / 縮減 scope / 社群 crowdfund / 永久 pre-audit 100K cap），不擴大創辦人自付。這個 volunteer-builder 模型讓 V1 在**不 VC / 不發 token / 不稀釋 Apache 2.0 公共財姿態 / 不創辦人財務過度承諾**的前提下推進外部審計。各來源狀態更新，以 `audit-funding-status` 標籤的 GitHub issue 公開發布。
 
 ### 5.3 Keeper 份額可行性
 
@@ -166,7 +166,7 @@ Keeper 份額在 V1 啟動時是績效費的 40%;每年 = `TVL × gross_APY × 0
 | (b') 3-keeper 輪替(上表) | 3 位獨立 operator 各吸收 $360/年 | 共 $1,080 | ~$2M | ~$6M |
 | (c) 機構級運營 + audit-reserve 累積 | 完整協議自給,含未來審計成本($30–50K 每 18–24 個月攤提) | $1,500–$3,000 + 審計攤提 | $20M+ | $50M+ |
 
-**上表中的 $5–10M 數字** 對應的是 **層 (b') 3-keeper 輪替 + 悲觀 1–2% APY**(刻意保守地設定,讓 V1 即使在 Liqwid rate 壓縮時仍可行,而不是只在當下參考條件下可行)。在 **6% 當下 APY + 單一非創辦人 keeper(層 b)** 下,可行門檻會降到 $740K–$1.48M——早很多。V1 實際的自給目標是**層 (a) / (b)**,不是層 (c);層 (c) 明確由 §5.1 的四源審計資金堆疊(Catalyst + 公共財費率 + 範圍縮減 + 創辦人自付)覆蓋,**不**依賴 treasury 累積。這與 V1 的非商業公共財定位一致——V1 不需要擴張到 $20M+ TVL 才算「完全自給」。白皮書 §4.3 有給存入者看的版本。
+**上表中的 $5–10M 數字** 對應的是 **層 (b') 3-keeper 輪替 + 悲觀 1–2% APY**（刻意保守地設定，讓 V1 即使在 Liqwid rate 壓縮時仍可行，而不是只在當下參考條件下可行）。在 **6% 當下 APY + 單一非創辦人 keeper（層 b）** 下，可行門檻會降到 $740K–$1.48M——早很多。V1 實際的自給目標是**層 (a) / (b)**，不是層 (c)；層 (c) 由 §5.1 的 funding stack（grants + 公共財費率 + 範圍縮減 + 受封頂的創辦人 gap-fill，見 §5.2.1 (d) — 白皮書 §0.2 解釋為何創辦人不是審計 underwriter 的 volunteer-builder framing）覆蓋，**不**依賴 treasury 累積。這與 V1 的非商業公共財定位一致——V1 不需要擴張到 $20M+ TVL 才算「完全自給」。白皮書 §4.3 有給存入者看的版本。
 
 **SwapAda 對 keeper 可行性的影響。** 先前內部驗證期的運營,keeper 需要自付 ADA 替金庫 top-up(每筆 Minswap V2 order 金庫會燒掉約 2 ADA;沒有鏈上補充機制時,創辦人-keeper 大約每 2–4 週要手動送一次 ADA 到金庫)。V1 的 `SwapAda` redeemer(`spec/ada-swap.md`)在鏈上把這個迴圈關起來:keeper 貢獻 ADA、以 oracle 價格從金庫換取 USDCx——這是**公平交換,不是捐贈**。Keeper 面經濟影響:先前創辦人在 Minswap 上鏈下執行(並付 slippage 的)ADA-換-USDCx,現在是受 validator 閘控的原子 TX。對 keeper 可行性表的淨影響:**中性到微正** ——SwapAda 每次的 ADA 網路費(約每筆 1 ADA × 每年 15 筆 = 15 ADA ≈ 100K TVL 下約 $10/年)完全被省下的 Minswap slippage / fee 吃掉。存入者端透過緩慢的 USDCx drain 來承擔 Minswap V2 batcher fee(100K TVL 下約 0.02% APY 的拖拉);這個拖拉已納入 §6.2 的「預期 net APY」那一欄。多 keeper 輪替(Phase 2+ Mixed / PermissionlessWithBond 模式)下,SwapAda 操作和 Compound / BatchProcess 一樣按公平輪替在 keeper 間分配——沒有任何一位 keeper 會被過度擔起這個成本。
 
@@ -398,7 +398,7 @@ Net Yield ≈ Gross Liqwid yield
 - Yield 靠自動複利累積,不用動手。
 - 你要付的費用:**存款 0 費用、Direct Withdraw 0.1%、每次收割的 yield 抽 4.5%**(從不碰本金)。
 - Keeper 拿多少:V1 啟動時 **4.5% 收割費的 40%**(≈ yield 的 1.8%,設高以支持公共財定位下的開源第三方 keeper 經濟可行性)。其餘 60%(yield 的 2.7%)進鏈上 treasury,依類別分桶使用。
-- **V1 啟動於啟動期**——100K TVL 下,營收並不完全覆蓋運營成本。V1 有三層自給門檻(§5.3):(a) 創辦人-keeper 邊際運營在 $185K–$555K TVL(當下 APY)/ $555K–$1.67M(悲觀 APY) break even;(b) 非創辦人專業 keeper 在 $740K–$1.48M / $2.22M–$4.44M;(c) 機構級運營 + audit-reserve 累積在 $20M+ / $50M+。V1 的實際目標是層 (a) / (b);層 (c) **刻意不是目標**——審計資金來自 §5.1 的四源堆疊(Catalyst + 公共財費率 + 範圍縮減 + 創辦人自付),**不**靠 treasury 累積。Phase 1 初期缺口由啟動資金承擔;若成長停在層 (a) 以下,啟動 §7.2 的 sunset 協議。
+- **V1 啟動於啟動期**——100K TVL 下，營收並不完全覆蓋運營成本。V1 有三層自給門檻（§5.3）：(a) 創辦人-keeper 邊際運營在 $185K–$555K TVL（當下 APY）/ $555K–$1.67M（悲觀 APY） break even；(b) 非創辦人專業 keeper 在 $740K–$1.48M / $2.22M–$4.44M；(c) 機構級運營 + audit-reserve 累積在 $20M+ / $50M+。V1 的實際目標是層 (a) / (b)；層 (c) **刻意不是目標**——審計資金來自 §5.1 的 funding stack（grants + 公共財費率 + 範圍縮減 + 受封頂的創辦人 gap-fill ~$15K 依 §5.2.1 (d) — 創辦人**不是**審計 underwriter，見白皮書 §0.2），**不**靠 treasury 累積。Phase 1 初期營運缺口由創辦人依白皮書 §4.3.1 minimal-operations 政策從個人收入補貼吸收；若成長停在層 (a) 以下且 §1.5 外部觸發條件（USDCx / Liqwid / Cardano / oracle 事件）或審計資金失敗（§8.1 Options A-D）實際成立，啟動 §7.2 的 sunset 協議。
 - **你的本金絕不被卡死**——Withdraw 隨時可在鏈上進行,與 keeper 狀態、代管基礎設施可用性、創辦人狀態都無關。
 
 完整給存入者的文件 + 風險揭露見 `whitepaper/whitepaper.md`;信任邊界分析見 `docs/security-model.md`。

@@ -9,7 +9,7 @@
 
 OptiVaults V1 is a non-custodial, on-chain auto-yield stablecoin vault on Cardano. Depositors lock USDCx and receive vUSDCx share tokens proportional to their deposit. An automated keeper deploys pooled capital across Liqwid Finance stablecoin lending markets (DJED, USDM) through Minswap V2 routing, harvests yield on-chain, and compounds it back into vault accounting so share price rises over time. All principal-affecting operations — deposits, withdrawals, share minting, yield calculation, fee extraction, protocol routing — are validated by Aiken PlutusV3 smart contracts. The protocol operator cannot extract user principal under any redeemer path.
 
-V1 is the first public production release. A single user-facing vault instance runs on Cardano mainnet with an operator-enforced TVL ceiling of 100,000 USDCx until a third-party audit completes; at that point the ceiling schedule is disclosed in the audit report.
+V1 is the first public production release. A single user-facing vault instance runs on Cardano mainnet with an operator-enforced TVL ceiling of 100,000 USDCx during the pre-audit operational phase. When external audit completes (cap-lift gate per whitepaper §8.1), the cap lifts toward §1.5 Stage 3 levels per the schedule disclosed in the audit report. If audit funding never delivers (whitepaper §8.1 Option D), V1 continues to operate on mainnet at the 100K cap indefinitely — audit is a cap-lift gate, not a launch gate (see whitepaper §0.2 funding posture).
 
 ---
 

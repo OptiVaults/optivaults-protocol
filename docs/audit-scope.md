@@ -115,17 +115,19 @@ These are **read-only anchors** — no new redeemers, no state change. Audit: ve
 
 ## 3. Property-Based Test Additions
 
-V1 ships with a set of property-based tests under `lib/vault/tests/property_test.ak` using `aiken/fuzz` iteration discipline (default cap 100 iterations per property, early-exit on first failure). The pre-V1 heritage suite covered peg-floor + asset-oracle lookup invariants; V1 audit scope plans the following coverage additions, each at the same 100-iteration cap unless noted otherwise:
+Existing `property_fuzz_test.ak` + `property_fuzz_extended_test.ak` cover 25 properties × 100 iterations. V1 adds:
 
-| Property | Description |
-|----------|-------------|
-| Treasury category floor | `audit_reserve_balance >= min_audit_reserve` (immutable floor) |
-| Compound fee split | `keeper_fee + treasury_fee == total_fee` exactly (no rounding skim) |
-| Treasury ratios sum | `Σ category_ratios == 10000` invariant |
-| Bond slashing bounds | `slash_amount <= posted_bond` |
-| Keeper authorization transitivity | If redeemer claims `WithdrawAsAuthorized`, then `keeper_stake_script` output must show updated bond state |
+| Property | Description | Iterations |
+|----------|-------------|------------|
+| P26: Treasury category floor | `audit_reserve_balance >= min_audit_reserve` (immutable floor) | 100 |
+| P27: Compound fee split | `keeper_fee + treasury_fee == total_fee` exactly (no rounding skim) | 100 |
+| P28: Treasury ratios sum | `Σ category_ratios == 10000` invariant | 100 |
+| P29: Bond slashing bounds | `slash_amount <= posted_bond` | 100 |
+| P30: Keeper authorization transitivity | If redeemer claims `WithdrawAsAuthorized`, then `keeper_stake_script` output must show updated bond state | 100 |
 
-The exact property count, iteration cap, and full `aiken check` summary at any commit are reproducible from source — run `aiken check` against the deployed commit to verify. We deliberately do not pin specific test-count numbers in this document so it does not drift relative to the source of truth as the property suite grows; the methodology (iteration-capped fuzzing + early-exit + per-property axiomatic invariants) is the durable description.
+Total fuzz runs expand from 2,500 → 3,000 per build.
+
+**Cross-reference (test-count metrics).** This file's "30 properties × 100 iterations = 3,000 fuzz runs" is **one specific metric** about property-based fuzz coverage. The whitepaper §5.4 figure of "194 unit + property tests / 689 randomized checks per `aiken check` run" refers to the **full Aiken test suite** (the "689 checks" is what `aiken check` summary line emits, counting deterministic case + each `aiken/fuzz` property invocation as 1 check). The two metrics are not contradictory — they describe different layers (this doc focuses on `aiken/fuzz` randomized iterations specifically; the whitepaper aggregates). The 3,000 fuzz-runs figure here counts the maximum iterations possible if every property runs to its 100-iteration cap; in practice early-exit on first failure means some properties may report fewer.
 
 ---
 
@@ -317,10 +319,10 @@ This creates a tamper-evident public record: every audit is part of the on-chain
 
 V1 is positioned as a non-commercial Cardano DeFi public-goods reference implementation. Audit engagement is funded via a non-dilutive stack:
 
-- **(a) Cardano Project Catalyst grant**: would expect $30K-$50K if a suitable Round opens. **Status as of writing: Cardano Project Catalyst is paused / restructuring with no confirmed timeline for Round resumption.** V1 retains (a) as a candidate funding source pending resumption but does not depend on it; the Q2-Q3 2027 audit timeline (§5) is set to allow either Catalyst re-opening within the window or full coverage from (b)+(c)+(d).
-- **(b) Audit-firm public-goods rate**: 30-50% discount on $100K-$150K full price (outreach pending). Alternative-grant outreach to Cardano Foundation, Intersect, and Aiken Foundation also planned.
-- **(c) Scope reduction via extensive internal audit history** (heritage work in §1): lets external audit focus on critical paths rather than full 17-logic-validator + 1-DEX-adapter scope (22 artefacts total — see §6 for full count), saving $15K-$25K
-- **(d) Founder self-fund remainder**: $20K-$40K out-of-pocket if (a) materialises; **scaling to $50K-$90K if (a) does not materialise before audit kickoff**
+- **(a) Grant stack — Catalyst + Cardano Foundation + Intersect Member Committee + Aiken Foundation**: $30K-$150K combined potential, $30K-$50K from Catalyst alone if a suitable Round opens. **Status as of writing: Cardano Project Catalyst is paused / restructuring with no confirmed timeline for Round resumption.** Parallel outreach to Cardano Foundation, Intersect, and Aiken Foundation reduces single-source dependency. V1 retains (a) as candidate funding pending resumption / approval but does not depend on any single grant source; the Q2-Q3 2027 audit timeline (§5) is set to allow either Catalyst re-opening within the window or coverage from the broader grant pool plus (b)+(c)+(d).
+- **(b) Audit-firm public-goods rate**: 30-50% discount on $50K-$150K base; multi-reviewer engagement model can also push the base toward $70K-$100K. Outreach pending.
+- **(c) Scope reduction via extensive internal audit history** (heritage work in §1): lets external audit focus on critical paths rather than full 17-logic-validator + 1-DEX-adapter scope (22 artefacts total — see §6 for full count), saving $15K-$25K.
+- **(d) Founder gap-fill contribution (capped, NOT underwriter)**: the founder commits **up to approximately $15K personal out-of-pocket** to bridge small shortfalls between (a)/(b)/(c) delivery and the final audit price. The founder **explicitly does NOT commit to underwriting the full $50K-$150K audit cost in any scenario** — V1 is a volunteer-built public good (whitepaper §0.2), not a founder-underwritten product. If the funding stack underperforms beyond the $15K gap-fill capacity, V1 follows the whitepaper §8.1 Options A-D contingency tree (timeline extension / scope-reduced audit / community crowdfund / permanent pre-audit 100K cap) — all four options keep V1 live on mainnet, they only determine the cap-lift pathway.
 
 This positioning may be relevant for audit firms evaluating engagement:
 

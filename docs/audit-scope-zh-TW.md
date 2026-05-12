@@ -115,17 +115,19 @@ V1 validator 集合從內部驗證期設計繼承下列架構不變量,作為 V1
 
 ## 3. Property-based 測試新增項目
 
-V1 在 `lib/vault/tests/property_test.ak` 下提供一組 property-based 測試,使用 `aiken/fuzz` 的迭代紀律(預設每個 property 上限 100 iter,首次失敗 early-exit)。Pre-V1 既有套件涵蓋 peg-floor 與 asset-oracle lookup 不變量;V1 審計範圍規劃以下新增,每項採同 100 iter 上限(如有不同會註明):
+既有的 `property_fuzz_test.ak` + `property_fuzz_extended_test.ak` 已涵蓋 25 個 property × 100 iter。V1 新增:
 
-| Property | 說明 |
-|----------|------|
-| Treasury 類別下限 | `audit_reserve_balance >= min_audit_reserve`(不可變下限) |
-| Compound 費用拆分 | `keeper_fee + treasury_fee == total_fee` 必須完全相等(rounding 不得被 skim) |
-| Treasury 比例總和 | `Σ category_ratios == 10000` 不變量 |
-| 保證金沒收界線 | `slash_amount <= posted_bond` |
-| Keeper 授權轉移性 | 若 redeemer 聲稱 `WithdrawAsAuthorized`,則 `keeper_stake_script` output 必須顯示已更新的保證金狀態 |
+| Property | 說明 | Iterations |
+|----------|------|------------|
+| P26:Treasury 類別下限 | `audit_reserve_balance >= min_audit_reserve`(不可變下限) | 100 |
+| P27:Compound 費用拆分 | `keeper_fee + treasury_fee == total_fee` 必須完全相等(rounding 不得被 skim) | 100 |
+| P28:Treasury 比例總和 | `Σ category_ratios == 10000` 不變量 | 100 |
+| P29:保證金沒收界線 | `slash_amount <= posted_bond` | 100 |
+| P30:Keeper 授權轉移性 | 若 redeemer 聲稱 `WithdrawAsAuthorized`,則 `keeper_stake_script` output 必須顯示已更新的保證金狀態 | 100 |
 
-任何 commit 的精確 property 數、iteration 上限、以及完整 `aiken check` summary 都可從 source 重現——對應 commit 跑 `aiken check` 即可驗證。本文刻意不固定特定 test-count 數字,避免隨 property suite 成長與 source of truth 脫節;真正持久的描述是方法論(iteration-capped fuzzing + early-exit + per-property axiomatic invariants)。
+Fuzz 總跑量從 2,500 → 3,000(每次 build)。
+
+**跨引(測試計數度量)。** 本文件的「30 個 property × 100 iter = 3,000 fuzz runs」是**一個特定的度量**,只講 property-based fuzz 覆蓋。白皮書 §5.4 的「194 個 unit + property test / 每次 `aiken check` 跑 689 個隨機化 check」講的是**完整 Aiken 測試套件**(「689 checks」是 `aiken check` 的 summary 行輸出,把每個確定性案例 + `aiken/fuzz` 的每次 property 呼叫都算一個 check)。兩個數字不是互相矛盾——它們描述不同層(本文聚焦在 `aiken/fuzz` 的隨機化迭代;白皮書是總計)。本文 3,000 fuzz-runs 的數字是在「每個 property 都跑滿 100 iter」的上限假設下;實務上 early-exit on first failure 代表有些 property 可能會少跑。
 
 ---
 
@@ -258,10 +260,10 @@ V1 對任何 finding **不**承諾固定金額。儘管如此,嚴肅的安全研
 
 V1 定位為 Cardano DeFi **非商業公共財**參考實作。審計接洽資金靠一個非稀釋性堆疊組成:
 
-- **(a) Cardano Project Catalyst 撥款**:若有合適 Round 開,預期可取得 $30K-$50K。**撰寫時的狀態:Cardano Project Catalyst 處於暫停 / 重組狀態,下一個 Round 何時恢復尚無明確時程。** V1 把 (a) 列為候選資金來源、等 Catalyst 恢復,但**不依賴**;Q2-Q3 2027 審計時程(§5)即是為了讓 Catalyst 在此區間恢復、或讓 funding 完全由 (b)+(c)+(d) 覆蓋兩種路徑都留得到時間。
-- **(b) 審計事務所公共財優惠費率**:從 $100K-$150K 全價折 30-50%(接洽中)。也計畫接洽 Cardano Foundation、Intersect、Aiken Foundation 等 alternative grant 來源。
-- **(c) 大量 heritage 內部審計史帶來的範圍縮減**(見 §1):讓外部審計聚焦在關鍵路徑、而不是完整 17 logic validator + 1 DEX adapter 的範圍(共 22 個 artefact——數字見 §6),可省 $15K-$25K
-- **(d) 創辦人自付殘額**:(a) 達成則 $20K-$40K 自付;**(a) 未達成則上限拉高至 $50K-$90K**
+- **(a) Grant 堆疊 — Catalyst + Cardano Foundation + Intersect Member Committee + Aiken Foundation**：合計潛在 $30K-$150K，Catalyst 單一來源若有合適 Round 開可取得 $30K-$50K。**撰寫時的狀態：Cardano Project Catalyst 處於暫停 / 重組狀態，下一個 Round 何時恢復尚無明確時程。** 並行接洽 Cardano Foundation、Intersect、Aiken Foundation 以降低單一來源依賴。V1 把 (a) 列為候選資金來源、等恢復 / 核准，但**不依賴任何單一 grant 來源**；Q2-Q3 2027 審計時程（§5）即為了讓 Catalyst 在此區間恢復、或讓 funding 由較廣的 grant pool 加上 (b)+(c)+(d) 覆蓋兩種路徑都留得到時間。
+- **(b) 審計事務所公共財優惠費率**：從 $50K-$150K base 折 30-50%；多 reviewer 委託模式也可把 base 壓到 $70K-$100K。接洽中。
+- **(c) 大量 heritage 內部審計史帶來的範圍縮減**（見 §1）：讓外部審計聚焦在關鍵路徑、而不是完整 17 logic validator + 1 DEX adapter 的範圍（共 22 個 artefact——數字見 §6），可省 $15K-$25K。
+- **(d) 創辦人 gap-fill 補貼（有上限、非 underwriter）**：創辦人承諾**最多約 $15K 個人自掏**用於 bridging (a)/(b)/(c) 到位之後與最終審計報價之間的**微額短缺**。創辦人**明確不承諾在任何情境下 underwriting 完整 $50K-$150K 審計成本**——V1 是 volunteer-built 公共財（白皮書 §0.2），不是 founder-underwritten 商業產品。若資金堆疊表現低於 $15K gap-fill 容量，V1 走白皮書 §8.1 Options A-D contingency tree（時程延後 / 縮減 scope 審計 / 社群 crowdfund / 永久 pre-audit 100K cap）——所有四個 option 都讓 V1 留在 mainnet，只決定 cap-lift 路徑。
 
 這個定位對評估合作的審計事務所可能有參考價值:
 

@@ -9,7 +9,7 @@
 
 OptiVaults V1 是 Cardano 上的非託管、鏈上自動複利穩定幣金庫。存入者鎖進 USDCx,拿到 vUSDCx 份額代幣(按存入比例)。一個自動化 keeper 透過 Minswap V2 routing 把匯集的資本部署到 Liqwid Finance 穩定幣借貸市場(DJED、USDM),鏈上收割收益,再把它複利回 vault 會計,讓 share price 隨時間上升。所有影響本金的操作——存款、提款、份額鑄造、收益計算、費用抽取、協議 routing——都由 Aiken PlutusV3 智能合約驗證。**協議 operator 在任何 redeemer 路徑下都無法提走使用者本金**。
 
-V1 是第一個公開上線版本。Cardano mainnet 上有一個面對使用者的 vault 實例,operator 自律執行 100,000 USDCx 的 TVL 上限,直到第三方審計完成;屆時上限時程會在審計報告中公開。
+V1 是第一個公開上線版本。Cardano mainnet 上有一個面對使用者的 vault 實例，operator 自律執行 100,000 USDCx 的 TVL 上限作為 pre-audit 運營階段限制。外部審計完成時（依白皮書 §8.1 為 cap-lift gate），上限依審計報告所述時程解鎖到 §1.5 Stage 3 水準。若審計資金始終未到位（白皮書 §8.1 Option D），V1 在 mainnet 維持 100K cap 無限期運作——審計是 cap-lift gate、不是 launch gate（見白皮書 §0.2 funding posture）。
 
 ---
 
