@@ -35,4 +35,4 @@ For the English version, see [README.md](./README.md).
 
 ---
 
-*OptiVaults V1 是 Cardano 上的非託管多穩定幣自動收益金庫，Apache 2.0 開源。網站 [optivaults.app](https://optivaults.app)，社群 [Discord](https://discord.gg/4VZK6vdK4t)。*
+*OptiVaults V1 是 Cardano 上的非託管多穩定幣自動收益金庫，Apache 2.0 開源。網站 [optivaults.app](https://optivaults.app)，社群 [Discord](https://discord.gg/HY5sy8cz8s)。*

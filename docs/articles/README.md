@@ -35,4 +35,4 @@ Each article is also mirrored on Medium with the canonical URL pointing back to 
 
 ---
 
-*OptiVaults V1 is a non-custodial multi-stablecoin auto-yield vault on Cardano, open-source under Apache 2.0. Web app at [optivaults.app](https://optivaults.app). Community on [Discord](https://discord.gg/4VZK6vdK4t).*
+*OptiVaults V1 is a non-custodial multi-stablecoin auto-yield vault on Cardano, open-source under Apache 2.0. Web app at [optivaults.app](https://optivaults.app). Community on [Discord](https://discord.gg/HY5sy8cz8s).*
