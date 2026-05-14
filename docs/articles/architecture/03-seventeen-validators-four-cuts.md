@@ -116,7 +116,7 @@ To be complete, here's the cost side of the trade:
 
 **(a) More ceremony deployment TXs**: V1's ceremony requires 38 TXs (3 NFT mints + 18 ref script deployments + 12 stake credential registrations + 5 state UTXO inits), with about 944 ADA committed to ref-script lockup and registration deposits (ref scripts are reclaimable at sunset via `reclaim-refs.ts`). A single-validator vault would need only 5–10 ceremony TXs.
 
-**(b) Larger audit surface**: each staking validator is its own audit target. Internal review accumulated 75 rounds and 280+ fixes; some of those findings (for example, `vault_keeper_hot`'s Compound path didn't originally verify that the gov input's spending redeemer was `ReceiveCompoundShare`, which could have let `gov_share` be miscredited under a different governance action) were missed precisely because validators are split apart and cross-validator binding becomes less visible.
+**(b) Larger audit surface**: each staking validator is its own audit target. Internal review accumulated multiple rounds with findings addressed; some of those findings (for example, `vault_keeper_hot`'s Compound path didn't originally verify that the gov input's spending redeemer was `ReceiveCompoundShare`, which could have let `gov_share` be miscredited under a different governance action) were missed precisely because validators are split apart and cross-validator binding becomes less visible.
 
 **(c) Deployment ordering is more fragile**: with 18 ref scripts and a dependency chain (vault_proxy's compile-time parameters require all 10 stake hashes to be decided first), the ceremony is sensitive to TX ordering and wallet UTXO contention. V1's `deploy.ts` includes a checkpoint mechanism with auto-resume — essentially mandatory at this split scale.
 

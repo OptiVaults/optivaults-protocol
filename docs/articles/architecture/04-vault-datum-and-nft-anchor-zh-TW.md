@@ -186,7 +186,7 @@ V1 對 vault state 的設計是這樣串起來的：
 - **[第 3 篇](./03-seventeen-validators-four-cuts-zh-TW.md)**：17 個 validator 的四條正交切割線
 - **第 4 篇（本文）**：單 UTXO 狀態 + 編譯期 Vault NFT Anchor
 
-OptiVaults V1 完整原始碼以 Apache 2.0 授權公開在 [github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol)。內部審計累積 75 輪、280+ 修復；測試套件 104 個 Aiken 單元 + 屬性測試，每次 `aiken check` 跑 599 個隨機化檢查迭代；目標 2026 年 Q3 完成第三方審計。
+OptiVaults V1 完整原始碼以 Apache 2.0 授權公開在 [github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol)。內部審計已歷經多輪審查並修復 findings；測試套件為完整的 Aiken 單元 + 屬性式 fuzz 測試套件，每次 `aiken check` 都會跑隨機化檢查迭代；目標 2027 年 Q2-Q3 完成第三方審計。
 
 V1 在 mainnet 啟動時設定 100,000 USDCx 的營運上限，直到第三方審計完成。整個專案的定位是 Cardano DeFi 公共財參考實作——歡迎 fork、特化、商業化使用，也歡迎在 GitHub Issues 或 [Discord](https://discord.gg/HY5sy8cz8s) 提出對抗性檢視。
 

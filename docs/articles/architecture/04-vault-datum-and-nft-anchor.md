@@ -186,7 +186,7 @@ The four parts at a glance:
 - **[Part 3](./03-seventeen-validators-four-cuts.md)**: Four orthogonal cuts behind the 17 validators
 - **Part 4 (this article)**: Single-UTXO state and the compile-time Vault NFT anchor
 
-OptiVaults V1's full source is open under Apache 2.0 at [github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol). Internal review has accumulated 75 rounds and 280+ fixes; the test suite contains 104 Aiken unit + property tests, with `aiken check` running 599 randomized check iterations per pass; third-party audit is targeted for Q3 2026.
+OptiVaults V1's full source is open under Apache 2.0 at [github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol). Internal review has covered multiple rounds with findings addressed; the test suite is a comprehensive Aiken unit + property-based fuzz suite, with randomized check iterations executed per `aiken check` pass; external third-party audit is targeted for Q2-Q3 2027.
 
 V1 launches on mainnet with a 100,000 USDCx operational ceiling, held until third-party audit completion. The project is positioned as a Cardano DeFi public-goods reference implementation — forks, specializations, and commercial reuse are all welcome, as are adversarial reviews via GitHub Issues or [Discord](https://discord.gg/HY5sy8cz8s).
 

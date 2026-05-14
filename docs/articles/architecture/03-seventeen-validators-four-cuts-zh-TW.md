@@ -116,7 +116,7 @@ V1 引入 oracle / asset_oracles / Minswap V2 SwapAdapter dispatch 之後，原�
 
 **(a) Ceremony 部署 TX 數變多**：V1 ceremony 需要 38 筆 TX（3 個 NFT 鑄造 + 18 個 ref script 部署 + 12 個 stake credential 註冊 + 5 個 state UTXO 初始化），總共約 944 ADA 的 ref-script 鎖倉與註冊押金（ref scripts 可在 sunset 時透過 `reclaim-refs.ts` 回收）。如果整個 vault 是單一 validator，ceremony 大概只需 5–10 筆 TX。
 
-**(b) 審計表面變大**：每個 staking validator 是獨立的審計目標。內部審計累積 75 輪、280+ 修復，其中有些 finding（例如 `vault_keeper_hot` 的 Compound 路徑當初沒驗證 gov input 的 spending redeemer 是 `ReceiveCompoundShare`，導致 gov_share 可能被誤認為其他治理動作的副產物）正是因為 validator 拆得多、跨 validator 之間的 binding 不顯眼才漏掉的。
+**(b) 審計表面變大**：每個 staking validator 是獨立的審計目標。內部審計累積多輪審查並修復 findings，其中有些 finding（例如 `vault_keeper_hot` 的 Compound 路徑當初沒驗證 gov input 的 spending redeemer 是 `ReceiveCompoundShare`，導致 gov_share 可能被誤認為其他治理動作的副產物）正是因為 validator 拆得多、跨 validator 之間的 binding 不顯眼才漏掉的。
 
 **(c) 部署時序更脆弱**：18 個 ref script 部署的順序與依賴鏈（vault_proxy 的編譯期參數需要 10 個 stake hash 都已決定）讓 ceremony 很容易踩到 TX 排序與 wallet UTXO 競爭問題。V1 的 `deploy.ts` 整套有 checkpoint 機制 + 自動 resume，這在這個拆分規模下是必備的。
 
