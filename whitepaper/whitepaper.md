@@ -1,6 +1,6 @@
 # OptiVaults V1 Whitepaper
 
-**Version 1.4.1 — Public Launch Candidate**
+**Version 1.4.2 — Public Launch Candidate**
 **Target Network: Cardano Mainnet**
 **Deposit Token: USDCx**
 
@@ -1251,6 +1251,42 @@ V1 launches with:
 
 Until external audit: **100K USDCx TVL cap, operator-enforced**. No promises beyond this.
 
+#### 5.1.1 Adversarial chain-replay coverage
+
+Internal audit's static-read methodology is complemented by an adversarial chain-replay surface: hand-crafted attack transactions are submitted to a Preprod ceremony build against live validators, and the contract's rejection (or acceptance) is recorded as on-chain evidence. This converts theoretical defense layers (identified during audit rounds) into observable rejection patterns indexed by transaction hash.
+
+The coverage below describes the categories of defense layer exercised; it is **not** a quantitative claim that every conceivable attack has been tested. External audit remains the primary security signal — chain replay complements unit + property-based tests by adding an end-to-end "build attack TX → ledger says no" trace.
+
+**Defense-layer categories exercised on Preprod**
+
+- **Vault primary spend (`vault_proxy.ak`)** — `withdrawal_count == 1` (single staking-validator dispatch per vault primary spend), `no_foreign_vault_datum` (rejects InlineDatum-shaped `VaultDatum` at non-proxy script addresses), `is_full_drain` NFT-burn requirement, `vault_count ∈ [2, 5]` NoDatum-secondary bound, `all_secondary_no_datum` MergeUtxo gate.
+
+- **User-path redeemers (`vault_user.ak`)** — `Deposit` mint-equality (`vUSDCx mint == expected_shares`), `Deposit` `min_deposit` floor, `Withdraw` burn-equality (`vUSDCx burn == -shares`), `verify_receiver_output` strict pkh equality (receiver field bound to actual output recipient), `verify_receiver_output` Script-credential rejection (receiver must be a verification-key wallet, not a locked script), `CommunitySunset` 90-day time threshold.
+
+- **Keeper-path redeemers (`vault_keeper_hot.ak`, `vault_swap_ada.ak`)** — validity-range width cap on every time-writing redeemer (`upper - now ≤ 1 hour`), `vault_swap_ada` amount-in-range bounds (10–50 ADA per swap), `ada_below_threshold` replenishment gate.
+
+- **Protocol-routing redeemers (`vault_protocol.ak`)** — `DeployToProtocol` destination whitelist (`registry.protocol_hashes`), SwapAdapter recipient binding (caller-layer + adapter-layer agreement on `expected_recipient_addr`), Tier 2 peg-floor on adapter-committed `min_receive` (`min_receive × 10_000 ≥ deploy_amount × min_swap_peg_bps`), `min_order_amount` lower bound for non-deposit swap-out.
+
+- **Mint policies (`vusdcx.ak`, `vault_nft.ak`)** — `vUSDCx` single-asset-name discipline (rejects multi-asset mint under the same policy), `vault_nft` PlutusV3 UTXO-ref one-shot (parameterized UTXO must appear in `tx.inputs` for mint; structurally one-shot after consumption).
+
+- **Order branch (`order.ak`)** — `signed_by_owner` strict signer authentication on `CancelAction`, `valid_refund` recipient pinning on `ExpireOrder` (refund must go to original `ord.owner`).
+
+- **Multisig governance (`multisig_gov.ak`)** — `valid_signer_set` rotation floor (`n ≥ 3 signers`), `time_window_ok` `lower_bound ≥ executable_at_ms` (no early ExecuteAction before timelock elapses), `payload_hash` binding (apply-side payload must hash to a value matching a queued action — RotateSigners + UpdateFee + UpdateRegistry + TreasurySpend all enforce the same pattern), `expected_payload_hash` re-computation in `is_gov_authorized` (cross-validator helper).
+
+- **Emergency / fee governance (`vault_gov_emergency.ak`, `vault_gov_policy.ak`)** — `validate_emergency_freeze_only` (`loss_amount == 0` invariant — EmergencyWithdraw can ONLY toggle the `frozen` flag, never reduce `total_deposited`), `max_performance_fee_bps` (450 bps cap on `UpdateFee` even with full gov authorization), payload-binding sister-layer to `multisig_gov` (Treasury Spend / UpdateFee / RotateSigners all share the same `is_gov_authorized` helper).
+
+- **CIP-69 purpose isolation** — every PlutusV3 validator declares its handled purposes (e.g., staking validator declares `withdraw` + `publish`); `else(_) { fail "<validator>: unsupported purpose" }` catches any other purpose invocation including Spend / Mint / Vote / Propose. A planted UTXO at `payment_credential = <staking script hash>` is permanently locked because no Spend handler exists for that script.
+
+- **Share-price invariant (`total_deposited` / `total_shares`)** — every mutation path is constrained: Deposit + Withdraw use `calculate_shares_to_mint` / `calculate_withdraw_amount` exact equality; Compound moves `total_deposited` only (yield → share-price up by design); BatchProcess uses per-order fair-share rounding; eight other redeemers preserve `total_deposited == old.total_deposited && total_shares == old.total_shares` via `verify_protocol_fields_preserved` / `verify_liqwid_invariants` / `verify_emergency_freeze_only` / `verify_datum_unchanged`. Source review covers every path; no manufacturable break of the ratio outside intentional design (Compound yield, deferred-yield withdraw fee).
+
+**Outcome**: each chain-replay category above produced an observable rejection on Preprod (Ogmios `evaluate` or `tx/submit` returning a structured script-error trace at the validator + purpose level), preserved in regression scripts under `tests/preprod/`. **No exploitable attack was found that the contract did not already reject.** This is consistent with the iterative methodology — most surfaces are exercised both by unit tests and property tests well before chain replay — but the on-chain evidence is a third independent confirmation.
+
+**One category was deferred to a fresh Preprod ceremony**: a `UpdateRegistry`-injected fake Liqwid `action_addr_hash`, then a Supply attempt routed to that fake address. The defense (`qtoken_delta > 0` invariant at `vault_liqwid.SupplyToLiqwid` — a fake action validator cannot mint real qTokens under the immutable per-market qToken policy) is covered by Aiken unit tests in `lib/vault/tests/`; chain replay was deferred because the ceremony setup (queue UpdateRegistry → wait timelock → attempt Supply) is heavy relative to the marginal audit-narrative value beyond unit-test coverage.
+
+**What chain replay does NOT cover**: external-system failure modes (Liqwid bad-debt, USDCx redemption freeze, oracle staleness — these are §5.3 / §5.2 / §5.4 risk surfaces, not contract defenses), keeper-key compromise scenarios that require simulating a malicious operator (covered by source review and the §5.4 keeper risk discussion), and behaviour beyond build-specific state (e.g., on a vault with full Liqwid allocation, certain partial-withdraw paths require Recall before they can fire — these are operational paths, not security defenses).
+
+Regression scripts are part of the open-source release; auditors and integrators can re-run them against a fresh Preprod ceremony to reproduce the rejection traces independently. The methodology itself (build attack TX → submit → record contract reject as TX hash or eval-trace) is a reusable template for future V1.x and V2 audit rounds.
+
 ### 5.2 Stablecoin depeg risk (multi-asset)
 
 V1 holds three stablecoins simultaneously: USDCx (deposit token), DJED (Liqwid allocation), USDM (Liqwid allocation). **This is dual-issuer allocation within a single-ecosystem exposure, not true risk diversification.** Each stablecoin carries its own depeg risk, and depositors bear the risk of whichever stablecoin the vault holds at the moment of a depeg event — not just USDCx.
@@ -1807,6 +1843,14 @@ Every governance QueueAction's payload hash can be reverse-engineered from CBOR 
 
 ## Changelog
 
+### v1.4.2 — 2026-05-14
+
+**Added**
+- §5.1.1 Adversarial chain-replay coverage — new subsection categorising the defense layers exercised by hand-crafted attack transactions against a Preprod ceremony build. Nine semantic categories (vault primary spend / user-path / keeper-path / protocol-routing / mint policies / order branch / multisig governance / emergency-fee governance / CIP-69 purpose isolation) plus a source-review note on the share-price invariant. Includes explicit "what chain replay does NOT cover" caveats (external-system failure modes, keeper-key compromise scenarios, build-specific state assumptions) and discloses one category deferred to a fresh Preprod ceremony (UpdateRegistry-injected fake Liqwid `action_addr_hash` — already covered by Aiken unit tests in `lib/vault/tests/`).
+
+**Tone**
+- §5.1.1 frames the methodology as complementary to unit + property tests + external audit, not as a replacement; emphasises that the primary security signal remains the upcoming external audit report. No quantitative "X tests passed" claim; the section instead categorises the defense layers and points readers to `tests/preprod/` regression scripts for reproduction.
+
 ### v1.4.1 — 2026-05-12
 
 Internal-consistency pass over v1.4. No structural framework change — v1.4's volunteer-builder + audit-as-cap-lift-gate model remains as published; this revision sweeps residual v1.3-era phrasing that survived the v1.4 rewrite in three sections (§4.1 / §1.6.1 / §7.4) and tightens cross-section alignment.
@@ -1828,8 +1872,6 @@ Internal-consistency pass over v1.4. No structural framework change — v1.4's v
 - §0 Phase 2 + §9.2 founder-incapacitation block — governance signer phrasing made conditional on (a)/(b) configuration.
 
 ### v1.4 — 2026-05-12
-
-Structural reframe of V1's funding and launch model. The volunteer-builder framework replaces the implicit "founder underwrites the external audit" expectation; external audit becomes a cap-lift gate, not a launch gate. V1 will launch on Cardano mainnet at the 100K USDCx pre-audit cap when §1.5 launch gates are met, regardless of audit funding status.
 
 **Added**
 - §0.1 — explicit disclosure of the relationship between the existing internal-verification-era mainnet deployment (founder-allowlist-gated, no third-party deposits, pre-V1 contract iteration) and the V1 design described in this whitepaper. Includes the planned unwind sequence (ActDeregisterStake × 4 staking-cred queue → full vault drain → ref-script reclaim) before V1 mainnet ceremony.
@@ -1932,4 +1974,4 @@ Initial release. Production-ready V1 design specification. Single-protocol Liqwi
 
 ---
 
-**End of Whitepaper V1.4.1**
+**End of Whitepaper V1.4.2**

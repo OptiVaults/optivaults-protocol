@@ -1,6 +1,6 @@
 # OptiVaults V1 白皮書
 
-**版本 1.4.1 — 公開發佈候選版**
+**版本 1.4.2 — 公開發佈候選版**
 **目標網路：Cardano Mainnet**
 **存入代幣：USDCx**
 
@@ -1247,6 +1247,42 @@ V1 啟動時的審計狀態：
 
 外部審計前，除了「100K USDCx TVL 上限，由營運方強制執行」之外，V1 不對外做其他承諾。
 
+#### 5.1.1 對抗性鏈上重放覆蓋
+
+內部審計的靜態讀碼之外，另一條補強路線是「對抗性鏈上重放」：把手工構造的攻擊交易直接送到 Preprod ceremony build 的活合約上，把合約的拒絕（或接受）當成鏈上證據紀錄下來。這條路線把審計輪次盤點到的理論防禦層，轉成可觀察的拒絕樣態（以交易雜湊或 evaluate trace 為索引）。
+
+下面列的是「實際在 Preprod 上觸發過的防禦層」，**並非**「所有可能的攻擊都已測過」的量化承諾。外部審計仍然是主要的安全訊號——鏈上重放只是補上一條「親手造攻擊 TX → 鏈上拒絕」的端到端佐證，用來與單元測試、property 測試互相驗證。
+
+**Preprod 實測過的防禦層分類**
+
+- **金庫主 UTXO spend（`vault_proxy.ak`）** — `withdrawal_count == 1`（每個金庫主 spend 只能 dispatch 一個 staking validator）、`no_foreign_vault_datum`（拒絕非 proxy 腳本地址的 InlineDatum-shaped `VaultDatum`）、`is_full_drain` NFT-burn 要求、`vault_count ∈ [2, 5]` NoDatum-secondary 上下限、`all_secondary_no_datum` MergeUtxo 閘門。
+
+- **用戶路徑 redeemer（`vault_user.ak`）** — `Deposit` mint-equality（`vUSDCx mint == expected_shares`）、`Deposit` `min_deposit` 下限、`Withdraw` burn-equality（`vUSDCx burn == -shares`）、`verify_receiver_output` 嚴格 pkh 等值檢查（redeemer 內 receiver 欄位綁定到實際輸出收款人）、`verify_receiver_output` Script-credential 拒絕（receiver 必須是 VKey 錢包，不可為鎖死腳本）、`CommunitySunset` 90 天時間門檻。
+
+- **Keeper 路徑 redeemer（`vault_keeper_hot.ak`、`vault_swap_ada.ak`）** — 所有寫時間欄位的 redeemer 強制 validity-range width cap（`upper - now ≤ 1 hour`）、`vault_swap_ada` amount-in-range 邊界（每筆 swap 10–50 ADA）、`ada_below_threshold` 補充閘門。
+
+- **協議路由 redeemer（`vault_protocol.ak`）** — `DeployToProtocol` 目的地白名單（`registry.protocol_hashes`）、SwapAdapter 收款者綁定（caller 層 + adapter 層共同確認 `expected_recipient_addr`）、Tier 2 peg-floor 對 adapter-committed `min_receive` 的下限（`min_receive × 10_000 ≥ deploy_amount × min_swap_peg_bps`）、`min_order_amount` 非存入代幣 swap-out 的金額下限。
+
+- **Mint policy（`vusdcx.ak`、`vault_nft.ak`）** — `vUSDCx` 單一 asset name 紀律（拒絕同 policy 下的多 asset mint）、`vault_nft` PlutusV3 UTXO-ref 一次性鑄造（parameterized UTXO 必須出現在 `tx.inputs`；該 UTXO 被花掉後就無法再 mint，從結構上保證只能鑄一次）。
+
+- **Order 分支（`order.ak`）** — `signed_by_owner` 在 `CancelAction` 上的嚴格簽署者驗證、`valid_refund` 在 `ExpireOrder` 上的收款者綁定（退款必須給原 `ord.owner`）。
+
+- **Multisig 治理（`multisig_gov.ak`）** — `valid_signer_set` rotation 下限（`n ≥ 3` 簽署者）、`time_window_ok` `lower_bound ≥ executable_at_ms`（timelock 結束前不可 ExecuteAction）、`payload_hash` 綁定（apply 側 payload 必須 hash 到佇列中某 action 的紀錄值——RotateSigners + UpdateFee + UpdateRegistry + TreasurySpend 全部共用此模式）、`is_gov_authorized` 跨 validator helper 重算 `expected_payload_hash`。
+
+- **緊急 / 費用治理（`vault_gov_emergency.ak`、`vault_gov_policy.ak`）** — `validate_emergency_freeze_only`（`loss_amount == 0` 不變式：EmergencyWithdraw 只能切換 `frozen` 旗標，絕不可減少 `total_deposited`）、`max_performance_fee_bps`（450 bps 上限，即使是經完整治理授權的 `UpdateFee` 也擋下）、與 `multisig_gov` 共用的 payload-binding 對應層（Treasury Spend / UpdateFee / RotateSigners 都走同一個 `is_gov_authorized` helper）。
+
+- **CIP-69 purpose 隔離** — 每個 PlutusV3 validator 明確宣告自己處理的 purpose（例如 staking validator 只宣告 `withdraw` + `publish`）；其餘 purpose 一律由 `else(_) { fail "<validator>: unsupported purpose" }` 捕捉並 fail，含 Spend / Mint / Vote / Propose 等。把 UTXO 故意打到 `payment_credential = <staking script hash>` 的位址上會被永久鎖死——因為對應腳本根本沒有 Spend handler。
+
+- **份額價格不變式（`total_deposited` / `total_shares`）** — 每一條會動到這兩個欄位的路徑都被嚴格約束：Deposit + Withdraw 走 `calculate_shares_to_mint` / `calculate_withdraw_amount` 的嚴格等式；Compound 只動 `total_deposited`（產生 yield → 份額單價上升，這是設計意圖）；BatchProcess 走 per-order 公平 share 計算；其餘 8 個 redeemer 一律強制 `total_deposited == old.total_deposited && total_shares == old.total_shares`，由 `verify_protocol_fields_preserved` / `verify_liqwid_invariants` / `verify_emergency_freeze_only` / `verify_datum_unchanged` 等 helper 把關。原碼審查涵蓋全部路徑；比例不變式不會在設計意圖之外被人為破壞（Compound yield 與 deferred-yield 早期解約費用均屬設計範圍內的上升）。
+
+**結果**：上述每一類鏈上重放都在 Preprod 上產出明確的拒絕證跡（Ogmios `evaluate` 或 `tx/submit` 回傳結構化的 script-error trace，明確指出哪個 validator 在哪個 purpose 下 fail），對應的回歸測試腳本保留在 `tests/preprod/` 底下。**沒有發現任何合約該拒卻沒拒的攻擊。** 這個結果跟迭代方法論一致——絕大多數表面在鏈上重放之前已先由單元測試與 property 測試覆蓋過——鏈上證據是再多一層獨立確認。
+
+**有一類刻意延後**：由 `UpdateRegistry` 注入假的 Liqwid `action_addr_hash`，再讓 Supply 路由到假位址。對應的防禦（`vault_liqwid.SupplyToLiqwid` 的 `qtoken_delta > 0` 不變式——假的 action validator 在每市場固定的 qToken policy 下根本 mint 不出真的 qToken）已由 Aiken unit test（`lib/vault/tests/`）涵蓋；鏈上重放暫時不做，是因為儀式步驟（queue UpdateRegistry → 等 timelock → 跑 Supply）的成本，相對於單元測試之外能多帶來的審計敘述價值偏低。
+
+**鏈上重放並未涵蓋的部分**：外部系統失敗（Liqwid bad-debt、USDCx redemption 凍結、oracle staleness——這些是 §5.3 / §5.2 / §5.4 的風險面，不是合約層防禦）；需要模擬惡意營運者的 keeper 私鑰妥協情境（由原碼審查 + §5.4 keeper 風險討論承擔）；以及只有特定 Preprod build 狀態才會出現的行為（例如金庫已全額配置到 Liqwid 時，部分 Withdraw 路徑必須先 Recall 才能執行——這屬於運維流程，不是安全防禦）。
+
+回歸測試腳本本身是開源版本的一部分；審計師與整合方可以在新的 Preprod ceremony 上重跑這些腳本，獨立重現拒絕 trace。整套做法（構造攻擊 TX → 上鏈 → 把合約拒絕紀錄成 TX hash 或 eval trace）也是未來 V1.x 與 V2 審計輪次可以直接沿用的模板。
+
 ### 5.2 穩定幣脫鉤風險（多資產）
 
 V1 同時持有三種穩定幣：USDCx（存入代幣）、DJED（Liqwid 配置）、USDM（Liqwid 配置）。**這是「單一生態系曝險下的雙發行者配置」，不是真正的風險分散。** 每一種都有自己的脫鉤風險；存入者真正承擔的是「脫鉤事件發生當下、金庫剛好持有的那一種」——不只是 USDCx。
@@ -1812,6 +1848,14 @@ scripts/verify-hashes.sh  # 比對 plutus.json 的 hash 與鏈上部署
 
 ## 變更紀錄
 
+### v1.4.2 — 2026-05-14
+
+**新增**
+- §5.1.1 對抗性鏈上重放覆蓋 — 新增子章節，把手工構造的攻擊交易在 Preprod ceremony build 上實測過的防禦層做語義分類。九大類別（金庫主 UTXO spend / 用戶路徑 / Keeper 路徑 / 協議路由 / Mint policy / Order 分支 / Multisig 治理 / 緊急與費用治理 / CIP-69 purpose 隔離）外加份額價格不變式的原碼審查說明。明確列出「鏈上重放並未涵蓋的部分」（外部系統失敗、keeper 私鑰妥協情境、特定 Preprod build 狀態假設），並揭露一類刻意延後的測試（`UpdateRegistry` 注入假 Liqwid `action_addr_hash`——已由 `lib/vault/tests/` 的 Aiken unit test 涵蓋）。
+
+**語氣**
+- §5.1.1 把方法論定位為單元測試 + property 測試 + 外部審計的補強，不是替代；強調主要的安全訊號仍然是即將到來的外部審計報告。不做「X 個測試通過」這種量化承諾；改以防禦層分類呈現，並指引讀者到 `tests/preprod/` 回歸測試腳本去自行重現。
+
 ### v1.4.1 — 2026-05-12
 
 針對 v1.4 的內部一致性修訂。無框架變更——v1.4 的 volunteer-builder + audit-as-cap-lift-gate 模型維持不變；本修訂清除三段（§4.1 / §1.6.1 / §7.4）中 v1.4 重寫未替換到位的 v1.3 殘留措辭、並收緊跨段對齊。
@@ -1833,8 +1877,6 @@ scripts/verify-hashes.sh  # 比對 plutus.json 的 hash 與鏈上部署
 - §0 Phase 2 + §9.2 創辦人失能段落 — 治理簽名者描述改為以 (a)/(b) 配置為條件的措辭。
 
 ### v1.4 — 2026-05-12
-
-V1 資金與啟動模型的結構性重塑。Volunteer-builder 框架取代原本「創辦人承擔外部審計」的隱性預期；外部審計改為 cap-lift gate，而非 launch gate。V1 將在 §1.5 launch gates 達成時、以 100K USDCx pre-audit cap 上 Cardano mainnet，與審計資金到位狀態無關。
 
 **新增**
 - §0.1 — 明確揭露既有內部驗證期 mainnet 部署（前端 founder-allowlist gating、零第三方存款、pre-V1 合約迭代）與本白皮書 V1 設計的關係。包含 V1 mainnet ceremony 前的清空時程（ActDeregisterStake × 4 staking-cred queue → 完整 vault drain → ref-script reclaim）。
@@ -1937,4 +1979,4 @@ V1 資金與啟動模型的結構性重塑。Volunteer-builder 框架取代原�
 
 ---
 
-**白皮書 V1.4.1 結束**
+**白皮書 V1.4.2 結束**
