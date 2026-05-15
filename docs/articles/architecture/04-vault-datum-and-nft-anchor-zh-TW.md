@@ -66,7 +66,7 @@ VaultDatum 29 個欄位分兩類：14 個可變、15 個不可變。
 
 `check_immutable_fields` 是 V1 安全模型的一個基石：**任何改動以上 15 個欄位的 TX，所有 vault staking validator 都會 reject**。
 
-換句話說，已部署 vault 的這 15 個欄位是**已部署 validator hash 的客觀屬性**，不是「我們承諾不改」，是「合約結構上根本不允許改」。績效費永遠不可能被治理調到 4.5% 以上、min_hold_seconds 永遠不可能拉超過 6 小時、Vault NFT identity 永遠不可能被替換——這些都是任何人可以拿 ledger 資料自己驗證的客觀事實，不需要相信營運方任何承諾。
+也就是說，已部署 vault 的這 15 個欄位是**已部署 validator hash 的客觀屬性**，不是「我們承諾不改」，是「合約結構上根本不允許改」。績效費永遠不可能被治理調到 4.5% 以上、min_hold_seconds 永遠不可能拉超過 6 小時、Vault NFT identity 永遠不可能被替換——這些都是任何人可以拿 ledger 資料自己驗證的客觀事實，不需要相信營運方任何承諾。
 
 ---
 

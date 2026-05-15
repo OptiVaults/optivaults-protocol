@@ -111,7 +111,7 @@ These authorization rules are completely isolated from each other. To switch kee
 
 ## A Compound TX, End to End
 
-Combining everything above into a concrete example. Compound is the keeper's regular operation: harvest Liqwid interest, deduct the 4.5% performance fee (split three ways: keeper / gov / treasury), and write the rest back to vault datum so share price rises.
+Here is everything above combined into a concrete example. Compound is the keeper's regular operation: harvest Liqwid interest, deduct the 4.5% performance fee (split three ways: keeper / gov / treasury), and write the rest back to vault datum so share price rises.
 
 The shape of a Compound TX:
 

@@ -66,7 +66,7 @@ VaultDatum has 29 fields, partitioned into 14 mutable and 15 immutable.
 
 `check_immutable_fields` is a cornerstone of V1's security model: **any TX that mutates these 15 fields is rejected by every vault staking validator**.
 
-In other words, the 15 immutable fields of a deployed vault are **objective properties of the deployed validator hash** — not "we promise not to change them" but "the contract structurally does not allow changes." Performance fee can never be raised above 4.5%, min_hold_seconds can never exceed 6 hours, Vault NFT identity can never be substituted — these are objectively verifiable facts anyone can check against ledger data, requiring trust in no operator promise.
+Put differently, the 15 immutable fields of a deployed vault are **objective properties of the deployed validator hash** — not "we promise not to change them" but "the contract structurally does not allow changes." Performance fee can never be raised above 4.5%, min_hold_seconds can never exceed 6 hours, Vault NFT identity can never be substituted — these are objectively verifiable facts anyone can check against ledger data, requiring trust in no operator promise.
 
 ---
 
