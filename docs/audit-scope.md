@@ -203,8 +203,10 @@ Disclosure Policy (RDP)** + **ex gratia recognition** framework.
 
 **Scope:** V1 on-chain validators (**17 logic validators + 4 one-shot
 NFT mint policies + 1 DEX adapter = 22 compiled artefacts total** — see
-`spec/architecture.md` §4.1 for partitioning rationale), deploy scripts,
-keeper code, API server.
+`spec/architecture.md` §4.1 for partitioning rationale) + deploy
+scripts. Operator-layer code (keeper / API server / frontend) is out of
+this repo's scope — it lives in `optivaults-reference`; operator-layer
+findings sent here are accepted and triage-routed.
 
 **What we commit to:**
 

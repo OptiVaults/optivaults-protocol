@@ -191,7 +191,7 @@ V1 改採業界標準的**責任揭露政策(RDP)+ 酬庸式(ex gratia)肯定**�
 
 ### 6.1 責任揭露政策
 
-**範圍:** V1 的鏈上 validator(**17 個 logic validator + 4 個 one-shot NFT mint policy + 1 個 DEX adapter = 22 個編譯 artefact**——切分理由見 `spec/architecture.md` §4.1)、部署腳本、keeper 程式、API server。
+**範圍:** V1 的鏈上 validator(**17 個 logic validator + 4 個 one-shot NFT mint policy + 1 個 DEX adapter = 22 個編譯 artefact**——切分理由見 `spec/architecture.md` §4.1)+ 部署腳本。鏈下 operator 層程式(keeper / API server / frontend)不在本 repo 範圍——它們位於 `optivaults-reference`;送到這裡的 operator 層發現會被接受並 triage 轉送。
 
 **我們承諾的事:**
 

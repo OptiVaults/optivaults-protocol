@@ -47,6 +47,8 @@ If you discover a security vulnerability in OptiVaults V1 smart contracts, deplo
   - `order.ak` — Order UTXO + Cancel + Expire + Process via BatchProcess
   - `vusdcx.ak` — vUSDCx share minting policy + 10^18 over-mint cap
   - `minswap_v2_adapter.ak` — SwapAdapter (§B@launch=1)
+  - `sundaeswap_adapter.ak` — SwapAdapter for SundaeSwap V3 + Stableswaps (in scope when the SundaeSwap adapter pair is deployed — opt-in, see `spec/swap-adapter.md`)
+  - `sundaeswap_cancel_guard.ak` — drain-proof cancel authority for SundaeSwap orders (deployed alongside `sundaeswap_adapter`)
 
 - **NFT mint policies**:
   - `vault_nft.ak` — one-shot Vault Identity NFT (compile-time anchor on proxy / vusdcx / order)
@@ -91,14 +93,14 @@ Additional invariants enforced on-chain (not exhaustive — see `docs/audit-scop
 - **Allocation invariant.** Two variants enforced across the vault operational set — a stricter `alloc_sum + idle_buffer ≤ total_deposited` via the shared `validate_allocations` helper (used by `Compound` / `DeployToProtocol` / `RecallFromProtocol` / `UpdateStrategy` / `AdminDeployNonDeposit` / `vault_liqwid` ops) and a looser `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal` inline check in `vault_gov_emergency.EmergencyWithdraw`. `vault_recall.MergeUtxo` guards the looser form at the source of donation-driven state changes via `valid_merge_utxo_admissibility` (R73 F-1 fix) — a MergeUtxo post-state that satisfies the looser form automatically satisfies the stricter form downstream because NDV and Σ liqwid_principal are non-negative.
 - **First-depositor protection.** `initial_share_multiplier = 10^6` + `valid_deposited > 0` prevent ERC-4626-style inflation attacks.
 - **Minimum deposit.** 10 USDCx minimum on Direct Deposit (queued Order bypasses for dust-safe batching; BatchProcess enforces non-zero share mint).
-- **Anti-double-satisfaction.** `vault_user.Withdraw` enforces `receiver_output_idx` hard binding (R48 M-1). BatchProcess enforces `payout_output_index` uniqueness across multiple orders (R52 H-1).
-- **No-vUSDCx-leak.** BatchProcess fails any TX minting vUSDCx to an address outside `(order_owner ∪ proxy_hash)` (R51 H-1).
-- **Deferred-yield Withdraw.** `withdraw_amount = base_withdraw − early_fee`; the early-fee stays physically in vault → share price rises by `(early_fee / total_shares)` → remaining depositors benefit. R49 M-4 closed the prior accounting drift.
-- **Compile-time Vault NFT anchor.** `vault_proxy` / `vusdcx` / `order` all parameterized on `vault_nft_policy` at deploy time, not datum. R55 C-1 closed the phantom-vUSDCx self-referential datum attack.
+- **Anti-double-satisfaction.** `vault_user.Withdraw` enforces `receiver_output_idx` hard binding. BatchProcess enforces `payout_output_index` uniqueness across multiple orders.
+- **No-vUSDCx-leak.** BatchProcess fails any TX minting vUSDCx to an address outside `(order_owner ∪ proxy_hash)`.
+- **Deferred-yield Withdraw.** `withdraw_amount = base_withdraw − early_fee`; the early-fee stays physically in vault → share price rises by `(early_fee / total_shares)` → remaining depositors benefit. An earlier accounting drift on this path has been closed.
+- **Compile-time Vault NFT anchor.** `vault_proxy` / `vusdcx` / `order` all parameterized on `vault_nft_policy` at deploy time, not datum — this closes the phantom-vUSDCx self-referential datum attack.
 - **15 immutable VaultDatum fields.** `governance_policy` / `governance_name` / `keeper_pkh` / `fee_collector` / `vault_version` / `performance_fee_bps` / `early_withdraw_fee_bps` / `min_hold_seconds` / `buffer_target_bps` / `vusdcx_policy` / `deposit_token_policy` / `deposit_token_name` / `order_script_hash` / `registry_hash` / `registry_auth_policy`. The 16th anchor (`vault_nft_policy`) is stronger — compile-time, not datum. Note: `performance_fee_bps` is "immutable field" in the sense the schema position is fixed; the value adjusts within `[0, 450]` via Governance `UpdateFee`. See `contracts/docs/vault-state-machine.md` (or V1 spec/vault-datum.md) for full field semantics.
 - **Governance cancel veto.** Every `QueueAction` has a 1-of-n `CancelAction` veto window; execution requires both m-of-n signatures AND action survives the timelock without cancellation.
-- **Validity-range width cap.** Every time-writing redeemer (Compound / UpdateFee / RotateSigners / UpdateStrategy / SwapAda / RebalanceBuffer) caps `upper - now ≤ 1 hour` to bound timestamp-manipulation surface (R58 F-1).
-- **Governance signer floor.** `valid_signer_set` requires `signers ≥ 3, threshold ≥ 2, threshold ≤ n, unique` (R51 H-1 + defense-in-depth).
+- **Validity-range width cap.** Every time-writing redeemer (Compound / UpdateFee / RotateSigners / UpdateStrategy / SwapAda / RebalanceBuffer) caps `upper - now ≤ 1 hour` to bound timestamp-manipulation surface.
+- **Governance signer floor.** `valid_signer_set` requires `signers ≥ 3, threshold ≥ 2, threshold ≤ n, unique` (defense-in-depth).
 - **Empty-hash governance delegation.** Documented design trade-off — see §"Known design decisions" below.
 
 ### Off-chain-dependent guarantees
@@ -290,7 +292,9 @@ recognition framework. Full terms in `docs/audit-scope.md §6`.
 Summary:
 
 - **Scope**: matches the §"In scope" list above (Aiken contracts +
-  deploy pipeline + keeper + API server + 22 compiled artefacts).
+  deploy pipeline + 22 compiled artefacts). Operator-layer findings
+  (keeper / API / frontend) are still accepted and triage-routed to
+  `optivaults-reference` per the §Scope note above.
 - **Disclosure window**: 90 days from triage (extendable by 30 days if
   remediation requires extended coordination with Liqwid / Minswap V2 /
   Circle-xReserve).

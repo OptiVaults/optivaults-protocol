@@ -47,6 +47,8 @@
   - `order.ak`——Order UTxO + Cancel + Expire + BatchProcess 內的 Process
   - `vusdcx.ak`——vUSDCx 份額 minting policy + 10^18 超鑄上限
   - `minswap_v2_adapter.ak`——SwapAdapter(§B@launch=1)
+  - `sundaeswap_adapter.ak`——SundaeSwap V3 + Stableswaps 的 SwapAdapter(部署 SundaeSwap adapter pair 時納入範圍——opt-in,見 `spec/swap-adapter.md`)
+  - `sundaeswap_cancel_guard.ak`——SundaeSwap order 的 drain-proof cancel 授權(與 `sundaeswap_adapter` 一同部署)
 
 - **NFT mint policy**:
   - `vault_nft.ak`——one-shot Vault Identity NFT(proxy / vusdcx / order 的編譯時錨點)
@@ -91,14 +93,14 @@
 - **Allocation invariant。** 金庫操作集上強制兩個版本——較嚴的 `alloc_sum + idle_buffer ≤ total_deposited`,透過共用的 `validate_allocations` helper 強制(用於 `Compound` / `DeployToProtocol` / `RecallFromProtocol` / `UpdateStrategy` / `AdminDeployNonDeposit` / `vault_liqwid` ops);較寬鬆的 `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal`,以 inline 方式檢查於 `vault_gov_emergency.EmergencyWithdraw`。`vault_recall.MergeUtxo` 在捐贈導致狀態變更的源頭以 `valid_merge_utxo_admissibility` 守住較寬鬆那條(R73 F-1 修補)——MergeUtxo 的 post-state 只要通過較寬鬆,下游較嚴版本也自動通過,因為 NDV 與 Σ liqwid_principal 均為非負。
 - **首位存入者保護。** `initial_share_multiplier = 10^6` + `valid_deposited > 0` 防止 ERC-4626 式通膨攻擊。
 - **最低存款門檻。** Direct Deposit 最低 10 USDCx(Queued Order 走 dust-safe 批次路徑;BatchProcess 強制份額鑄造量必須非零)。
-- **防雙重兌現。** `vault_user.Withdraw` 強制 `receiver_output_idx` 綁定(R48 M-1)。BatchProcess 強制多個 order 的 `payout_output_index` 互不重複(R52 H-1)。
-- **無 vUSDCx 外漏。** BatchProcess 拒絕任何將 vUSDCx 鑄到 `(order_owner ∪ proxy_hash)` 以外地址的 TX(R51 H-1)。
-- **延後收益(deferred-yield)的 Withdraw。** `withdraw_amount = base_withdraw − early_fee`;early fee 物理上留在金庫 → share price 上升 `(early_fee / total_shares)` → 其餘存入者受益。R49 M-4 關閉了先前的會計漂移。
-- **Vault NFT 的編譯時錨點。** `vault_proxy` / `vusdcx` / `order` 都在部署時以 `vault_nft_policy` 作參數化,而非透過 datum。R55 C-1 關閉了 phantom-vUSDCx 自我引用 datum 攻擊。
+- **防雙重兌現。** `vault_user.Withdraw` 強制 `receiver_output_idx` 綁定。BatchProcess 強制多個 order 的 `payout_output_index` 互不重複。
+- **無 vUSDCx 外漏。** BatchProcess 拒絕任何將 vUSDCx 鑄到 `(order_owner ∪ proxy_hash)` 以外地址的 TX。
+- **延後收益(deferred-yield)的 Withdraw。** `withdraw_amount = base_withdraw − early_fee`;early fee 物理上留在金庫 → share price 上升 `(early_fee / total_shares)` → 其餘存入者受益。先前在此路徑上的一處會計漂移已關閉。
+- **Vault NFT 的編譯時錨點。** `vault_proxy` / `vusdcx` / `order` 都在部署時以 `vault_nft_policy` 作參數化,而非透過 datum——藉此關閉 phantom-vUSDCx 自我引用 datum 攻擊。
 - **15 個不可變 VaultDatum 欄位。** `governance_policy` / `governance_name` / `keeper_pkh` / `fee_collector` / `vault_version` / `performance_fee_bps` / `early_withdraw_fee_bps` / `min_hold_seconds` / `buffer_target_bps` / `vusdcx_policy` / `deposit_token_policy` / `deposit_token_name` / `order_script_hash` / `registry_hash` / `registry_auth_policy`。第 16 個錨點(`vault_nft_policy`)更強——是編譯時錨點,不是 datum 欄位。注意:`performance_fee_bps` 的「不可變」指的是**欄位結構位置**固定;值會透過治理 `UpdateFee` 在 `[0, 450]` 範圍內調整。完整欄位語意見 `contracts/docs/vault-state-machine.md`(或 V1 的 `spec/vault-datum.md`)。
 - **治理 cancel 否決。** 每筆 `QueueAction` 都有 1-of-n `CancelAction` 否決窗口;執行需要**同時**滿足 m-of-n 簽名**與**在 timelock 期間沒被取消。
-- **Validity-range 寬度上限。** 所有會寫時間的 redeemer(Compound / UpdateFee / RotateSigners / UpdateStrategy / SwapAda / RebalanceBuffer)都強制 `upper - now ≤ 1 小時`,限縮時間戳操弄面(R58 F-1)。
-- **治理簽名者下限。** `valid_signer_set` 要求 `signers ≥ 3, threshold ≥ 2, threshold ≤ n, 唯一`(R51 H-1 + 縱深防禦)。
+- **Validity-range 寬度上限。** 所有會寫時間的 redeemer(Compound / UpdateFee / RotateSigners / UpdateStrategy / SwapAda / RebalanceBuffer)都強制 `upper - now ≤ 1 小時`,限縮時間戳操弄面。
+- **治理簽名者下限。** `valid_signer_set` 要求 `signers ≥ 3, threshold ≥ 2, threshold ≤ n, 唯一`(縱深防禦)。
 - **治理 empty-hash 委派。** 這是已文件化的設計權衡——詳見下方§「已知設計決策」。
 
 ### 依賴鏈下條件的保證
@@ -236,7 +238,7 @@ Bounty tier 表適合「post-external-audit、TVL 大到 audit-reserve 的累積
 
 V1 改以標準的**責任揭露政策(RDP)+ 酬庸式(ex gratia)肯定**框架釋出。完整條款見 `docs/audit-scope.md §6`。摘要:
 
-- **範圍**:與上方 §「在範圍內」相同(Aiken 合約 + 部署流程 + keeper + API server + 22 個編譯 artefact)。
+- **範圍**:與上方 §「在範圍內」相同(Aiken 合約 + 部署流程 + 22 個編譯 artefact)。鏈下 operator 層的發現(keeper / API / frontend)仍接受,並依上方 §Scope 註記 triage 轉送至 `optivaults-reference`。
 - **揭露窗口**:triage 後 90 天(若修補需要與 Liqwid / Minswap V2 / Circle-xReserve 延伸協調,可再延 30 天)。
 - **確認回應**:72 小時內;7 天內完成 triage + 初步修補計畫。
 - **肯定方式(操作方裁量、酬庸式)**:在 V1 審計報告 + repo 公開致謝、合撰 finding + fix 的 case-study、對未來內部審計草稿 + pre-mainnet 測試部署有優先存取權、以及來自創辦人啟動資金的酬庸式感謝支付(明確**不是**市場行情 bounty——V1 Phase 1 treasury audit-reserve 的累積速率支撐不了;見 `docs/audit-scope.md §6.2`)。
