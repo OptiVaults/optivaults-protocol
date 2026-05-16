@@ -860,6 +860,8 @@ V1 部署 **17 個 logic validator**(其中 #17 `vusdcx` 是份額代幣鑄造�
 
 **合計編譯 artefact：17 logic validator + 4 NFT mint policy + 1 DEX adapter = 22**。
 
+**可選的第二個 adapter——SundaeSwap。** V1 帶有一個可選、config-gated 的第二個 SwapAdapter,對應 SundaeSwap V3 + Stableswaps:`sundaeswap_adapter`（adapter 本身）加上 `sundaeswap_cancel_guard`（一個小型 staking validator,讓尚未成交的 SundaeSwap order 取消時是 drain-proof 的——整筆 order 價值必須送回金庫地址）。這一對是**部署時 opt-in**:當部署儀式的設定檔帶 `sundaeswap` 區塊時,這兩個 artefact 才折進 hash DAG、發佈為 reference script、種入 Registry 白名單;省略該區塊,儀式與 22 artefact 的 Minswap-only 基準完全 byte-identical。因此 canonical 的 artefact 數字維持 **22**,SundaeSwap 是啟用時明確的 **+2**(24 個 artefact / 20 個 reference script)。SundaeSwap 在 V1 中擔任 USDM leg——它的 `USDCx/USDM` stableswap pool 提供更低的同質資產滑點——外加一個萬一 Minswap V2 batcher 停擺時的 liveness 後援;DJED leg 留在 Minswap V2。本白皮書其他段落引用的 ceremony 成本數字（≈ 870 ADA reference-script 鎖定、18 個 reference script、27–30 筆 ceremony TX）是量測到的 Minswap-only 基準;啟用 SundaeSwap 會在其上多兩個 reference script、再加一小段 ADA 增量。見 `spec/swap-adapter.md §8`。
+
 **拓撲設計理由。** 22 個 artefact 是沿著四個正交切割面分割（partition）的結果（authorization-boundary、governance response-latency、bytecode-cost-center、size-fix），主要由 Plutus V3 16 KB reference-script ceiling 推動，並非任意細分。工程理由與拆分後 size 列在 `spec/architecture.md §4.1`；本白皮書不列舉逐次 commit 的時序歷史，因為對 depositor 決策無實質意義。
 
 詳細 redeemer 見 `spec/architecture.md`，VaultDatum schema（§5.4 Phase 2 + Phase 1 治理安全 dead-man-switch 後為 29 欄位）見 `spec/vault-datum.md`。
@@ -1814,7 +1816,7 @@ scripts/verify-hashes.sh  # 比對 plutus.json 的 hash 與鏈上部署
 - `order-batch.md` — OrderDatum + BatchProcess、pre-batch snapshot 定價、使用者自訂 batcher tip
 - `ada-swap.md` — SwapAda redeemer(金庫 ADA 補充閉環)、Charli3 + Orcfax oracle 讀取
 - `vault-nft.md` — Vault Identity NFT 的 PlutusV3 UTXO-ref one-shot 設計
-- `swap-adapter.md` — Minswap V2 SwapAdapter 介面(Tier 2 peg-floor decoder、`SwapExactIn` / `SwapMultiRouting` 逐 byte 驗證;§3.4、§5.4 P4 引用)
+- `swap-adapter.md` — SwapAdapter 介面(Tier 2 peg-floor decoder、order datum 逐 byte 驗證;`minswap_v2_adapter` 加上 §8 的可選 SundaeSwap adapter 一對;§3.4、§5.4 P4 引用)
 - `rebalance-policy.md` — 完整再平衡演算法(slippage 預算、DEX 路徑選擇、頻率限制;§2.5 高階機制描述的規範性來源)
 
 **文件（位於 `docs/`）**：

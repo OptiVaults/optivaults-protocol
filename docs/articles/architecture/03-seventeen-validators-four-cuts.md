@@ -108,6 +108,8 @@ Plus 4 NFT mint policies (`vault_nft` / `governance_nft` / `registry_auth_nft` /
 
 The tightest is `vault_liqwid` with ~3 KB of headroom. All 22 artefacts comfortably fit under the 16 KB ceiling.
 
+> **Note — the optional second DEX adapter.** V1 can be deployed with an optional second SwapAdapter for SundaeSwap (`sundaeswap_adapter` + a companion `sundaeswap_cancel_guard`). It is config-gated at the deploy ceremony: enabling it adds 2 artefacts (24 total); omitting it leaves the deployment byte-identical to the 22-artefact base. It is an opt-in extension, not part of the core size-driven split this article describes — see `spec/swap-adapter.md` §8.
+
 ---
 
 ## The Cost of Splitting

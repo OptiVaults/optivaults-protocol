@@ -1,10 +1,10 @@
 # SwapAdapter 介面 — V1 多 DEX 擴充點
 
-**狀態:** V1 啟動時只帶一個 adapter(`minswap_v2_adapter`)。上線後,**不需要重部署 V1、也不需要強迫存入者遷移**,可以透過治理 `UpdateRegistry`(14 天 timelock + 1-of-n cancel)把額外的 DEX adapter 部署 + 白名單化。
+**狀態:** V1 一律帶 `minswap_v2_adapter`,並可選擇性地帶第二個 adapter——`sundaeswap_adapter` 加上配套的 `sundaeswap_cancel_guard`——當部署設定啟用 SundaeSwap 時,在部署儀式中綁定(見 §8)。除這兩者之外,**不需要重部署 V1、也不需要強迫存入者遷移**,可以透過治理 `UpdateRegistry`(14 天 timelock + 1-of-n cancel)在上線後把更多 DEX adapter 部署 + 白名單化。
 
 ## 1. 動機
 
-V1 的 DEX-swap 路徑(`vault_protocol.DeployToProtocol` 與其治理閘門版本 `vault_gov_emergency.AdminDeployNonDeposit`)必須 decode 目的 DEX 的 order datum,才能對 `minimum_receive` 做 trustless 的 peg-floor 檢查。不同 DEX 有不同 datum 格式(Minswap V2 用 Constr-tagged `OrderDatum` + `OrderStep` 模式;假設的 SundaeSwap V3 或 Splash 會用不同結構)。把每個 DEX decoder 全部寫死進 `vault_protocol`,會產生兩個問題:
+V1 的 DEX-swap 路徑(`vault_protocol.DeployToProtocol` 與其治理閘門版本 `vault_gov_emergency.AdminDeployNonDeposit`)必須 decode 目的 DEX 的 order datum,才能對 `minimum_receive` 做 trustless 的 peg-floor 檢查。不同 DEX 有不同 datum 格式(Minswap V2 用 Constr-tagged `OrderDatum` + `OrderStep` 模式;SundaeSwap V3 + Stableswaps 用共用的 `OrderDatum` + `Order::Swap` 結構)。把每個 DEX decoder 全部寫死進 `vault_protocol`,會產生兩個問題:
 
 1. **審計面膨脹**——每加一個 DEX 整合,就要把整個 `vault_protocol` validator 重新審計一次。
 2. **遷移壓力**——上線後新增一個 DEX 要強制 V1.x 重部署 + 存入者遷移(燒掉舊 vUSDCx、存進新 vault),從 DeFi 歷史經驗看,每次遷移事件成本約 $50K-$80K + 幾個月 + 5-15% 的滯留資金。
@@ -117,7 +117,7 @@ verify_swap_via_adapter(
 - **唯一性**:不允許重複。
 - **更新路徑**:`UpdateRegistry` redeemer,14 天 timelock + 1-of-n cancel 否決。在 `KeeperToggleMarket` + `FastUpdateMarkets` 中 bit-for-bit 保留。
 
-V1 啟動時恰好只有一個條目:`minswap_v2_adapter` 的 script hash(部署時從 `plutus.json` 計算)。
+V1 啟動時帶 `minswap_v2_adapter` 的 script hash(部署時從 `plutus.json` 計算);啟用 SundaeSwap 的部署儀式會在 init 時一併種入 `sundaeswap_adapter` 的 hash(§8.3)。更多 adapter 在上線後透過 §7 追加。
 
 ## 7. 新增 DEX adapter(上線後的生命週期)
 
@@ -129,7 +129,51 @@ V1 啟動時恰好只有一個條目:`minswap_v2_adapter` 的 script hash(部署
 6. **觀察窗**:社群 + n 位治理簽名者中的任一位,都可以在 timelock 期間 cancel 該 queued 動作。任何不認可新 adapter 的存入者,可以在 14 天窗口內退場。
 7. **治理 execute**:timelock 過後 registry UTxO 被更新、新 adapter 啟用。Keeper 可以透過它 routing;V1 金庫地址與既有 vUSDCx 持有不變。
 
-## 8. 安全屬性
+## 8. SundaeSwap——隨 V1 綁定的第二個 adapter
+
+V1 可以在部署時帶上第二個 SwapAdapter,對應 **SundaeSwap V3 + Stableswaps**——它在部署儀式中綁定,而非上線後才加入。這是 **opt-in**:V1 部署儀式只有在儀式設定檔帶 `sundaeswap` 區塊時才把它折進來。省略該區塊,儀式與 22 artefact 的 Minswap-only 基準完全 byte-identical;啟用它,artefact 數量變成 **24**(下面這兩個),reference script 數量變成 20。
+
+### 8.1 為什麼要第二個 DEX
+
+`vault_protocol.DeployToProtocol` 把金庫的 USDCx ↔ DJED/USDM swap 透過 SwapAdapter 路由。第二個 adapter 帶來兩件事:
+
+- **更低的穩定幣滑點**。V1 swap 的是同質資產(USDCx ↔ DJED/USDM)。Stableswap 曲線的 AMM 能把一般 pool 的 constant-product 滑點壓到不到 1%。SundaeSwap 的 `USDCx/USDM` Stableswaps pool 是 V1 用得到、同質資產裡最深的場子。
+- **liveness 後援**。萬一 Minswap V2 batcher 停擺,keeper 可以把同一筆 swap 改走 SundaeSwap。
+
+對 V1 而言 SundaeSwap 是 **USDM-leg DEX**:它的 `USDCx/USDM` stableswap 流動性很深,但沒有可用的 DJED 流動性,所以 keeper 把 USDM swap 走 SundaeSwap、DJED leg 留在 Minswap V2。
+
+### 8.2 兩個 artefact
+
+| Artefact | 類型 | 角色 |
+|---|---|---|
+| `sundaeswap_adapter` | SwapAdapter(staking validator) | Decode SundaeSwap order datum,並對照鏈上 order 驗證 redeemer 承諾的 `min_receive` 與 routing。遵循 §4 的 adapter 合約。 |
+| `sundaeswap_cancel_guard` | Staking validator | 持有尚未成交的 SundaeSwap order;讓它的 `Cancel` drain-proof。 |
+
+**`sundaeswap_adapter`** 結構上比 `minswap_v2_adapter` 簡單。SundaeSwap 的 order datum 明確帶了兩端的 swap 資產——`Order::Swap { offer, min_received }`,各是一組 `(policy_id, asset_name, amount)`——所以 adapter 直接拿 `hop_chain[0]` 比對 `offer`、`hop_chain[last]` 比對 `min_received`。不需要 LP-name rehash(那是 `minswap_v2_adapter` 才需要的機制,因為 Minswap 的 order datum 只帶一個 LP-token 識別碼,從中推不出目標資產)。一個 adapter 同時處理 SundaeSwap V3(constant-product)與 Stableswaps 兩種 pool——兩者共用 byte-identical 的 swap order datum;pool 類型的差異落在 pool datum 裡,而 adapter 從不讀 pool datum。
+
+**`sundaeswap_cancel_guard`** 的存在,是因為 SundaeSwap 授權取消的方式。SundaeSwap order 的 `OrderRedeemer::Cancel` 由 order datum 的 `owner` 欄位(一個 `MultisigScript`)授權。如果 `owner` 是一把普通的 keeper key,被入侵的 keeper 就能取消一筆金庫出資的 order、把退款收進自己口袋。V1 因此把 `owner` 設成 `sundaeswap_cancel_guard` script。往後每一筆對 guard-owned order 的取消,都必須滿足 guard 的 `verify_cancel_value_conservation` 檢查:離開金庫地址的**淨**值(金庫的 outputs 減掉金庫的 inputs)必須把整筆 order 的價值送回金庫地址。Keeper 可以取消一筆卡住的 order,但動不了其中任何一個 lovelace。
+
+Minswap V2 不需要對等的 guard——它的 order datum 直接把退款目的地寫死,所以 Minswap 的取消只能退回 order 建立時就釘死的地址。
+
+### 8.3 綁定模式
+
+啟用 SundaeSwap 的 V1,會經由以下兩條路徑之一抵達相同的終態——`sundaeswap_adapter` 在 `swap_adapter_hashes` 裡、SundaeSwap 的 `order.spend` hash 在 `protocol_hashes` 裡:
+
+- **(a) Init 綁定**。部署儀式看到 `sundaeswap` 設定區塊,就把這一對 adapter 解進 hash DAG(`vault_proxy → sundaeswap_cancel_guard → sundaeswap_adapter`)、發佈它們的 reference script,並在 init 時把 adapter hash(進 `swap_adapter_hashes`)與 SundaeSwap V3 + Stableswaps 的 `order.spend` hash(進 `protocol_hashes`,也就是 `DeployToProtocol` 的目的地白名單)一併種入 Registry。啟用 SundaeSwap 的 V1 就是這樣上線的。
+- **(b) 治理追加路徑**。§7 描述的上線後生命週期——一筆 `UpdateRegistry` 動作(14 天 timelock + 1-of-n cancel)把 adapter hash 與 order hash 追加到 live Registry 上。這是第 3、第 4 個 DEX adapter 走的路徑,也是當某次上線儀式漏掉 `sundaeswap` 區塊時的補救路徑。
+
+adapter hash **與** SundaeSwap 的 `order.spend` hash 兩者都要白名單化,SundaeSwap swap 才路由得起來——`swap_adapter_hashes` 授權 adapter,`protocol_hashes` 授權 `DeployToProtocol` 送值過去的 order 地址。只種了 adapter,SundaeSwap routing 仍然動不了,要等 `protocol_hashes` 也更新。
+
+### 8.4 Cancel-guard 的參數化
+
+`sundaeswap_cancel_guard` 在 compile 時以它所保護的那組 SundaeSwap `order.spend` hash 作為參數。兩個後果:
+
+- guard 的 `verify_cancel_value_conservation` 在保護集合為空時是 **fail-closed**——一個沒把任何 order hash 編進去的 guard,會拒絕每一筆取消,而不是無意義地放行。參數設錯的 guard 不會默默退化成一個毫無約束的 guard。
+- 受保護的 hash 集合是分網路的。Keeper 從 operator 設定解析它,在 mainnet 上若該值未設定就 fail loud,確保 guard 不會用錯 hash 部署。
+
+這個 conservation 檢查無法靠在同一筆取消 TX 裡 co-spend 再重建金庫 UTXO 來規避:它量的是**淨**流(金庫 outputs 減金庫 inputs),所以金庫自己的餘額不能被算進「送回的 order 價值」裡。
+
+## 9. 安全屬性
 
 **Adapter 治理 NOT 能做的事**:
 
@@ -142,7 +186,7 @@ V1 啟動時恰好只有一個條目:`minswap_v2_adapter` 的 script hash(部署
 - 核准一個對 `min_receive` 說謊的惡意 adapter——對任意 `SwapAdapterRedeemer` 都回傳 `True` 的 adapter 會繞過 Tier 2。**緩解**:adapter 原始碼開放 + 可透過 script hash 做鏈上審視;治理簽名者是公開身份的 m-of-n;14 天 timelock + 1-of-n cancel 給存入者退場時間。
 - 把 `minswap_v2_adapter` 從白名單移除——會停掉 Minswap V2 路由。**緩解**:立即可見;存入者可在 14 天觀察窗內退場;1-of-n cancel。
 
-## 9. 上 mainnet 前的驗證檢查表
+## 10. 上 mainnet 前的驗證檢查表
 
 Mainnet 部署前必做(納入 V1 外部審計範圍追蹤):
 
@@ -154,15 +198,15 @@ Mainnet 部署前必做(納入 V1 外部審計範圍追蹤):
 - [ ] 治理 `UpdateRegistry` 加一個 mock 第二 adapter → 觀察 14 天 timelock → execute 成功 → 第二 adapter 可被呼叫。
 - [ ] 治理 `UpdateRegistry` 移除 `minswap_v2_adapter` → 後續 DeployToProtocol revert。
 
-## 10. V1 不支援的事
+## 11. V1 不支援的事
 
 - **自動化 adapter 註冊**。V1 要求每個新 adapter 都經人類治理審視。Permissionless adapter 註冊(任何人部署立刻可用)需要更精細的信任框架,延後到 V2+。
 - **Adapter 版本化**。若 Minswap V3 帶新 datum 格式,operator 部署 `minswap_v3_adapter` 作為獨立 validator,由治理白名單化。舊的 `minswap_v2_adapter` 仍在名單上(處理 legacy V2 routes)或被移除(乾淨切換)。**沒有** adapter 內部版本升級機制。
 - **Adapter 內部 cost bound**。每個 adapter 設定自己的計算預算。V1 靠 ledger 的 evaluation limit 防止失控執行;**沒有**跨 adapter 的預算強制。
 
-## 11. 參考
+## 12. 參考
 
-- 程式:`lib/vault/swap_adapter.ak`、`validators/minswap_v2_adapter.ak`
+- 程式:`lib/vault/swap_adapter.ak`、`validators/minswap_v2_adapter.ak`、`validators/sundaeswap_adapter.ak`、`validators/sundaeswap_cancel_guard.ak`、`lib/vault/sundaeswap.ak`
 - 白皮書:§3.4 外部依賴(多 DEX 擴充性)、§5.3 DEX 滑點保護(Tier 2 peg-floor + Tier 1 oracle)
 - Spec:`spec/architecture.md §3.6`(Registry 結構)、§4(validator 目錄)
 - 相關:`spec/oracle.md`(adapter caller 使用的 Tier 1 oracle 讀取器)

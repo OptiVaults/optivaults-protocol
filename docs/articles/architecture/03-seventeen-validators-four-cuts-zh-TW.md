@@ -108,6 +108,8 @@ V1 引入 oracle / asset_oracles / Minswap V2 SwapAdapter dispatch 之後，原�
 
 最緊的目前是 `vault_liqwid` 還剩約 3 KB headroom。所有 22 個編譯產物都安全落在 16 KB 之內。
 
+> **註——可選的第二個 DEX adapter。** V1 可以帶一個可選的第二個 SwapAdapter 部署,對應 SundaeSwap(`sundaeswap_adapter` 加上配套的 `sundaeswap_cancel_guard`)。它在部署儀式中 config-gated:啟用會多 2 個編譯產物(共 24 個);省略則部署與 22 產物的基準完全 byte-identical。它是 opt-in 的擴充,不屬於本文描述的、由 size 推動的核心拆分——見 `spec/swap-adapter.md §8`。
+
 ---
 
 ## 拆分的代價

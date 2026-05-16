@@ -1,10 +1,10 @@
 # SwapAdapter interface — V1 multi-DEX extension point
 
-**Status:** V1 launch ships with exactly one adapter (`minswap_v2_adapter`). Post-launch, additional DEX adapters can be deployed + whitelisted via governance `UpdateRegistry` (14-day timelock + 1-of-n cancel) **without redeploying V1 or forcing depositor migration**.
+**Status:** V1 always ships `minswap_v2_adapter`, and optionally a second adapter — `sundaeswap_adapter` plus its companion `sundaeswap_cancel_guard` — bound at the deploy ceremony when the config enables SundaeSwap (see §8). Beyond those, further DEX adapters can be deployed + whitelisted post-launch via governance `UpdateRegistry` (14-day timelock + 1-of-n cancel) **without redeploying V1 or forcing depositor migration**.
 
 ## 1. Motivation
 
-V1's DEX-swap path (`vault_protocol.DeployToProtocol` and its governance-gated cousin `vault_gov_emergency.AdminDeployNonDeposit`) must decode the destination DEX's order datum to enforce a trustless peg-floor on `minimum_receive`. Different DEXes use different datum formats (Minswap V2 uses a Constr-tagged `OrderDatum` + `OrderStep` pattern; hypothetical SundaeSwap V3 or Splash would use different structures). Hard-coding all DEX decoders into `vault_protocol` creates two problems:
+V1's DEX-swap path (`vault_protocol.DeployToProtocol` and its governance-gated cousin `vault_gov_emergency.AdminDeployNonDeposit`) must decode the destination DEX's order datum to enforce a trustless peg-floor on `minimum_receive`. Different DEXes use different datum formats (Minswap V2 uses a Constr-tagged `OrderDatum` + `OrderStep` pattern; SundaeSwap V3 + Stableswaps use a shared `OrderDatum` + `Order::Swap` structure). Hard-coding all DEX decoders into `vault_protocol` creates two problems:
 
 1. **Audit surface bloat** — every DEX integration would require re-auditing the entire `vault_protocol` validator.
 2. **Migration pressure** — adding a new DEX post-launch would force a V1.x redeploy + depositor migration (burn old vUSDCx, deposit into new vault), cost of $50K-$80K + several months + 5-15% stranded funds per migration event in historical DeFi experience.
@@ -117,7 +117,7 @@ Internally it:
 - **Uniqueness**: no duplicate hashes.
 - **Update path**: `UpdateRegistry` redeemer with 14-day timelock + 1-of-n cancel veto. Preserved bit-for-bit in `KeeperToggleMarket` + `FastUpdateMarkets`.
 
-V1 launches with exactly one entry: the `minswap_v2_adapter` script hash (computed at deploy time from `plutus.json`).
+V1 launches with the `minswap_v2_adapter` script hash (computed at deploy time from `plutus.json`); a SundaeSwap-enabled ceremony seeds the `sundaeswap_adapter` hash at init as well (§8.3). Further adapters are appended post-launch via §7.
 
 ## 7. Adding a new DEX adapter (post-launch lifecycle)
 
@@ -129,7 +129,51 @@ V1 launches with exactly one entry: the `minswap_v2_adapter` script hash (comput
 6. **Observation window**: community + any 1 of the n governance signers can cancel the queued action during the timelock. Any depositor who disapproves of the new adapter can exit in the 14-day window.
 7. **Governance execute**: after timelock, the registry UTXO is updated and the new adapter becomes active. Keepers can now route through it; the V1 vault address and existing vUSDCx holdings are unchanged.
 
-## 8. Security properties
+## 8. SundaeSwap — the bundled second adapter
+
+V1 can be deployed with a second SwapAdapter for **SundaeSwap V3 + Stableswaps**, bound at the deploy ceremony rather than added post-launch. It is **opt-in**: the V1 deploy ceremony folds it in only when the ceremony config carries a `sundaeswap` block. Omitting the block leaves the ceremony byte-identical to the 22-artefact Minswap-only base; enabling it makes the artefact count **24** (the two artefacts below) and the reference-script count 20.
+
+### 8.1 Why a second DEX
+
+`vault_protocol.DeployToProtocol` routes the vault's USDCx ↔ DJED/USDM swaps through a SwapAdapter. A second adapter buys two things:
+
+- **Lower stablecoin slippage.** V1 swaps like-assets (USDCx ↔ DJED/USDM). A stableswap-curve AMM cuts the constant-product slippage of a generic pool to a fraction of a percent. SundaeSwap's `USDCx/USDM` Stableswaps pool is the deepest like-asset venue available to V1.
+- **Liveness backstop.** If the Minswap V2 batcher stalls, the keeper can route the same swap through SundaeSwap.
+
+SundaeSwap is a **USDM-leg DEX** for V1: it has deep `USDCx/USDM` stableswap liquidity but no usable DJED liquidity, so the keeper routes USDM swaps through SundaeSwap and keeps the DJED leg on Minswap V2.
+
+### 8.2 Two artefacts
+
+| Artefact | Type | Role |
+|---|---|---|
+| `sundaeswap_adapter` | SwapAdapter (staking validator) | Decodes a SundaeSwap order datum + verifies the redeemer-committed `min_receive` and routing against the on-chain order. Conforms to the adapter contract of §4. |
+| `sundaeswap_cancel_guard` | Staking validator | Owns un-filled SundaeSwap orders; makes their `Cancel` drain-proof. |
+
+**`sundaeswap_adapter`** is structurally simpler than `minswap_v2_adapter`. SundaeSwap's order datum carries both swap assets explicitly — `Order::Swap { offer, min_received }`, each a `(policy_id, asset_name, amount)` triple — so the adapter compares `hop_chain[0]` against `offer` and `hop_chain[last]` against `min_received` directly. There is no LP-name rehash (the machinery `minswap_v2_adapter` needs because Minswap's order datum carries only an LP-token identifier from which the target asset cannot be derived). One adapter handles both SundaeSwap V3 (constant-product) and Stableswaps pools — the two share a byte-identical swap order datum; the pool-type difference lives in the pool datum, which the adapter never reads.
+
+**`sundaeswap_cancel_guard`** exists because of how SundaeSwap authorises cancellation. A SundaeSwap order's `OrderRedeemer::Cancel` is authorised by the order datum's `owner` field (a `MultisigScript`). If `owner` were a plain keeper key, a compromised keeper could cancel a vault-funded order and pocket the refund. V1 instead sets `owner` to the `sundaeswap_cancel_guard` script. Every cancel of a guard-owned order must then satisfy the guard's `verify_cancel_value_conservation` check: the **net** value leaving the vault address (outputs at the vault minus inputs from the vault) must return the full order value to the vault address. The keeper can cancel a stuck order, but cannot redirect a single lovelace of it.
+
+Minswap V2 needs no equivalent guard — its order datum pins the refund destination directly, so a Minswap cancel can only refund to the address baked into the order at creation.
+
+### 8.3 Binding modes
+
+A SundaeSwap-enabled V1 reaches the same end state — `sundaeswap_adapter` in `swap_adapter_hashes` and the SundaeSwap `order.spend` hashes in `protocol_hashes` — by either of two paths:
+
+- **(a) Init-binding.** The deploy ceremony, seeing the `sundaeswap` config block, resolves the adapter pair into the hash DAG (`vault_proxy → sundaeswap_cancel_guard → sundaeswap_adapter`), publishes their reference scripts, and seeds the Registry at init with both the adapter hash (in `swap_adapter_hashes`) and the SundaeSwap V3 + Stableswaps `order.spend` hashes (in `protocol_hashes`, the `DeployToProtocol` destination whitelist). This is how a SundaeSwap-enabled V1 launches.
+- **(b) Governance add-path.** The post-launch lifecycle of §7 — an `UpdateRegistry` action (14-day timelock + 1-of-n cancel) appends the adapter hash and the order hashes to the live Registry. This is the path for a 3rd or 4th DEX adapter, and the fallback if a launch ceremony omitted the `sundaeswap` block.
+
+Both the adapter hash **and** the SundaeSwap `order.spend` hashes must be whitelisted for a SundaeSwap swap to route — `swap_adapter_hashes` authorises the adapter, `protocol_hashes` authorises the order address that `DeployToProtocol` sends value to. Seeding only the adapter leaves SundaeSwap routing inert until `protocol_hashes` is updated too.
+
+### 8.4 Cancel-guard parameterization
+
+`sundaeswap_cancel_guard` is parameterized at compile time on the set of SundaeSwap `order.spend` hashes it protects. Two consequences:
+
+- The guard's `verify_cancel_value_conservation` is **fail-closed** on an empty protected set — a guard compiled with no order hashes rejects every cancel rather than vacuously accepting it. A mis-parameterized guard never silently degrades into an unconstrained one.
+- The protected hash set is network-specific. The keeper resolves it from operator config and fails loud on mainnet if it is unset, so the guard is never deployed against the wrong hashes.
+
+The conservation check cannot be satisfied by co-spending and recreating the vault UTXO in the same cancel TX: it measures the **net** flow (vault outputs minus vault inputs), so the vault's own balance cannot be counted toward the returned order value.
+
+## 9. Security properties
 
 **What adapter governance can NOT do**:
 
@@ -142,7 +186,7 @@ V1 launches with exactly one entry: the `minswap_v2_adapter` script hash (comput
 - Approve a malicious adapter that lies about `min_receive` — an adapter that returns `True` on any `SwapAdapterRedeemer` regardless of the actual DEX datum would bypass Tier 2. **Mitigation**: adapter source is open + on-chain audit-able via its script hash; governance signers are m-of-n with public identities; 14-day timelock + 1-of-n cancel gives depositors time to exit.
 - Remove `minswap_v2_adapter` from the whitelist — would halt Minswap V2 routing. **Mitigation**: would be immediately visible; depositors can exit in the 14-day observation window; 1-of-n cancel.
 
-## 9. Pre-mainnet verification checklist
+## 10. Pre-mainnet verification checklist
 
 Before mainnet deploy (tracked as part of V1 external audit scope):
 
@@ -154,15 +198,15 @@ Before mainnet deploy (tracked as part of V1 external audit scope):
 - [ ] Governance `UpdateRegistry` adds a mock second adapter → 14-day timelock observed → execute succeeds → second adapter invocable.
 - [ ] Governance `UpdateRegistry` removes `minswap_v2_adapter` from whitelist → subsequent DeployToProtocol reverts.
 
-## 10. Out of scope for V1
+## 11. Out of scope for V1
 
 - **Automated adapter registration**. V1 requires human governance review for each new adapter. Permissionless adapter registration (anyone can deploy + immediately use) would require a more elaborate trust framework and is deferred to V2+.
 - **Adapter versioning**. If Minswap V3 ships with new datum format, the operator deploys `minswap_v3_adapter` as a separate validator and governance whitelists it. Old `minswap_v2_adapter` stays listed (handles legacy V2 routes) or is removed (clean cutover). There is no in-adapter version-bump mechanism.
 - **Adapter-internal cost bounds**. Each adapter sets its own compute envelope. V1 relies on ledger evaluation limits to prevent runaway execution; no cross-adapter budget enforcement.
 
-## 11. References
+## 12. References
 
-- Code: `lib/vault/swap_adapter.ak`, `validators/minswap_v2_adapter.ak`
+- Code: `lib/vault/swap_adapter.ak`, `validators/minswap_v2_adapter.ak`, `validators/sundaeswap_adapter.ak`, `validators/sundaeswap_cancel_guard.ak`, `lib/vault/sundaeswap.ak`
 - Whitepaper: §3.4 external dependencies (multi-DEX extensibility), §5.3 DEX slippage protection (Tier 2 peg-floor + Tier 1 oracle)
 - Spec: `spec/architecture.md` §3.6 (Registry layout), §4 (validator catalog)
 - Related: `spec/oracle.md` (Tier 1 oracle reader used by adapter callers)

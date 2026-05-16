@@ -858,6 +858,8 @@ Plus 1 DEX adapter:
 
 Total compiled artefacts: **17 logic validators + 4 NFT mint policies + 1 DEX adapter = 22**.
 
+**Optional second adapter — SundaeSwap.** V1 carries an optional, config-gated second SwapAdapter for SundaeSwap V3 + Stableswaps: `sundaeswap_adapter` (the adapter itself) plus `sundaeswap_cancel_guard` (a small staking validator that makes an un-filled SundaeSwap order's cancel drain-proof — the full order value must return to the vault address). The pair is **opt-in at deploy time**: when the ceremony config carries a `sundaeswap` block, the two artefacts are folded into the hash DAG, published as reference scripts, and seeded into the Registry whitelist; when the block is omitted the ceremony is byte-identical to the 22-artefact Minswap-only base. The canonical artefact count therefore stays **22**, with SundaeSwap an explicit **+2** when enabled (24 artefacts / 20 reference scripts). SundaeSwap's role is V1's USDM leg — its `USDCx/USDM` stableswap pool gives lower like-asset slippage — plus a liveness backstop if the Minswap V2 batcher stalls; the DJED leg stays on Minswap V2. The ceremony-cost figures quoted elsewhere in this whitepaper (≈ 870 ADA reference-script lockup, 18 reference scripts, 27–30 ceremony TXs) are the measured Minswap-only base; enabling SundaeSwap adds two reference scripts and a small ADA increment on top. See `spec/swap-adapter.md` §8.
+
 **Topology rationale.** The 22-artefact count reflects partitioning along four orthogonal seams (authorization-boundary, governance response-latency, bytecode-cost-center, size-fix) driven primarily by the Plutus V3 16 KB reference-script ceiling — not arbitrary subdivision. Engineering rationale + post-split sizes live in `spec/architecture.md §4.1`; this whitepaper does not enumerate the chronological commit-by-commit history, which has no bearing on depositor decisions.
 
 See `spec/architecture.md` for full redeemer details and `spec/vault-datum.md` for the VaultDatum schema (29 fields after §5.4 Phase 2 + Phase 1 governance safety dead-man-switch).
@@ -1811,7 +1813,7 @@ Every governance QueueAction's payload hash can be reverse-engineered from CBOR 
 - `order-batch.md` — OrderDatum + BatchProcess, pre-batch snapshot pricing, user-set batcher tip
 - `ada-swap.md` — SwapAda redeemer (vault ADA replenishment closed loop), Charli3 + Orcfax oracle reading
 - `vault-nft.md` — Vault Identity NFT PlutusV3 UTXO-ref one-shot design
-- `swap-adapter.md` — Minswap V2 SwapAdapter interface (Tier 2 peg-floor decoder, byte-for-byte `SwapExactIn` / `SwapMultiRouting` validation; referenced by §3.4, §5.4 P4)
+- `swap-adapter.md` — SwapAdapter interface (Tier 2 peg-floor decoder, byte-for-byte order-datum validation; `minswap_v2_adapter` + the optional SundaeSwap adapter pair in §8; referenced by §3.4, §5.4 P4)
 - `rebalance-policy.md` — Complete rebalance algorithm (slippage budgets, DEX path selection, frequency limits; canonical source for the §2.5 high-level mechanism description)
 
 **Docs** (under `docs/`):

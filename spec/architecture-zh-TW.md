@@ -135,6 +135,13 @@ V1 出廠時帶 **17 個 logic validator + 4 個 NFT mint policy + 1 個 DEX ada
 | 15 | `vault_nft` | Vault Identity NFT 的 one-shot minting policy——**PlutusV3 validator**,以特定 UTxO 參照參數化。Mint 要求該 UTxO 在 TX input(密碼學 one-shot);burn 無約束(永遠允許)。見 `spec/vault-nft.md`。 |
 | 16 | `minswap_v2_adapter` | **Minswap V2 order 的 SwapAdapter**(§B@launch=1)。Staking validator,由 `vault_protocol.DeployToProtocol` + `vault_gov_emergency.AdminDeployNonDeposit` 透過 zero-withdrawal 呼叫。Decode Minswap V2 order datum(SwapExactIn / SwapMultiRouting)+ 驗證 redeemer 承諾的 min_receive 與 target_asset 與鏈上 datum 一致。未參數化——hash 透過 Registry `swap_adapter_hashes` 白名單化。上線後新增 DEX adapter 走治理 `UpdateRegistry`(14 天 timelock)——**不需要** V1 vault 重部署。見 `lib/vault/swap_adapter.ak` + `validators/minswap_v2_adapter.ak`。 |
 
+**可選的第二個 adapter——SundaeSwap(config-gated)。** 除了 `minswap_v2_adapter`,V1 還可以帶第二個 SwapAdapter 部署,對應 SundaeSwap V3 + Stableswaps。它是兩個 artefact,不是一個:
+
+- `sundaeswap_adapter`——一個 SwapAdapter,介面與 `minswap_v2_adapter` 相同(目錄 #16 / `spec/swap-adapter.md`)。結構上比 Minswap adapter 簡單:SundaeSwap 的 order datum 明確帶了兩端的 swap 資產(`Order::Swap { offer, min_received }`),所以不需要 LP-name rehash。一個 adapter 同時處理 SundaeSwap V3(constant-product)與 Stableswaps 兩種 pool——兩者共用同一份 swap order datum。
+- `sundaeswap_cancel_guard`——一個 staking validator,持有尚未成交的 SundaeSwap order。SundaeSwap 由 order datum 的 `owner` 欄位授權 order `Cancel`;把 `owner` 設成這個 guard(而非一把普通的 keeper key),就強制每一筆取消都得滿足 `verify_cancel_value_conservation`——離開金庫的淨值必須送回金庫地址。這封住了 keeper 取消一筆金庫出資的 order、再把退款導向別處的路徑。Minswap V2 不需要對等機制,因為它的 order datum 直接把退款目的地寫死。
+
+兩者只有在部署儀式設定檔帶 `sundaeswap` 區塊時才折進來(見 `spec/swap-adapter.md §8`)。省略該區塊,儀式與 22 artefact 的 Minswap-only 基準完全 byte-identical;啟用它,數量變成 **24**(20 個 reference script)。SundaeSwap 擔任 V1 的 USDM leg(深的 `USDCx/USDM` stableswap、同質資產滑點更低),外加一個 Minswap liveness 後援;DJED leg 留在 Minswap V2。
+
 另有兩個 minting policy 支援治理與 registry actor。兩者都沿用**與 `vault_nft` 相同的 PlutusV3 UTXO-ref one-shot 模式**(見 `spec/vault-nft.md §2`)——無 native-script 截止日、burn 無條件、透過消費 UTXO 參照做密碼學 mint-once 保證。三個 one-shot 身份 NFT 走同一模式,安全推理一致,避免了內部驗證期 native-script 截止日 trap 曾阻擋乾淨 sunset 的問題。
 
 - `governance_nft`——治理 NFT 的 one-shot policy(單一 token、鎖在 MultisigGov UTxO;可在 V1 sunset / V2 遷移時 burn 以防 phantom-gov UTxO)
