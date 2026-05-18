@@ -1,6 +1,6 @@
 # SwapAdapter 介面 — V1 多 DEX 擴充點
 
-**狀態:** V1 一律帶 `minswap_v2_adapter`,並可選擇性地帶第二個 adapter——`sundaeswap_adapter` 加上配套的 `sundaeswap_cancel_guard`——當部署設定啟用 SundaeSwap 時,在部署儀式中綁定(見 §8)。除這兩者之外,**不需要重部署 V1、也不需要強迫存入者遷移**,可以透過治理 `UpdateRegistry`(14 天 timelock + 1-of-n cancel)在上線後把更多 DEX adapter 部署 + 白名單化。
+**狀態:** V1 帶兩個 DEX adapter——`minswap_v2_adapter` 與 SundaeSwap 這一對(`sundaeswap_adapter` 加上配套的 `sundaeswap_cancel_guard`)——兩者都在部署儀式中綁定(見 §8)。除這兩者之外,**不需要重部署 V1、也不需要強迫存入者遷移**,可以透過治理 `UpdateRegistry`(14 天 timelock + 1-of-n cancel)在上線後把更多 DEX adapter 部署 + 白名單化。
 
 ## 1. 動機
 
@@ -131,7 +131,7 @@ V1 啟動時帶 `minswap_v2_adapter` 的 script hash(部署時從 `plutus.json` 
 
 ## 8. SundaeSwap——隨 V1 綁定的第二個 adapter
 
-V1 可以在部署時帶上第二個 SwapAdapter,對應 **SundaeSwap V3 + Stableswaps**——它在部署儀式中綁定,而非上線後才加入。這是 **opt-in**:V1 部署儀式只有在儀式設定檔帶 `sundaeswap` 區塊時才把它折進來。省略該區塊,儀式與 22 artefact 的 Minswap-only 基準完全 byte-identical;啟用它,artefact 數量變成 **24**(下面這兩個),reference script 數量變成 20。
+V1 帶上第二個 SwapAdapter,對應 **SundaeSwap V3 + Stableswaps**——它在部署儀式中綁定,而非上線後才加入。V1 部署儀式透過儀式設定檔中的 `sundaeswap` 區塊把它折進來,因此它是每一次 V1 launch 部署的一部分:V1 的 canonical artefact 數量是 **24**(含下面這兩個),reference script 數量是 20。(省略 `sundaeswap` 設定區塊的部署會是 22 個 artefact / 18 個 reference script,但那不是 V1 的 canonical 配置。)
 
 ### 8.1 為什麼要第二個 DEX
 

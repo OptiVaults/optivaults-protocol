@@ -1,6 +1,6 @@
 # OptiVaults V1 — Order Queue & Batch Processing
 
-**Scope**: the `order` validator, OrderDatum, and BatchProcess redeemer on `vault_batcher` (the standalone keeper-authorized staking validator that owns the 4 fold loops + OrderDatum/OrderRedeemer decode + list.unique + R51/R52 anti-leak invariants) — how deposits and withdrawals are queued and processed in batches.
+**Scope**: the `order` validator, OrderDatum, and BatchProcess redeemer on `vault_batcher` (the standalone keeper-authorized staking validator that owns the 4 fold loops + OrderDatum/OrderRedeemer decode + list.unique + anti-leak invariants) — how deposits and withdrawals are queued and processed in batches.
 
 ---
 

@@ -1,6 +1,6 @@
 # OptiVaults V1 — Order Queue 與 Batch Processing
 
-**範圍**:`order` validator、OrderDatum,以及 `vault_batcher` 上的 BatchProcess redeemer(這個 standalone keeper-authorized staking validator 擁有 4 個 fold 迴圈 + OrderDatum/OrderRedeemer decode + list.unique + R51/R52 anti-leak 不變量)——存款與提款如何被排進批次處理。
+**範圍**:`order` validator、OrderDatum,以及 `vault_batcher` 上的 BatchProcess redeemer(這個 standalone keeper-authorized staking validator 擁有 4 個 fold 迴圈 + OrderDatum/OrderRedeemer decode + list.unique + anti-leak 不變量)——存款與提款如何被排進批次處理。
 
 ---
 

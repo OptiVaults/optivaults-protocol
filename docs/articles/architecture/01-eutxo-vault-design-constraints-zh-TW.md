@@ -6,7 +6,7 @@
 
 OptiVaults V1 是 Cardano 上第一個非託管穩定幣自動收益金庫。使用者存入 USDCx，取得 vUSDCx 份額代幣；金庫把資金部署到 Liqwid 的 DJED / USDM 借貸市場賺取利息，定期複利回寫進份額價格。所有與本金有關的操作都由 Aiken PlutusV3 合約強制——協議營運方在任何 redeemer 路徑下都無法挪動使用者本金。
 
-如果你只熟悉 Ethereum / Solidity 上的 ERC-4626 vault，Cardano eUTXO 上的等效實作會看起來不太自然。**重點是底層模型不同**。本系列會解釋 V1 的合約架構：為什麼是 17 個 logic validator + 4 個 NFT mint policy + 1 個 DEX adapter（共 22 個編譯產物），為什麼採用 Withdraw-Zero Forwarding Pattern，狀態為什麼集中在單一 UTXO，以及 Vault NFT 的編譯期錨點解決了什麼問題。
+如果你只熟悉 Ethereum / Solidity 上的 ERC-4626 vault，Cardano eUTXO 上的等效實作會看起來不太自然。**重點是底層模型不同**。本系列會解釋 V1 的合約架構：為什麼是 17 個 logic validator + 4 個 NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact（共 24 個編譯產物），為什麼採用 Withdraw-Zero Forwarding Pattern，狀態為什麼集中在單一 UTXO，以及 Vault NFT 的編譯期錨點解決了什麼問題。
 
 本篇先講設計起點：在 eUTXO 上做 vault 會踩到的四個結構性約束。理解這四個約束，後面三篇講的設計選擇就會有完整脈絡。
 

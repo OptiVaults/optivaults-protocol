@@ -56,7 +56,7 @@ Vault NFT 提供**編譯時信任錨點**:`vault_proxy`、`vusdcx`、`order` 三
 | 桶 | Inflow 份額 | 用途 | 支出閘控 |
 |----|-----------|------|---------|
 | Audit reserve | 40% | 累積以覆蓋定期第三方審計 | 治理閘控;提案需帶 `audit_invoice_ref` |
-| Operations | 25% | 平台層基礎設施(前端 / landing / API 用 VPS、Blockfrost 平台查詢、監控、網域、CDN);個別 keeper 自己的基礎設施改由每筆 Compound 的 40% keeper 份額直接吸收,不再走這個 bucket | 治理閘控、各類別 24h cooldown |
+| Operations | 25% | 平台層基礎設施(前端 / landing / API 用的主機、Blockfrost 平台查詢、監控、網域、CDN);個別 keeper 自己的基礎設施改由每筆 Compound 的 40% keeper 份額直接吸收,不再走這個 bucket | 治理閘控、各類別 24h cooldown |
 | R&D | 25% | 協議開發、未來的 bounty 計畫(post-audit + TVL-scale,依 `docs/audit-scope.md §6.3`)、生態補助 | 治理閘控、各類別 24h cooldown |
 | Buffer | 10% | 預期外支出、法律、事件應變 | 治理閘控、各類別 24h cooldown |
 
@@ -114,7 +114,7 @@ Feed datum 格式(feed UTxO 上的 InlineDatum):`PriceSample { price_bps: Int, t
 
 ## 4. 合約目錄
 
-V1 出廠時帶 **17 個 logic validator + 4 個 NFT mint policy + 1 個 DEX adapter(`minswap_v2_adapter`)= 共 22 個編譯 artefact**(canonical 數字,跨白皮書 §3.1、README size 表、`audit-scope.md §6` scope 聲明一致)。全部是 Aiken PlutusV3;編譯大小記在 `README.md`。切分理由(四條正交軸:授權邊界、治理反應延遲、bytecode-cost-center、size 修正)見下方 §4.1。
+V1 出廠時帶 **17 個 logic validator + 4 個 NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact(`sundaeswap_adapter` + `sundaeswap_cancel_guard`)= 共 24 個編譯 artefact**(canonical 數字,跨白皮書 §3.1、README size 表、`audit-scope.md §6` scope 聲明一致)。全部是 Aiken PlutusV3;編譯大小記在 `README.md`。切分理由(四條正交軸:授權邊界、治理反應延遲、bytecode-cost-center、size 修正)見下方 §4.1。
 
 | # | Validator | 角色 | 授權模型 |
 |---|-----------|------|---------|
@@ -135,12 +135,12 @@ V1 出廠時帶 **17 個 logic validator + 4 個 NFT mint policy + 1 個 DEX ada
 | 15 | `vault_nft` | Vault Identity NFT 的 one-shot minting policy——**PlutusV3 validator**,以特定 UTxO 參照參數化。Mint 要求該 UTxO 在 TX input(密碼學 one-shot);burn 無約束(永遠允許)。見 `spec/vault-nft.md`。 |
 | 16 | `minswap_v2_adapter` | **Minswap V2 order 的 SwapAdapter**(§B@launch=1)。Staking validator,由 `vault_protocol.DeployToProtocol` + `vault_gov_emergency.AdminDeployNonDeposit` 透過 zero-withdrawal 呼叫。Decode Minswap V2 order datum(SwapExactIn / SwapMultiRouting)+ 驗證 redeemer 承諾的 min_receive 與 target_asset 與鏈上 datum 一致。未參數化——hash 透過 Registry `swap_adapter_hashes` 白名單化。上線後新增 DEX adapter 走治理 `UpdateRegistry`(14 天 timelock)——**不需要** V1 vault 重部署。見 `lib/vault/swap_adapter.ak` + `validators/minswap_v2_adapter.ak`。 |
 
-**可選的第二個 adapter——SundaeSwap(config-gated)。** 除了 `minswap_v2_adapter`,V1 還可以帶第二個 SwapAdapter 部署,對應 SundaeSwap V3 + Stableswaps。它是兩個 artefact,不是一個:
+**第二個 DEX adapter——SundaeSwap。** 除了 `minswap_v2_adapter`,V1 的第二個 SwapAdapter 對應 SundaeSwap V3 + Stableswaps。它是兩個 artefact,不是一個:
 
 - `sundaeswap_adapter`——一個 SwapAdapter,介面與 `minswap_v2_adapter` 相同(目錄 #16 / `spec/swap-adapter.md`)。結構上比 Minswap adapter 簡單:SundaeSwap 的 order datum 明確帶了兩端的 swap 資產(`Order::Swap { offer, min_received }`),所以不需要 LP-name rehash。一個 adapter 同時處理 SundaeSwap V3(constant-product)與 Stableswaps 兩種 pool——兩者共用同一份 swap order datum。
 - `sundaeswap_cancel_guard`——一個 staking validator,持有尚未成交的 SundaeSwap order。SundaeSwap 由 order datum 的 `owner` 欄位授權 order `Cancel`;把 `owner` 設成這個 guard(而非一把普通的 keeper key),就強制每一筆取消都得滿足 `verify_cancel_value_conservation`——離開金庫的淨值必須送回金庫地址。這封住了 keeper 取消一筆金庫出資的 order、再把退款導向別處的路徑。Minswap V2 不需要對等機制,因為它的 order datum 直接把退款目的地寫死。
 
-兩者只有在部署儀式設定檔帶 `sundaeswap` 區塊時才折進來(見 `spec/swap-adapter.md §8`)。省略該區塊,儀式與 22 artefact 的 Minswap-only 基準完全 byte-identical;啟用它,數量變成 **24**(20 個 reference script)。SundaeSwap 擔任 V1 的 USDM leg(深的 `USDCx/USDM` stableswap、同質資產滑點更低),外加一個 Minswap liveness 後援;DJED leg 留在 Minswap V2。
+兩者在部署儀式 init 時綁定——部署儀式設定檔帶 `sundaeswap` 區塊(見 `spec/swap-adapter.md §8`)——因此是每一次 V1 launch 部署的一部分,讓 V1 的 canonical 數字為 **24** 個 artefact(20 個 reference script)。SundaeSwap 擔任 V1 的 USDM leg(深的 `USDCx/USDM` stableswap、同質資產滑點更低),外加一個 Minswap liveness 後援;DJED leg 留在 Minswap V2。
 
 另有兩個 minting policy 支援治理與 registry actor。兩者都沿用**與 `vault_nft` 相同的 PlutusV3 UTXO-ref one-shot 模式**(見 `spec/vault-nft.md §2`)——無 native-script 截止日、burn 無條件、透過消費 UTXO 參照做密碼學 mint-once 保證。三個 one-shot 身份 NFT 走同一模式,安全推理一致,避免了內部驗證期 native-script 截止日 trap 曾阻擋乾淨 sunset 的問題。
 
@@ -153,14 +153,14 @@ V1 出廠時帶 **17 個 logic validator + 4 個 NFT mint policy + 1 個 DEX ada
 
 ### 4.1 Validator 切分理由
 
-V1 的 17 個 logic validator(+ 4 NFT mint policy + 1 DEX adapter = 22 個 artefact)反映**沿四條正交軸**的切分,每條都由 Plutus V3 16 KB reference-script 上限驅動:
+V1 的 17 個 logic validator(+ 4 NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact = 24 個 artefact)反映**沿四條正交軸**的切分,每條都由 Plutus V3 16 KB reference-script 上限驅動:
 
 - **(1) 授權邊界**——把 permissionless redeemer 與 keeper-authorized + governance-authorized 的分開,讓每一半都保持在上限以下,並縮小各 validator 的審計面。例子:`vault_user`(permissionless Deposit/Withdraw)從 `vault_keeper_hot`(keeper-auth Compound/RebalanceBuffer)切出;`vault_batcher`(keeper-auth BatchProcess)從 `vault_user` 切出,讓後者可以**完全移除** `keeper_stake_hash` 參數。
 - **(2) 治理反應延遲邊界**——把慢速審慎的政策變更(7-21d timelock)從 emergency / recovery 路徑(0d + 7d-conditional)分開,防止未來的政策 feature 擴張意外撐大 emergency 路徑的攻擊面。例子:`vault_gov_policy`(UpdateStrategy/Fee/FeeSplit/SlippagePolicy)從 `vault_gov_emergency`(EmergencyWithdraw)切出;`vault_admin_deploy`(AdminDeployNonDeposit + SwapAdapter dispatch)再從 `vault_gov_emergency` 抽出。
 - **(3) Bytecode-cost-center 抽取**——當某個 redeemer 帶 4-5 KB 獨有的重機械(oracle reader、decoder、fold suite),且同 validator 中**沒有其他 redeemer 共用**時,把它抽成獨立 validator 能把完整 bytecode 當作 headroom 還給母 validator。例子:`vault_swap_ada`(dual-feed oracle reader + 6-tuple registry read,從 `vault_keeper_hot` 抽出);`vault_admin_deploy`(SwapAdapter dispatch,從 `vault_gov_emergency` 抽出)。
 - **(4) 強迫的 size 修正切分**——當加入必要 feature 把某 validator 推過上限時,沿上述三條軸中成本最低者切分。例子:SwapAdapter dispatch + Tier 1 oracle wiring 把 `vault_protocol` 合計大小推到 16,500 B 後,把 `vault_recall`(RecallFromProtocol + MergeUtxo)從其中抽出。
 
-所有切分之後,`vault_proxy` 帶 **11 個編譯時參數**(10 個 staking validator hash + `vault_nft_policy`),routing **10 條 Withdraw-Zero 路徑**(`UseUser` / `UseKeeperHot` / `UseSwapAda` / `UseProtocol` / `UseRecall` / `UseLiqwid` / `UseGovPolicy` / `UseGovEmergency` / `UseAdminDeploy` / `UseBatcher`)。Withdrawal-count 不變量(每 TX 恰好一個 vault staking validator)隨 route 數縮放。Post-split 最緊的 headroom 是 `vault_liqwid` 13,392 B(剩 2,992 B、距上限 18.3%)。12 個 staking validator 每個都帶 A2 `publish` handler——每個的 2 ADA Cardano stake 押金在治理通過 14 天 timelock 後都能回收,關閉了 pre-split monolithic validator 年代的「2 ADA 永久鎖死」trap。
+所有切分之後,`vault_proxy` 帶 **11 個編譯時參數**(10 個 staking validator hash + `vault_nft_policy`),routing **10 條 Withdraw-Zero 路徑**(`UseUser` / `UseKeeperHot` / `UseSwapAda` / `UseProtocol` / `UseRecall` / `UseLiqwid` / `UseGovPolicy` / `UseGovEmergency` / `UseAdminDeploy` / `UseBatcher`)。Withdrawal-count 不變量(每 TX 恰好一個 vault staking validator)隨 route 數縮放。Post-split 最緊的 headroom 是 `vault_liqwid` 13,392 B(剩 2,992 B、距上限 18.3%)。14 個 staking validator 每個都帶 A2 `publish` handler——每個的 2 ADA Cardano stake 押金在治理通過 14 天 timelock 後都能回收,關閉了 pre-split monolithic validator 年代的「2 ADA 永久鎖死」trap。
 
 每次抽取的細節(母 → 女 validator 對應、精確的編譯時參數、每次切分的內部審計發現)存在工程用 memory(不在公共 repo 中)。外部審計事務所合作時可申請存取完整抽取模板文件。
 

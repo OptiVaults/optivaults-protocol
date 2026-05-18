@@ -16,7 +16,7 @@ Do NOT start this ceremony if any of these are false:
 - [ ] Preprod pre-flight ceremony with mainnet timelocks completed (see §A below). Numeric verification confirmed `executable_at_ms - queued_at_ms == production_timelock_ms` for all 11 governance redeemers. Short-timelock paths (emergency 0d, fast_update_markets 1h) executed end-to-end on Preprod.
 - [ ] Minswap V2 adapter decoder byte-for-byte verified against real mainnet TXs per `spec/swap-adapter.md §9`.
 - [ ] Governance signers confirmed: 3 distinct real key holders, each with independent hardware wallet (per whitepaper §5.5). Threshold 3 (unanimity at launch). PKHs documented in `deploy/config/mainnet.json` and cross-verified by each signer.
-- [ ] Deploy wallet has ≥ 1,000 ADA. 944 ADA goes into the ceremony (ref-scripts ~870 ADA + stake deposits 24 ADA + state seeds 27 ADA + network fees ~22 ADA); 50+ ADA headroom for retry + indexer wait + contingency.
+- [ ] Deploy wallet has ≥ 1,100 ADA. ~1,039 ADA goes into the ceremony (ref-scripts ~962 ADA + stake deposits 28 ADA + state seeds 27 ADA + network fees ~22 ADA); 50+ ADA headroom for retry + indexer wait + contingency.
 - [ ] Deploy wallet has ≥ 15 USDCx (`1f3aec8b…` policy; actual mainnet deposit token) for the vault seed. Verified not-frozen on Circle side.
 - [ ] **Deploy-wallet UTxO hygiene**. Run `tsx deploy/tools/scrub-deploy-wallet.ts --network Mainnet --releaseTag v1-mainnet-r0` BEFORE invoking `deploy.ts`. The scrub fold consolidates token-tank UTxOs into `tankAdaPerBucket = 30 ADA` bins and leaves the wallet with ≥ 1 pure-ADA UTxO ≥ 50 ADA at the front of the coin pool. **Why both halves matter**: (a) `deployRefScript.ts::consolidateTokensIfNeeded` re-folds existing tanks at exactly 30 ADA each — without a pure-ADA UTxO to absorb the ~600K-1.2M lovelace TX fee, the consolidator throws an actionable `[deployRefScript] consolidation BLOCKED: wallet has 0 pure-ADA UTxOs` (replaces the older opaque `change too small: -N` failure mask). (b) The stake-credential registration step now uses `fetchPureAdaUtxosForStakeReg` (Blockfrost-direct query that filters scriptRef-bearing + token-carrying + < 3 ADA UTxOs) instead of Lucid's wallet coin selector, preventing accidental ref-script destruction. A clean wallet keeps both helpers' inputs available. Confirm post-scrub by inspecting wallet UTxOs and checking that pure-ADA pool ≥ 100 ADA and at least one pure-ADA UTxO ≥ 3 ADA exists.
 - [ ] Blockfrost Mainnet quota: ≥ 2,000 requests headroom (ceremony consumes ~400–600 requests over 10–15 min).
@@ -30,11 +30,11 @@ Do NOT start this ceremony if any of these are false:
 
 | Bucket | Amount (ADA) | Reclaimable | When recoverable |
 |--------|--------------|-------------|------------------|
-| 18 reference-script min-UTxO lockup | 871.51 | Yes | V2 migration OR ceremony sunset via `tools/reclaim-refs.ts` |
-| 12 stake credential deposits (12 × 2 ADA) | 24.00 | Yes | 14d after `ActDeregisterStake` governance Execute per credential |
+| 20 reference-script min-UTxO lockup | 962.07 | Yes | V2 migration OR ceremony sunset via `tools/reclaim-refs.ts` |
+| 14 stake credential deposits (14 × 2 ADA) | 28.00 | Yes | 14d after `ActDeregisterStake` governance Execute per credential |
 | 5 state UTxO seeds (vault, registry, treasury, keeper-auth, governance) | ~27 | Partial | Vault + registry seeds consumed in normal ops; treasury + keeper-auth + governance survive until sunset |
-| Network TX fees (27-30 TXs × ~0.2–1.3 ADA) | ~22 | No | Permanent sunk cost |
-| **Total** | **~944.51 ADA** | **~922 ADA reclaimable, ~22 ADA sunk** | |
+| Network TX fees (42 TXs × ~0.2–1.3 ADA) | ~22 | No | Permanent sunk cost |
+| **Total** | **~1,039 ADA** | **~990 ADA reclaimable, ~22 ADA sunk** | |
 
 Mainnet wallet budget recommendation: **≥ 1,000 ADA** (as above, with headroom).
 
@@ -68,11 +68,11 @@ grep -nE "60_000\b|60 \* 1_000" multisig_gov.ak registry.ak treasury.ak vault_ad
 #    only acceptable hits are inside `if preprod_fast_timelocks { 60_000 } else { ... }` arms
 ```
 
-Record the 22 artefact hashes for cross-check. Compare against:
+Record the 24 artefact hashes for cross-check. Compare against:
 - `deploy/state/mainnet-hash-preview.txt` — current mainnet-candidate snapshot (regenerate via `aiken build` from the same constants.ak)
 - The post-audit baseline (same commit SHA as the external audit report references)
 
-Tightest validators (must remain < 16,384 B Plutus V3 ceiling): vault_protocol 13,691 B / vault_admin_deploy 13,633 B / vault_recall 13,610 B / vault_liqwid 13,604 B. All 22 artefacts have ≥ 2,693 B headroom.
+Tightest validators (must remain < 16,384 B Plutus V3 ceiling): vault_protocol 13,691 B / vault_admin_deploy 13,633 B / vault_recall 13,610 B / vault_liqwid 13,604 B. All 24 artefacts have ≥ 2,693 B headroom.
 
 ### 2.2 Configure mainnet
 
@@ -182,11 +182,11 @@ Two governance redeemers have production timelock ≤ 1 hour and remain runnable
 
 - [ ] `aiken build && aiken check` clean on the Preprod ceremony commit (218 / 0 / 0)
 - [ ] `mainnet-hash-preview.txt` matches `aiken build` output byte-for-byte
-- [ ] All 22 ref scripts deploy on Preprod (visible via `data/v9.3-ref-scripts-preprod.json` or equivalent)
+- [ ] All 20 ref scripts deploy on Preprod (visible via `data/v9.3-ref-scripts-preprod.json` or equivalent)
 - [ ] 11 governance redeemers pass numeric assertion (A)
 - [ ] 4 high-frequency redeemers pass full Queue+Execute via backdate (B)
 - [ ] EmergencyWithdraw + FastUpdateMarkets pass full Queue+Execute on production timelock
-- [ ] Reclaim Preprod ceremony refs via `tools/reclaim-refs.ts` (~870 ADA recovered, ~24 ADA stake-deposit recovery via A2 deregister with 14d wait optional)
+- [ ] Reclaim Preprod ceremony refs via `tools/reclaim-refs.ts` (~962 ADA recovered, ~28 ADA stake-deposit recovery via A2 deregister with 14d wait optional)
 
 When all pass criteria are met, the mainnet ceremony is unblocked from a contract-correctness standpoint (other §0 preconditions still apply).
 
@@ -208,17 +208,17 @@ The script is **idempotent by releaseTag + state file**. Rerunning picks up at t
 - `phases.ts::runPhase4aStakeRegs` no longer relies on Lucid's wallet coin selector. It calls `fetchPureAdaUtxosForStakeReg(addr, bfUrl, bfKey)` directly against Blockfrost (with the same multi-key rotation as the rest of deploy.ts), filters out scriptRef-bearing + token-carrying + < 3 ADA UTxOs, and uses `tx.collectFrom([cleanFeeUtxo])` to pin inputs. This closes a class of ref-script destruction observed when Lucid's coin selector consumed scriptRef UTxOs as fee inputs and dropped the script in change.
 - PHASE 4a auto-retries `ConwayMempoolFailure "All inputs are spent"` (Blockfrost indexer-lag race) up to 5 times with 30s sleep between attempts, using a queue-based `while` loop with `queue.unshift` to re-process the same target after the indexer catches up. Operator does NOT need to intervene unless 5 retries are exhausted on the same stake registration.
 
-### 3.2 Phase map (27-30 TXs)
+### 3.2 Phase map (42 TXs)
 
 | Phase | Step keys | TX count | Duration |
 |-------|-----------|----------|----------|
 | PHASE 0 | `pickUtxoRefs` | 0 (offline reservation) | <1s |
 | PHASE 1 | `compile` | 0 (offline hash derivation) | 5-10s |
 | PHASE 2 | `mintVaultNft`, `mintGovNft`, `mintRegistryAuthNft` | 3 | 30-60s |
-| PHASE 3 | `refScript:<18 validators>` | 18 | 5-8 min |
-| PHASE 4a | `registerStake:<12 credentials>` | 12 | 3-5 min |
+| PHASE 3 | `refScript:<20 artefacts>` | 20 | 5-8 min |
+| PHASE 4a | `registerStake:<14 credentials>` | 14 | 3-5 min |
 | PHASE 4b | `initRegistry`, `initTreasury`, `initKeeperAuth`, `initGovernance`, `initVault` | 5 | 2-4 min |
-| **Total** | | **38** | **10-15 min** |
+| **Total** | | **42** | **10-15 min** |
 
 Ceremony wait breakdown: TX submit (fast) + indexer wait (~10s per TX on Blockfrost mainnet) + one-shot NFT deadline margin (14400ms = 4h, set generously in deploy script).
 
@@ -304,25 +304,25 @@ GOV_ADDR=$(jq -r ".stateUtxos.governance.address" deploy/state/mainnet-v1-mainne
 curl -s -H "project_id: $BLOCKFROST_API_KEY" \
   "https://cardano-mainnet.blockfrost.io/api/v0/addresses/$GOV_ADDR/utxos" | jq .
 
-# 18 ref scripts at the deploy wallet — each should have the expected size
+# 20 ref scripts at the deploy wallet — each should have the expected size
 DEPLOY_ADDR=$(cardano-cli ... /wallet address ...)
 curl -s -H "project_id: $BLOCKFROST_API_KEY" \
   "https://cardano-mainnet.blockfrost.io/api/v0/addresses/$DEPLOY_ADDR/utxos" | \
   jq 'map(select(.reference_script_hash)) | length'
-# Expected: 18
+# Expected: 20
 ```
 
-### 5.2 VPS / keeper / API backfill
+### 5.2 Keeper / API backfill
 
 After the ceremony, the following backend systems need the new mainnet ceremony addresses:
 
-- [ ] **VPS keeper `.env`** — update:
+- [ ] **Keeper `.env`** — update:
   - `VAULT_ADDR`, `VAULT_NFT_POLICY`, `VUSDCX_POLICY`, `REGISTRY_ADDR`, `TREASURY_ADDR`, `GOVERNANCE_ADDR`, `KEEPER_AUTH_ADDR`
-  - `PROXY_REF_SCRIPT_TX`, `USER_REF_SCRIPT_TX`, … (18 ref script TX hashes)
+  - `PROXY_REF_SCRIPT_TX`, `USER_REF_SCRIPT_TX`, … (20 ref script TX hashes)
   - `EXPECTED_PROXY_HASH`, `EXPECTED_VAULT_USER_HASH`, …
-- [ ] **VPS API `.env`** — same set (API reads subset).
-- [ ] **Key daemon mainnet socket** — persistent across VPS reboots (systemd unit or equivalent).
-- [ ] **pm2 restart keeper && pm2 restart api** on VPS after env sync.
+- [ ] **API `.env`** — same set (API reads subset).
+- [ ] **Key daemon mainnet socket** — persistent across host reboots (systemd unit or equivalent).
+- [ ] **Restart keeper && restart api** after env sync.
 - [ ] **Frontend** (`v1/reference/frontend/`) — set `VITE_NETWORK=mainnet` + per-field `VITE_*` env vars from `deploy/state/mainnet-<releaseTag>.json` (proxyAddr / vaultNftPolicy / vusdcxPolicy / registryAddr / registryAuthPolicy / liqwidMarketPolicy). The `MAINNET_PRESET` in `src/lib/v1Config.ts` already pins the canonical mainnet USDCx token (`1f3aec8b…`) — only ceremony-derived values need filling. `VITE_NETWORK=mainnet bash deploy.sh` rebuilds + Cloudflare Pages publishes.
 - [ ] **Withdraw CLI** (`v1/reference/withdraw-cli/`) — replace `config/mainnet.json` (currently a placeholder with `_comment: "V1 mainnet ceremony has not been performed yet."`) with the published mainnet ceremony JSON (`deploy/state/mainnet-<releaseTag>.json` content). `npm run build && npm publish` republishes the package.
 - [ ] **Emergency Withdraw SPA** (`v1/reference/emergency-withdraw/`) — copy `deploy/state/mainnet-<releaseTag>.json` to `public/v1-deploy-state.json`, then `vite build` + Cloudflare Pages publish (or expose via Worker URL via `?config=` query string).
@@ -351,13 +351,13 @@ Queue + Execute a benign `UpdateStrategy` with no actual allocation change (just
 V1 is explicitly permissioned to sunset per whitepaper §9.2. The sunset path:
 
 1. Governance queues `ActUpdateFee(performanceFeeBps=0, earlyWithdrawFeeBps=0, minHoldSeconds=0)`. 14d timelock.
-2. Governance queues 12 `ActDeregisterStake` actions (one per staking credential). 14d timelock each.
-3. Governance executes all 12 `ActDeregisterStake` after timelock. Each returns 2 ADA to the deploy wallet.
+2. Governance queues 14 `ActDeregisterStake` actions (one per staking credential). 14d timelock each.
+3. Governance executes all 14 `ActDeregisterStake` after timelock. Each returns 2 ADA to the deploy wallet.
 4. Governance announces 90d window for depositors to exit via normal `Withdraw` path.
 5. After 90d, governance queues `ActEmergencyWithdraw` with `freeze=1`. Depositors who didn't exit during the window get migrated to V2 via V2 ceremony's deposit + migration script.
-6. Operator runs `tsx deploy/tools/reclaim-refs.ts --network Mainnet --releaseTag v1-mainnet-r0` to reclaim the 871 ADA ref-script lockup. Fresh TX with CML body rebuild workaround for Lucid's Conway ref-script fee bug.
+6. Operator runs `tsx deploy/tools/reclaim-refs.ts --network Mainnet --releaseTag v1-mainnet-r0` to reclaim the ~962 ADA ref-script lockup. Fresh TX with CML body rebuild workaround for Lucid's Conway ref-script fee bug.
 
-Total ADA recoverable on sunset: ~895 ADA (871 ref-scripts + 24 stake deposits). ~49 ADA sunk cost over the vault's lifetime (state UTxO seeds + network fees).
+Total ADA recoverable on sunset: ~990 ADA (~962 ref-scripts + 28 stake deposits). ~49 ADA sunk cost over the vault's lifetime (state UTxO seeds + network fees).
 
 ---
 
@@ -366,9 +366,9 @@ Total ADA recoverable on sunset: ~895 ADA (871 ref-scripts + 24 stake deposits).
 These are non-blocking but worth resolving at external audit handoff:
 
 - **Minswap V2 adapter decoder**: `spec/swap-adapter.md §9` specifies byte-for-byte verification against real mainnet TXs. That verification has not been done (it will require spending some TX on mainnet Minswap V2 with matching payload structures and comparing the adapter's decode against the on-chain datum format). Must happen before governance populates `swap_adapter_hashes` with the mainnet adapter.
-- **Preprod pre-flight evidence**: a recent Preprod ceremony with `preprod_fast_timelocks = True` completed all 38 ceremony TXs with zero ref-script destruction, all 12 stake registrations confirmed, and an `ActAdminDeployNonDeposit` Queue action chain-verified end-to-end — demonstrating that the single-flag timelock gate wires through to `multisig_gov::min_timelock_ms` correctly. The mainnet ceremony is the same `deploy.ts` codepath with the flag flipped to `False`; no other deploy-side code differences between Preprod and Mainnet.
-- **R73 `valid_allocs × MergeUtxo donation gap` fix** (full description in `SECURITY.md` §"Known open findings"): Option A fix (~6 LOC in `vault_recall.MergeUtxo`) queued for next contract revision. If deployed before mainnet, changes `vault_recall` hash → one ref-script rewrite + one A2 deregister/re-register cycle. If deployed post-mainnet, a V2 migration is needed. Recommend: include in pre-mainnet revision.
-- **VPS backfill automation**: the manual env-sync flow in §5.2 is error-prone. `backfill-vps-env.ts` tool to auto-generate `.env` content from state file should be written and tested on Preprod before mainnet.
+- **Preprod pre-flight evidence**: a recent Preprod ceremony with `preprod_fast_timelocks = True` completed all 42 ceremony TXs with zero ref-script destruction, all 14 stake registrations confirmed, and an `ActAdminDeployNonDeposit` Queue action chain-verified end-to-end — demonstrating that the single-flag timelock gate wires through to `multisig_gov::min_timelock_ms` correctly. The mainnet ceremony is the same `deploy.ts` codepath with the flag flipped to `False`; no other deploy-side code differences between Preprod and Mainnet.
+- **`valid_allocs × MergeUtxo donation gap` fix** (full description in `SECURITY.md` §"Known open findings"): Option A fix (~6 LOC in `vault_recall.MergeUtxo`) queued for next contract revision. If deployed before mainnet, changes `vault_recall` hash → one ref-script rewrite + one A2 deregister/re-register cycle. If deployed post-mainnet, a V2 migration is needed. Recommend: include in pre-mainnet revision.
+- **Backfill automation**: the manual env-sync flow in §5.2 is error-prone. A `backfill-env.ts` tool to auto-generate `.env` content from state file should be written and tested on Preprod before mainnet.
 - **3-sig governance signing protocol**: need a documented off-chain communication protocol for the 3 signers to coordinate on Queue/Execute payload_hash verification (how they independently reconstruct the payload, compare hashes, and sign only after consensus). This is a social-engineering surface, not a contract surface, but it's the critical governance-liveness piece.
 
 ---

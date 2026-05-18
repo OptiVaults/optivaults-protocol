@@ -50,7 +50,7 @@ V1 兩個都沒採。V1 把這條防線寫在合約層：**`last_compound_time +
 
 7 天是兩個考量的折衷：
 
-**太短 → false positive**。Keeper 可能因合理理由短暫停擺：VPS 維護、Cardano mainnet 短暫擁塞、Blockfrost / Ogmios 短期不可用、營運者短期休假。若 dead-man-switch 是 1-3 天，這些情境會被誤判為「keeper 死了」，trigger early_withdraw_fee 免收會讓存入者誤判趨勢。
+**太短 → false positive**。Keeper 可能因合理理由短暫停擺：主機維護、Cardano mainnet 短暫擁塞、Blockfrost / Ogmios 短期不可用、營運者短期休假。若 dead-man-switch 是 1-3 天，這些情境會被誤判為「keeper 死了」，trigger early_withdraw_fee 免收會讓存入者誤判趨勢。
 
 **太長 → 存入者保護不足**。若 dead-man-switch 是 30-60 天，keeper 真的跑路後，存入者要等 1-2 個月才能無 fee 退場。對 emergency 情境（譬如 Liqwid 突然出問題），這個窗口太長。
 

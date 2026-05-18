@@ -195,8 +195,8 @@ Each row produces one or more on-chain TXs that MUST confirm + match the expecte
 | ID | Scenario | Expected |
 |----|----------|----------|
 | BATCH-1 | BatchProcess of 3 mixed orders | TX confirms; per-order fair sums equal to mint/burn totals |
-| BATCH-2 | BatchProcess where keeper diverts vUSDCx to non-owner output | TX fails (R51 H-1 `no_vusdcx_leak`) |
-| BATCH-3 | BatchProcess with two orders sharing `payout_output_index` | TX fails (R52 H-1 `unique_payout_indices`) |
+| BATCH-2 | BatchProcess where keeper diverts vUSDCx to non-owner output | TX fails (`no_vusdcx_leak`) |
+| BATCH-3 | BatchProcess with two orders sharing `payout_output_index` | TX fails (`unique_payout_indices`) |
 | BATCH-4 | BatchProcess without keeper zero-withdraw | TX fails (keeper_stake_script gate) |
 
 ### 3.11 vault_keeper_hot (Compound + RebalanceBuffer)
@@ -239,7 +239,7 @@ Each row produces one or more on-chain TXs that MUST confirm + match the expecte
 |----|----------|----------|
 | RECALL-1 | RecallFromProtocol consumes Minswap fill, increments NDV | TX confirms |
 | RECALL-2 | MergeUtxo with 2 secondary UTXOs (donations of stables) | TX confirms; non_deposit_value += sum |
-| RECALL-3 | MergeUtxo with garbage token in secondary | TX fails (R56 M-1 allowlist) |
+| RECALL-3 | MergeUtxo with garbage token in secondary | TX fails (allowlist) |
 
 ### 3.15 vault_gov_policy (UpdateStrategy / UpdateFee / UpdateFeeSplit / UpdateSlippagePolicy)
 
@@ -408,7 +408,7 @@ Added with the Phase 1 governance safety design (validator commit `9626e8e` + do
 
 ## 8. References
 
-- `spec/architecture.md` — 17-validator catalog (+ 4 one-shot NFT mint policies + 1 DEX adapter = 22 total artefacts; partitioning rationale in §4.1)
+- `spec/architecture.md` — 17-validator catalog (+ 4 one-shot NFT mint policies + `minswap_v2_adapter` + 2 SundaeSwap artefacts = 24 total artefacts; partitioning rationale in §4.1)
 - `spec/governance.md` + `spec/multisig-gov.md` — gov action set
 - `spec/treasury.md` — treasury redeemer details
 - `spec/keeper-auth.md` — keeper rotation + bond mechanics

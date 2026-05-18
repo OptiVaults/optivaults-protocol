@@ -72,7 +72,7 @@ Treasury 份額:依 `spec/treasury.md` 分進四個類別桶。
 | 類別 | 比例 | 100K TVL / 年 | 1M TVL / 年 | 10M TVL / 年 | 用途 |
 |------|------|--------------:|------------:|------------:|------|
 | Audit reserve(40%) | 65 | 648 | 6,480 | 向下一次第三方審計帳單累積(總 fee 的 24%,與舊 80%×30% 同樣累積速度) |
-| Operations(25%) | 41 | 405 | 4,050 | 平台層基礎設施:VPS(frontend/landing/API)、Blockfrost(平台 queries)、監控、網域、CF Pages——per-keeper infra 現在透過 40% keeper 份額直接補,不再從此 bucket |
+| Operations(25%) | 41 | 405 | 4,050 | 平台層基礎設施:主機(frontend/landing/API)、Blockfrost(平台 queries)、監控、網域、CF Pages——per-keeper infra 現在透過 40% keeper 份額直接補,不再從此 bucket |
 | R&D(25%) | 41 | 405 | 4,050 | 協議開發、未來 bounty 計畫(post-audit + TVL-scale,`docs/audit-scope.md §6.3`)、生態補助 |
 | Buffer(10%) | 16 | 162 | 1,620 | 預期外支出、法律諮詢、事件應變 |
 
@@ -84,7 +84,7 @@ Treasury 份額:依 `spec/treasury.md` 分進四個類別桶。
 
 | 項目 | 成本(數量級) | 備註 |
 |------|--------------|------|
-| 跑 keeper 的 VPS(雙實例 HA) | $10–25/月 × 2 = $20–50/月 | Hetzner / DO / 類似。雙實例以提高 keeper 可用性(見白皮書 §8.4)。 |
+| 跑 keeper 的伺服器(雙實例 HA) | $10–25/月 × 2 = $20–50/月 | 雙實例以提高 keeper 可用性(見白皮書 §8.4)。 |
 | Blockfrost API 存取 | $0–100/月 | 免費版能支撐約 50 req/min;超過或需要專用 key rotation 就要付費版 |
 | 監控 + alerting | $5–20/月 | Grafana Cloud 免費版,或自架 stack |
 | 網域 + CDN(frontend + landing) | $2–10/月 | 靜態站用 Cloudflare Pages 免費;網域要付 |
@@ -105,7 +105,7 @@ Treasury 份額:依 `spec/treasury.md` 分進四個類別桶。
 - 低端交叉點($360/年 ops):`TVL = $360 / (6% × 4.5% × 15%) ≈ $889,000`
 - 高端交叉點($2,400/年 ops):`TVL = $2,400 / (6% × 4.5% × 15%) ≈ $5.93M`
 
-「operations 桶單獨覆蓋基礎設施」的門檻 E2 下約 **USD 900K TVL**(最小可行),**USD 6M TVL**(舒適餘裕)。比 pre-E2 的 $417K-$2.78M 推遲約 2×,因為 ops bucket 從 32% 縮到 15% of fee。**這個轉變被 40% keeper 直接份額吸收 per-keeper infra 成本所抵消**(keeper-related 合計預算反而從 fee 的 52% 微增到 55%)。Ops bucket 縮水後,需要它覆蓋的是**平台層基礎設施**(frontend / landing / API server / treasury 監控),個別 keeper VPS / Blockfrost / 監控由 keeper 自己 40% 份額支付。
+「operations 桶單獨覆蓋基礎設施」的門檻 E2 下約 **USD 900K TVL**(最小可行),**USD 6M TVL**(舒適餘裕)。比 pre-E2 的 $417K-$2.78M 推遲約 2×,因為 ops bucket 從 32% 縮到 15% of fee。**這個轉變被 40% keeper 直接份額吸收 per-keeper infra 成本所抵消**(keeper-related 合計預算反而從 fee 的 52% 微增到 55%)。Ops bucket 縮水後,需要它覆蓋的是**平台層基礎設施**(frontend / landing / API server / treasury 監控),個別 keeper 的基礎設施 / Blockfrost / 監控由 keeper 自己 40% 份額支付。
 
 這條線以下,V1 處於**啟動期**,運行成本超過 treasury 入帳。初期缺口由專案啟動資金承擔;跨過門檻之後,OptiVaults 本身的營收即可支撐基線運營,更高的 TVL 則漸漸支撐 audit reserve + R&D + buffer 類別。
 
@@ -144,7 +144,7 @@ V1 的公共財定位(見白皮書 §8.1 + Executive Summary)支援一個非稀�
 
 Keeper 份額在 V1 啟動時是績效費的 40%;每年 = `TVL × gross_APY × 0.018`。下表假設 **6% 當下參考 blended APY** + **3-keeper 輪替**(每人取 keeper pool 的 ⅓) + **每位 keeper $360/年基礎設施成本**:
 
-| TVL | Keeper 年總 pool | 單一 keeper(3 位) | 扣 $360/年 VPS 後淨額 |
+| TVL | Keeper 年總 pool | 單一 keeper(3 位) | 扣 $360/年基礎設施後淨額 |
 |-----|-----------------|-------------------|---------------------|
 | 100K | 108 | 36 | −324(虧) |
 | 500K | 540 | 180 | −180(虧) |
@@ -162,7 +162,7 @@ Keeper 份額在 V1 啟動時是績效費的 40%;每年 = `TVL × gross_APY × 0
 | 層 | 覆蓋範圍 | 年度成本 | Breakeven TVL(6% 當下 APY) | Breakeven TVL(2% 悲觀 APY) |
 |----|---------|---------:|-------------------------:|------------------------:|
 | (a) 單一創辦人 keeper、邊際運營 | 創辦人吸收自己的勞動、共用既有基礎設施 | $100–$300 | $185K – $555K | $555K – $1.67M |
-| (b) 單一非創辦人專業 keeper | 獨立 operator、專用 VPS + 監控 | $400–$800 | $740K – $1.48M | $2.22M – $4.44M |
+| (b) 單一非創辦人專業 keeper | 獨立 operator、專用伺服器 + 監控 | $400–$800 | $740K – $1.48M | $2.22M – $4.44M |
 | (b') 3-keeper 輪替(上表) | 3 位獨立 operator 各吸收 $360/年 | 共 $1,080 | ~$2M | ~$6M |
 | (c) 機構級運營 + audit-reserve 累積 | 完整協議自給,含未來審計成本($30–50K 每 18–24 個月攤提) | $1,500–$3,000 + 審計攤提 | $20M+ | $50M+ |
 
@@ -305,7 +305,7 @@ Phase 2+ 可以透過 `UpdateKeeperAuth` 加入額外授權的 keeper。之後 k
 
 | 成本項 | 低端 | 標準 | 高可用 |
 |--------|------|------|--------|
-| VPS(keeper 實例) | $60/年 | $240/年 | $600/年 |
+| 伺服器(keeper 實例) | $60/年 | $240/年 | $600/年 |
 | Blockfrost key ×2 | $360/年 | $720/年 | $1,800/年 |
 | 監控 + alerting | $50/年 | $200/年 | $500/年 |
 | 備份 / HA 工具 | $0 | $100/年 | $500/年 |

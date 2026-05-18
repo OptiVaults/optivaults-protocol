@@ -143,9 +143,7 @@ tsx deploy/deploy.ts --network Preprod --releaseTag <your-test-tag> --dryRun
 
 V1 的內部審計採**涵蓋區方法論**(A–F 區,見 `docs/audit-scope.md`),取代早期版本使用的逐輪編號制。涵蓋區計畫就是外部審計範圍的權威來源。
 
-目前已知有開放狀態的審計發現(貢獻時請留意):
-
-- **R73 F-1 (MEDIUM, 已修)**:`vault_recall.MergeUtxo` admissibility 缺口已透過 `valid_merge_utxo_admissibility` predicate + 6 個 regression test(`lib/vault/tests/r73_test.ak`)關閉。完整 root-cause + 修補寫照見 [SECURITY.md](SECURITY.md) §「最近修補」。若你動到 `vault_recall.ak` 或共用的 predicate,記得把 admissibility guard 留在任何新的 state-mutation 路徑上。
+內部對抗性審計目前沒有任何 LOW 以上嚴重性的開放發現(見 [SECURITY.md](SECURITY.md) §「已知開放中的審計發現」)。貢獻時請留意:`vault_recall.ak` 與共用的 `valid_merge_utxo_admissibility` predicate 在捐贈導致狀態變更的源頭帶有 allocation-invariant guard——若你動到這些路徑,記得把 admissibility guard 留在任何新的 state-mutation 路徑上。
 
 內部分類為 LOW 或 INFO 的發現會在內部追蹤,除非你改到受影響的 validator 區域,否則不會阻擋貢獻;LOW 以上的發現都會在 SECURITY.md 摘錄。
 

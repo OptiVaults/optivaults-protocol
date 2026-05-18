@@ -6,7 +6,7 @@
 
 [Part 2](./02-withdraw-zero-forwarding-pattern.md) introduced the Withdraw-Zero Forwarding Pattern: moving vault business logic out of spending validators and into multiple staking validators. What it didn't answer is *how many* validators V1 splits into and along which lines. That's the question this part answers.
 
-OptiVaults V1 splits vault logic into **17 logic validators + 4 NFT mint policies + 1 DEX adapter = 22 compiled artefacts**. That's a relatively aggressive split for a Cardano vault — many existing designs ship with 5–8 validators. So why so many for V1?
+OptiVaults V1 splits vault logic into **17 logic validators + 4 NFT mint policies + `minswap_v2_adapter` + 2 SundaeSwap artefacts = 24 compiled artefacts**. That's a relatively aggressive split for a Cardano vault — many existing designs ship with 5–8 validators. So why so many for V1?
 
 **Because the split follows four orthogonal cuts**, each driven by a specific design constraint. This part explains them one by one.
 
@@ -104,11 +104,11 @@ The combined result of all four cuts:
 | `order` | Order Process / Cancel / Expire | 3.8 KB |
 | `vusdcx` | Share token minting policy | 1.3 KB |
 
-Plus 4 NFT mint policies (`vault_nft` / `governance_nft` / `registry_auth_nft` / `gov_signer_nft`) + 1 DEX adapter (`minswap_v2_adapter`) = 22 compiled artefacts.
+Plus 4 NFT mint policies (`vault_nft` / `governance_nft` / `registry_auth_nft` / `gov_signer_nft`) + `minswap_v2_adapter` + the 2 SundaeSwap artefacts = 24 compiled artefacts.
 
-The tightest is `vault_liqwid` with ~3 KB of headroom. All 22 artefacts comfortably fit under the 16 KB ceiling.
+The tightest is `vault_liqwid` with ~3 KB of headroom. All 24 artefacts comfortably fit under the 16 KB ceiling.
 
-> **Note — the optional second DEX adapter.** V1 can be deployed with an optional second SwapAdapter for SundaeSwap (`sundaeswap_adapter` + a companion `sundaeswap_cancel_guard`). It is config-gated at the deploy ceremony: enabling it adds 2 artefacts (24 total); omitting it leaves the deployment byte-identical to the 22-artefact base. It is an opt-in extension, not part of the core size-driven split this article describes — see `spec/swap-adapter.md` §8.
+> **Note — the second DEX adapter.** Two of V1's 24 artefacts are the SundaeSwap SwapAdapter (`sundaeswap_adapter` + a companion `sundaeswap_cancel_guard`). They are bound at the deploy ceremony — part of every V1 launch deploy — but they are a DEX-adapter extension, distinct from the core size-driven split this article is about. See `spec/swap-adapter.md` §8.
 
 ---
 
@@ -116,11 +116,11 @@ The tightest is `vault_liqwid` with ~3 KB of headroom. All 22 artefacts comforta
 
 To be complete, here's the cost side of the trade:
 
-**(a) More ceremony deployment TXs**: V1's ceremony requires 38 TXs (3 NFT mints + 18 ref script deployments + 12 stake credential registrations + 5 state UTXO inits), with about 944 ADA committed to ref-script lockup and registration deposits (ref scripts are reclaimable at sunset via `reclaim-refs.ts`). A single-validator vault would need only 5–10 ceremony TXs.
+**(a) More ceremony deployment TXs**: V1's ceremony requires 42 TXs (3 NFT mints + 20 ref script deployments + 14 stake credential registrations + 5 state UTXO inits), with about 1,039 ADA committed to ref-script lockup and registration deposits (ref scripts are reclaimable at sunset via `reclaim-refs.ts`). A single-validator vault would need only 5–10 ceremony TXs.
 
 **(b) Larger audit surface**: each staking validator is its own audit target. Internal review accumulated multiple rounds with findings addressed; some of those findings (for example, `vault_keeper_hot`'s Compound path didn't originally verify that the gov input's spending redeemer was `ReceiveCompoundShare`, which could have let `gov_share` be miscredited under a different governance action) were missed precisely because validators are split apart and cross-validator binding becomes less visible.
 
-**(c) Deployment ordering is more fragile**: with 18 ref scripts and a dependency chain (vault_proxy's compile-time parameters require all 10 stake hashes to be decided first), the ceremony is sensitive to TX ordering and wallet UTXO contention. V1's `deploy.ts` includes a checkpoint mechanism with auto-resume — essentially mandatory at this split scale.
+**(c) Deployment ordering is more fragile**: with 20 ref scripts and a dependency chain (vault_proxy's compile-time parameters require all 10 stake hashes to be decided first), the ceremony is sensitive to TX ordering and wallet UTXO contention. V1's `deploy.ts` includes a checkpoint mechanism with auto-resume — essentially mandatory at this split scale.
 
 But the upside of splitting — breaking past 16 KB, paying ref-script fee only for what each TX actually uses, and natural authorization isolation — outweighs these costs significantly for user experience and security model. So V1 chose this direction.
 

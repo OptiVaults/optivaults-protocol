@@ -205,7 +205,7 @@ At V1 mainnet deploy, TreasuryDatum is initialized with:
 | Field | Launch value | Rationale |
 |-------|--------------|-----------|
 | `audit_bps` | 4000 | 40% of inflow to audit reserve accumulates toward the ~USD 50K-150K target for the next third-party audit (24% of total fee under the V1 launch fee split — same accumulation rate as the historical 80%×30% allocation) |
-| `ops_bps` | 2500 | 25% to platform-layer infrastructure: VPS (dual-instance keeper), Blockfrost paid tier, monitoring stack, domain/CDN, frontend hosting. Reduced from 40% because the new 40% keeper share absorbs per-keeper infra cost directly via Compound output |
+| `ops_bps` | 2500 | 25% to platform-layer infrastructure: self-hosted infrastructure (dual-instance keeper), Blockfrost paid tier, monitoring stack, domain/CDN, frontend hosting. Reduced from 40% because the new 40% keeper share absorbs per-keeper infra cost directly via Compound output |
 | `rd_bps` | 2500 | 25% to protocol development, future bounty program (post-audit + TVL-scale per `docs/audit-scope.md §6.3`), ecosystem grants to contributors |
 | `buffer_bps` | 1000 | 10% to unexpected costs, legal consultation, incident response |
 | `monthly_cap_audit` | 500_000_000 (500 USDCx) | Prevents any single month's spend from draining audit reserve |
@@ -236,7 +236,7 @@ At approximately USD 1M TVL, the same math produces:
 
 - Annual inflow (60% treasury share): `1,620 USDCx`
 - Audit reserve: `648/yr` (24% of total fee = same accumulation rate as the historical allocation) → fills a USD 50K audit reserve in ~77 years at this TVL level, or ~8 years at USD 10M TVL
-- Operations: `405/yr` — covers low-end VPS + Blockfrost (per-keeper infra now funded directly via the 40% keeper direct share, not from this bucket)
+- Operations: `405/yr` — covers low-end hosting + Blockfrost (per-keeper infra now funded directly via the 40% keeper direct share, not from this bucket)
 - R&D: `405/yr` — modest grant/bounty budget; 1-2 small bounties per year
 - Buffer: `162/yr`
 

@@ -163,7 +163,7 @@ Every `ActionKind` has a minimum timelock. Governance can queue with a **longer*
 | `RotateSigners`         | 14 days      | 7 days      | 14 days       | Change multisig membership or threshold |
 | `SlashBond`             | 14 days      | 7 days      | 14 days       | **Phase 3+ only** (`active_bonds` non-empty); confiscate misbehaving keeper's bond. Not reachable at V1 launch. |
 | `UpdateOracleSource`    | 14 days      | 7 days      | 14 days       | Switch SwapAda oracle source (Charli3/Orcfax feed rotation). See `spec/ada-swap.md` §7. |
-| `DeregisterStake`       | 14 days      | 7 days      | 14 days       | Recover the 2 ADA Cardano stake-registration deposit per staking validator post-teardown. Covers all **12 V1 staking credentials**: `vault_user`, `vault_keeper_hot`, `vault_batcher`, `vault_swap_ada`, `vault_protocol`, `vault_recall`, `vault_liqwid`, `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`, `keeper_stake_script`, `minswap_v2_adapter` (SwapAdapter). |
+| `DeregisterStake`       | 14 days      | 7 days      | 14 days       | Recover the 2 ADA Cardano stake-registration deposit per staking validator post-teardown. Covers all **14 V1 staking credentials**: `vault_user`, `vault_keeper_hot`, `vault_batcher`, `vault_swap_ada`, `vault_protocol`, `vault_recall`, `vault_liqwid`, `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`, `keeper_stake_script`, `minswap_v2_adapter` (SwapAdapter), `sundaeswap_adapter`, `sundaeswap_cancel_guard`. |
 | `Heartbeat`             | 0 (self)     | N/A         | N/A           | 1-of-self signer liveness; direct redeemer, not queued |
 | `DistributeSignerCompensation` | 0 (1-of-n) | N/A     | N/A           | Quarterly pool distribution; direct redeemer, not queued |
 
@@ -279,7 +279,7 @@ Governance cannot raise these caps — they are protocol constants in `lib/vault
 
 After triggering, any vUSDCx holder can drive Recall → Swap → Withdraw without any keeper or governance intervention. The redeemer **only opens recovery paths** — it cannot mutate any value-bearing field; attackers cannot use it to drain or brick the vault.
 
-**Out-of-scope:** does NOT recover the ~870 ADA in reference-script lockup (founder's deploy wallet) nor the ~24 ADA in stake-credential deposits (gov-only A2 ActDeregisterStake). These accept their own residual loss as part of single-actor governance cost.
+**Out-of-scope:** does NOT recover the ~962 ADA in reference-script lockup (founder's deploy wallet) nor the ~28 ADA in stake-credential deposits (gov-only A2 ActDeregisterStake). These accept their own residual loss as part of single-actor governance cost.
 
 ### 4.5 AdminDeployNonDeposit
 
@@ -371,7 +371,7 @@ After triggering, any vUSDCx holder can drive Recall → Swap → Withdraw witho
 **Purpose:** Recover the 2 ADA Cardano stake-registration deposit posted per staking validator when its credential was registered during the V1 deploy ceremony. Addresses the V1 design-gap documented in `deploy/state/recovery-verification.md` §2, where the original staking validators' `else(_) { fail }` catch-all rejected the ledger's Publish purpose.
 
 **Scope at V1 launch:**
-- **All 12 V1 staking credentials** carry a gov-gated `publish` handler and are deregister-able via this action: `vault_user`, `vault_keeper_hot`, `vault_batcher`, `vault_swap_ada`, `vault_protocol`, `vault_recall`, `vault_liqwid`, `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`, `keeper_stake_script`, and the SwapAdapter `minswap_v2_adapter`. Partitioning rationale documented in `spec/architecture.md §4.1`.
+- **All 14 V1 staking credentials** carry a gov-gated `publish` handler and are deregister-able via this action: `vault_user`, `vault_keeper_hot`, `vault_batcher`, `vault_swap_ada`, `vault_protocol`, `vault_recall`, `vault_liqwid`, `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`, `keeper_stake_script`, the SwapAdapter `minswap_v2_adapter`, and the SundaeSwap pair `sundaeswap_adapter` + `sundaeswap_cancel_guard`. Partitioning rationale documented in `spec/architecture.md §4.1`.
 
 **Publish handler pattern:**
 ```aiken

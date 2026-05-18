@@ -51,7 +51,7 @@ V1's launch allocation:
 
 Key points:
 
-**The keeper's 40% looks high, but it is actually a net cost centre.** At 100K TVL, 6% gross yield × 4.5% × 40% ≈ $108/yr — under the Phase 1 baseline configuration, far short of covering an independent operator's VPS and monitoring costs (typically $400–$1,000/yr). The 40% keeper cap is deliberately set high so that future open keeper registration (whitepaper §7.2 PermissionlessWithBond) can bring a non-founder keeper's breakeven TVL down to roughly $1M — a 25% cap would put it near $1.5M; 40% drops it to about $1M. This is V1's structural runway for actually opening up keeper registration in Phase 3+.
+**The keeper's 40% looks high, but it is actually a net cost centre.** At 100K TVL, 6% gross yield × 4.5% × 40% ≈ $108/yr — under the Phase 1 baseline configuration, far short of covering an independent operator's infrastructure and monitoring costs (typically $400–$1,000/yr). The 40% keeper cap is deliberately set high so that future open keeper registration (whitepaper §7.2 PermissionlessWithBond) can bring a non-founder keeper's breakeven TVL down to roughly $1M — a 25% cap would put it near $1.5M; 40% drops it to about $1M. This is V1's structural runway for actually opening up keeper registration in Phase 3+.
 
 **The gov pool starts at 0%.** In Phase 1, governance is a 3-of-3 multisig (or falls back to a single signer when SPO recruitment is delayed); governance activity is sparse, so the gov pool has no economic necessity at this stage. Setting `gov_fee_bps = 0` effectively disables the gov pool — no USDCx accrues in the MultisigGov UTXO — while the governance timelock and cancel mechanisms keep operating normally.
 

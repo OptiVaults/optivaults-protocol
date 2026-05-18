@@ -1,6 +1,6 @@
 # SwapAdapter interface — V1 multi-DEX extension point
 
-**Status:** V1 always ships `minswap_v2_adapter`, and optionally a second adapter — `sundaeswap_adapter` plus its companion `sundaeswap_cancel_guard` — bound at the deploy ceremony when the config enables SundaeSwap (see §8). Beyond those, further DEX adapters can be deployed + whitelisted post-launch via governance `UpdateRegistry` (14-day timelock + 1-of-n cancel) **without redeploying V1 or forcing depositor migration**.
+**Status:** V1 ships two DEX adapters — `minswap_v2_adapter` and the SundaeSwap pair (`sundaeswap_adapter` plus its companion `sundaeswap_cancel_guard`) — both bound at the deploy ceremony (see §8). Beyond those, further DEX adapters can be deployed + whitelisted post-launch via governance `UpdateRegistry` (14-day timelock + 1-of-n cancel) **without redeploying V1 or forcing depositor migration**.
 
 ## 1. Motivation
 
@@ -131,7 +131,7 @@ V1 launches with the `minswap_v2_adapter` script hash (computed at deploy time f
 
 ## 8. SundaeSwap — the bundled second adapter
 
-V1 can be deployed with a second SwapAdapter for **SundaeSwap V3 + Stableswaps**, bound at the deploy ceremony rather than added post-launch. It is **opt-in**: the V1 deploy ceremony folds it in only when the ceremony config carries a `sundaeswap` block. Omitting the block leaves the ceremony byte-identical to the 22-artefact Minswap-only base; enabling it makes the artefact count **24** (the two artefacts below) and the reference-script count 20.
+V1 ships a second SwapAdapter for **SundaeSwap V3 + Stableswaps**, bound at the deploy ceremony rather than added post-launch. The V1 deploy ceremony folds it in via a `sundaeswap` block in the ceremony config, so it is part of every V1 launch deploy: V1's canonical artefact count is **24** (the two artefacts below included) and its reference-script count is 20. (A deployment that omits the `sundaeswap` config block would be 22 artefacts / 18 reference scripts, but that is not V1's canonical configuration.)
 
 ### 8.1 Why a second DEX
 

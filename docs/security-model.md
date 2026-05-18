@@ -266,7 +266,7 @@ The three layers are designed to bound depositor loss across the realistic singl
 **Scenario E — Founder incapacitated, no SPO co-signers, ≥ 90 days no activity**
 - Founder is unreachable / deceased / loses key. Keeper stops running. No governance action queued in 90+ days.
 - Depositor response: any vUSDCx holder invokes `CommunitySunset`. Frozen + sunset_triggered set. Then any holder fires `RecallFromLiqwid` per market → underlying recovered. Then any holder fires `DeployToProtocol` Layer 2 swap → USDCx lands in vault. Then each holder fires `Withdraw` → recovers proportional USDCx.
-- Depositor outcome: full proportional USDCx recovered. Out-of-scope losses: ~870 ADA reference-script lockup (founder's deploy wallet), ~24 ADA stake-credential deposits (gov-only A2 path) — these accept residual loss as the cost of single-actor governance.
+- Depositor outcome: full proportional USDCx recovered. Out-of-scope losses: ~962 ADA reference-script lockup (founder's deploy wallet), ~28 ADA stake-credential deposits (gov-only A2 path) — these accept residual loss as the cost of single-actor governance.
 - Time horizon: hours-to-days for community-driven recovery once 90-day threshold is met. The 90-day threshold itself is the trigger condition, so total wait from incident to recovery initiation is bounded by the operational-inactivity detection window.
 
 **Scenario F — Founder key compromise + attacker also controls keeper + 90 days pass**
@@ -277,8 +277,8 @@ The three layers are designed to bound depositor loss across the realistic singl
 #### Out-of-scope under sunset
 
 CommunitySunset does NOT recover:
-- ~870 ADA in reference-script UTXOs at the deploy wallet (founder's funds, recoverable only with founder's deploy key).
-- ~24 ADA in stake-credential deposits (A2 ActDeregisterStake requires gov-multisig signatures).
+- ~962 ADA in reference-script UTXOs at the deploy wallet (founder's funds, recoverable only with founder's deploy key).
+- ~28 ADA in stake-credential deposits (A2 ActDeregisterStake requires gov-multisig signatures).
 
 These are operator/founder-side losses, not depositor losses, and accept their own residual exposure as part of the single-actor governance cost. Future founder-side mitigations (multi-sig deploy wallet, dead-man-release on stake deposits) are out-of-scope for V1 launch.
 

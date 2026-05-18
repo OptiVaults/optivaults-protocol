@@ -267,7 +267,7 @@ Validator hash + 基礎身份。任何一個變動都會強制新部署(新地�
 **情境 E — Founder 失能、沒 SPO 共簽者、≥ 90 天無動靜**
 - 創辦人聯絡不上 / 過世 / 失去 key。Keeper 停跑。90+ 天沒有任何治理動作 queue。
 - 存入者反應:任何 vUSDCx 持有者呼叫 `CommunitySunset`。Frozen + sunset_triggered 設定。然後任何持有者 fire `RecallFromLiqwid` per market → underlying 收回。然後任何持有者 fire `DeployToProtocol` Layer 2 swap → USDCx 落到 vault。然後每位持有者 fire `Withdraw` → 拿回按比例的 USDCx。
-- 存入者結果:完整按比例回收 USDCx。範圍外損失:~870 ADA reference-script 鎖定(創辦人部署錢包)、~24 ADA stake-credential 押金(治理 A2 路徑)——這兩部分作為單一簽名者治理的殘留成本被接受。
+- 存入者結果:完整按比例回收 USDCx。範圍外損失:~962 ADA reference-script 鎖定(創辦人部署錢包)、~28 ADA stake-credential 押金(治理 A2 路徑)——這兩部分作為單一簽名者治理的殘留成本被接受。
 - 時間範圍:90 天門檻達到後,社群驅動回收 hours-to-days。90 天門檻本身就是觸發條件,從事件到回收啟動的總時間取決於運營失能偵測窗口。
 
 **情境 F — Founder key 被盜 + 攻擊者也控制 keeper + 90 天過去**
@@ -278,8 +278,8 @@ Validator hash + 基礎身份。任何一個變動都會強制新部署(新地�
 #### Sunset 範圍外
 
 CommunitySunset **不**回收:
-- 部署用的 ~870 ADA reference-script UTXO(創辦人部署錢包,只能用創辦人部署 key 回收)。
-- ~24 ADA 的 stake-credential 押金(A2 ActDeregisterStake 需要治理 multisig)。
+- 部署用的 ~962 ADA reference-script UTXO(創辦人部署錢包,只能用創辦人部署 key 回收)。
+- ~28 ADA 的 stake-credential 押金(A2 ActDeregisterStake 需要治理 multisig)。
 
 這是 operator/founder 端的損失,不是存入者損失,作為單一簽名者治理的殘留成本被接受。未來 founder 端的緩解措施(multi-sig 部署錢包、stake 押金的 dead-man-release)在 V1 上線範圍外。
 

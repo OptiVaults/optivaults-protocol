@@ -205,7 +205,7 @@ V1 mainnet 部署時,TreasuryDatum 初始化為:
 | 欄位 | 啟動值 | 理由 |
 |------|------|------|
 | `audit_bps` | 4000 | 40% 的 inflow 進 audit reserve,逐步累積達到下一次第三方審計約 USD 50K-150K 目標(V1 啟動 fee split 下總 fee 的 24%——與舊 80%×30% 同樣的累積速度) |
-| `ops_bps` | 2500 | 25% 給平台層基礎設施:VPS(雙實例 keeper)、Blockfrost 付費版、監控 stack、網域/CDN、frontend 代管。從 40% 下調,因新的 40% keeper 直接份額已透過 Compound output 吸收 per-keeper infra 成本 |
+| `ops_bps` | 2500 | 25% 給平台層基礎設施:自架基礎設施(雙實例 keeper)、Blockfrost 付費版、監控 stack、網域/CDN、frontend 代管。從 40% 下調,因新的 40% keeper 直接份額已透過 Compound output 吸收 per-keeper infra 成本 |
 | `rd_bps` | 2500 | 25% 給協議開發、未來的 bounty 計畫(post-audit + TVL-scale,依 `docs/audit-scope.md §6.3`)、貢獻者生態補助 |
 | `buffer_bps` | 1000 | 10% 給預期外支出、法律諮詢、事件應變 |
 | `monthly_cap_audit` | 500_000_000(500 USDCx) | 防單月支出榨乾 audit reserve |
@@ -236,7 +236,7 @@ V1 mainnet 部署時,TreasuryDatum 初始化為:
 
 - 年 inflow(60% treasury 份額):`1,620 USDCx`
 - Audit reserve:`648/年`(總 fee 的 24% = 與舊配置同樣累積速度)→ 這個 TVL 下,累到 50K 約 77 年;USD 10M TVL 下約 8 年
-- Operations:`405/年`——低端 VPS + Blockfrost(per-keeper infra 現在透過 40% keeper 直接份額補,不再從這個 bucket)
+- Operations:`405/年`——低端代管主機 + Blockfrost(per-keeper infra 現在透過 40% keeper 直接份額補,不再從這個 bucket)
 - R&D:`405/年`——適度的 grant / bounty 預算,每年 1-2 個小 bounty
 - Buffer:`162/年`
 

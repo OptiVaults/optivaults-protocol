@@ -45,7 +45,7 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 5. **以 stake validator 做 keeper 授權**——keeper 的操作透過一個帶 mode flag 的 stake validator 驗證,讓授權規則可以演進(治理核可清單 → 帶保證金的 permissionless),不需要重部署主 vault 合約。
 6. **keeper 費率分成 40%**——執行該筆 Compound 的 keeper 拿 40% 績效費作為營運補償(validator 硬上限);其餘 60% 進 treasury。設在硬上限是為了在公共財定位下支持 post-audit Phase 2+ 第三方 keeper 經濟可行性。
 7. **使用者自訂 batch tip**——Order UTxO 帶有使用者自訂的 tip 上限;keeper 在處理 batched order 時只能在此上限內收取。
-8. **Withdraw-Zero forwarding pattern**——單一 vault UTxO 透過 `vault_proxy` 委派給 10 個 staking validator(`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`),以滿足大小限制並做乾淨的角色分離。切分理由(四條正交軸線:授權邊界、治理反應延遲、bytecode 成本集中點、size 修正)整理於 `spec/architecture.md §4.1`。每個 stake credential(10 個 Withdraw-Zero 委派的 validator + `keeper_stake_script` + `minswap_v2_adapter` SwapAdapter,共 12 個)都各自帶有自己的 A2 `publish` handler,所以這 12 份 stake-registration 押金都可以在 sunset 時透過治理回收。
+8. **Withdraw-Zero forwarding pattern**——單一 vault UTxO 透過 `vault_proxy` 委派給 10 個 staking validator(`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`),以滿足大小限制並做乾淨的角色分離。切分理由(四條正交軸線:授權邊界、治理反應延遲、bytecode 成本集中點、size 修正)整理於 `spec/architecture.md §4.1`。每個 stake credential(10 個 Withdraw-Zero 委派的 validator + `keeper_stake_script` + `minswap_v2_adapter` SwapAdapter + `sundaeswap_adapter` + `sundaeswap_cancel_guard`,共 14 個)都各自帶有自己的 A2 `publish` handler,所以這 14 份 stake-registration 押金都可以在 sunset 時透過治理回收。
 9. **編譯時信任錨點**——Vault Identity NFT、governance NFT policy、treasury script、keeper stake script 都在部署時燒進 validator script hash,而不是放在 datum 欄位。
 10. **Pre-audit TVL 上限**——Operator 自律執行的 100K USDCx 上限,一直到 Q2-Q3 2027 第三方審計完成為止;post-audit 的上限調整計畫會與審計報告一併公開。
 11. **公共財定位**——V1 被定位為**非商業**的公共財參考實作。4.5% 績效費用於覆蓋營運 + audit reserve + 長期 runway,不是創辦人或投資人的收益。Apache 2.0 授權讓 fork 與特化變得可行(不同穩定幣組合、不同風險姿態、區域變體)。V1 可能就是最終狀態,也可能是其他 Cardano DeFi 團隊改造的基礎——這兩個結局都是可接受的。存入者參與時應抱持的心態是「**貢獻公共財 + 擔任早期驗證者**」,不是購買商業服務。完整含意見白皮書 §12 免責聲明。
@@ -69,11 +69,11 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 │   ├── ada-swap.md             SwapAda redeemer + dual-feed 預言機讀取器
 │   ├── vault-nft.md            Vault Identity NFT one-shot mint 模式
 │   └── swap-adapter.md         SwapAdapter 介面 + B@launch=1 上線後新增 DEX 流程
-├── contracts/                  V1 Aiken PlutusV3 原始碼——17 個 logic validator + 4 個 NFT mint policy + 1 個 DEX adapter;`aiken check` 全綠（對應部署 commit 跑可取得當前 test summary）
+├── contracts/                  V1 Aiken PlutusV3 原始碼——17 個 logic validator + 4 個 NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact;`aiken check` 全綠（對應部署 commit 跑可取得當前 test summary）
 ├── deploy/                     部署流程
 │   ├── README.md               Deploy pipeline 總覽 + checklist
 │   ├── deploy.ts               單指令 ceremony 指揮(冪等 + 可續跑)
-│   ├── compile.ts              離線 hash 推導(跨 22 個 artefact 做 applyParams)
+│   ├── compile.ts              離線 hash 推導(跨 24 個 artefact 做 applyParams)
 │   ├── lib/                    blockfrostProvider + 設定載入 + 狀態檔 + datum 建構 + ref-script 部署 + 階段助手
 │   ├── config/                 preprod.example.json + mainnet.example.json(樣板)+ preprod-mock.json(operator 自備的實用設定為 gitignored)
 │   ├── state/                  Ceremony 狀態 checkpoint(gitignored——依 releaseTag 分 JSON)
@@ -126,25 +126,25 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 V1 目前處於**mainnet pre-flight 階段**:
 
 - ✅ 規格 / 文件 / 白皮書完成(`spec/` + `docs/` + `whitepaper/` 共 15 份 markdown)。
-- ✅ 全部 17 個 Aiken logic validator + 4 個 NFT mint policy + 1 個 DEX adapter(`minswap_v2_adapter`,§B@launch=1 SwapAdapter)都已實作,`aiken check` 全綠(`contracts/`)。切分理由見 `spec/architecture.md` §4.1。`UpdateSlippagePolicy` + 2 個 VaultDatum 欄位(§5.4 Phase 2)以及 ref-script SwapAdapter dispatch + `minswap_v2_adapter` + Registry `swap_adapter_hashes`(§B@launch=1)全部上鏈。
+- ✅ 全部 17 個 Aiken logic validator + 4 個 NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact 都已實作,`aiken check` 全綠(`contracts/`)。切分理由見 `spec/architecture.md` §4.1。`UpdateSlippagePolicy` + 2 個 VaultDatum 欄位(§5.4 Phase 2)以及 ref-script SwapAdapter dispatch + `minswap_v2_adapter` + Registry `swap_adapter_hashes`(§B@launch=1)全部上鏈。
 - ✅ 單元 + property 測試套件——對應部署 commit 跑 `aiken check` 全綠（cd contracts && aiken check 取得當前 summary；property test 使用 `aiken/fuzz` 的 iteration cap 紀律，首次失敗 early-exit）。
 - ✅ Preprod E2E 測試計畫已草擬(`tests/preprod-e2e-plan.md`),涵蓋全部 vault validator + 4 個 NFT one-shot policy + 跨 validator 整合流程,共 100+ 個情境。
 - ✅ Preprod E2E 測試腳本——多階段覆蓋，包含 ceremony health + 用戶流程（Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw）+ zero-yield Compound + MergeUtxo 捐贈路徑（含負測路徑）+ 治理狀態機流程 + oracle / SwapAdapter chain replay。腳本發布在 operator reference repo。
-- ✅ 多次 Preprod ceremony 已執行——每次 38 筆 TX，所有階段鏈上驗證通過。近期 ceremony 已驗證治理 Queue/Execute 多簽流程、mock-Liqwid Supply/Recall/Compound/Distribute 端對端、oracle E2E（含 stale-feed / disagreement / no-entry 拒絕路徑）、以及 R77 F-1 攻擊接收方鏈上重演防線。
+- ✅ 多次 Preprod ceremony 已執行——每次 42 筆 TX，所有階段鏈上驗證通過。近期 ceremony 已驗證治理 Queue/Execute 多簽流程、mock-Liqwid Supply/Recall/Compound/Distribute 端對端、oracle E2E（含 stale-feed / disagreement / no-entry 拒絕路徑）、以及攻擊接收方鏈上重演防線。
 - ✅ A2 治理閘控 stake deregister 工具(`deploy/tools/a2-{queue,execute,cancel}-deregister.ts`),帶冪等性 + CBOR-Constr payload 編碼。
 - ✅ Mainnet ceremony runbook 已草擬(`deploy/runbooks/v1-mainnet-ceremony.md`,501 行)——資金預算 + pre-flight + 逐階段 + 部分失敗處理 + 儀式後補登 + sunset 路徑。
 - ✅ 鏈下 byte-for-byte decoder `deploy/tools/verify-minswap-v2-decode.ts` 把 Minswap V2 adapter 的 decode 邏輯暴露出來,讓 pre-mainnet 可以對歷史鏈上 TX 做 decode 驗證而不用重送一次。
 - ⏳ Keeper 參考實作——放在 `optivaults-reference`(operator repo),尚未開始。
-- ⏳ 內部審計輪次（涵蓋區 A-F，見 `docs/audit-scope.md`）——已完成多輪，嚴重度分級與修補證據詳列於 `SECURITY.md`。近期 CRITICAL 修補：R77 F-1（Minswap V2 order datum 接收方欄位無約束——透過 `SwapAdapterRedeemer.expected_recipient_addr` + Layer-1 / Layer-2 強制檢查修補）。A-F 涵蓋區逐一走讀尚未展開。
+- ⏳ 內部審計輪次（涵蓋區 A-F，見 `docs/audit-scope.md`）——已完成多輪內部對抗性審計，以涵蓋區為組織單位；迄今所有非 INFO 級的發現都已在程式碼中修補並補上 regression test（`SECURITY.md` 帶有定性摘要）。第三方審計待進行。
 - ⏳ 外部審計接洽——目標 Q2-Q3 2027,事務所尚未選定。
 
 ### Preprod deploy 狀態
 
 V1 合約集已執行多次 Preprod ceremony，演練完整 deploy pipeline + 治理狀態機 + Liqwid 整合 + SwapAdapter dispatch + oracle E2E。每次 ceremony 的 per-validator hash 與鏈上 TX 證據都記錄在該 ceremony 的 state JSON（`deploy/state/<network>-<release-tag>.json`，operator-only，gitignored）。最近一次 ceremony 的 `mainnet-hash-preview.txt` 快照可透過 `deploy/tools/verify-mainnet-build.sh` 重新產出（該腳本現已包含對所有 `h-*.ts` operator tool 的 TIMELOCK_MS 預檢 audit gate）。
 
-Stake-registration 押金（每次 12 × 2 ADA = 24 ADA）+ ref-script min-ADA 鎖定（每次約 870 ADA）在 sunset 時都可以透過 `deploy/tools/a2-{queue,execute}-deregister.ts` + `deploy/tools/reclaim-refs.ts` 回收，前提是走 A2 治理流程（14 天 production timelock）。
+Stake-registration 押金（每次 14 × 2 ADA = 28 ADA）+ ref-script min-ADA 鎖定（每次約 962 ADA）在 sunset 時都可以透過 `deploy/tools/a2-{queue,execute}-deregister.ts` + `deploy/tools/reclaim-refs.ts` 回收，前提是走 A2 治理流程（14 天 production timelock）。
 
-編譯後 validator 大小——全部 22 個 artefact 都在 16 KB Plutus V3 上限以下。任何 commit 的精確 per-validator bytes 可透過 `cd contracts && aiken build` 後對 `plutus.json` 計算重現；我們刻意不在本文件 pin 特定大小，避免隨審計輪次修補使合約面演進而與 source of truth 脫節。
+編譯後 validator 大小——全部 24 個 artefact 都在 16 KB Plutus V3 上限以下。任何 commit 的精確 per-validator bytes 可透過 `cd contracts && aiken build` 後對 `plutus.json` 計算重現；我們刻意不在本文件 pin 特定大小，避免隨審計輪次修補使合約面演進而與 source of truth 脫節。
 
 開發 / 審計 / 上線時程見 [docs/audit-scope.md](docs/audit-scope.md)。
 

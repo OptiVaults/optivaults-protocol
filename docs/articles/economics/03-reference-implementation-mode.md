@@ -47,7 +47,7 @@ Net: keeper -$30-35
 Protocol income: $13.5/year (entirely to treasury + founder keeper share)
 ```
 
-At this scale, default cadence's on-chain gas exceeds the keeper's extraction from the vault, let alone covering VPS / monitoring infrastructure. **Running $5K TVL under default cadence is economically unreasonable and contradicts V1's public-goods positioning**.
+At this scale, default cadence's on-chain gas exceeds the keeper's extraction from the vault, let alone covering hosting / monitoring infrastructure. **Running $5K TVL under default cadence is economically unreasonable and contradicts V1's public-goods positioning**.
 
 Reference Implementation Mode is V1's contract-plus-operational-layer response.
 
@@ -128,7 +128,7 @@ Compute default cadence vs Reference Implementation Mode's annual on-chain gas:
 - Heartbeat × 4-5 × 0.5-1 ADA ≈ 2-5 ADA
 - **Total ≈ 4-15 ADA/year**
 
-Reduction roughly 85-95%. Combined with "no need for high-tier keeper VPS plan" (single ARM VPS at about $50/yr suffices under Reference Implementation Mode), V1's low-TVL operational cost drops to about **$80/yr** — the figure listed in whitepaper §4.3.1's cost-scaling table's lowest range.
+Reduction roughly 85-95%. Combined with "no need for a high-tier keeper hosting plan" (a single small ARM server at about $50/yr suffices under Reference Implementation Mode), V1's low-TVL operational cost drops to about **$80/yr** — the figure listed in whitepaper §4.3.1's cost-scaling table's lowest range.
 
 $80/yr is a critical threshold. It means the founder's burden absorbing this cost from personal income is light enough that "no founding-capital runway needs to be drawn down" — that's the concrete meaning of V1's "structurally sustainable" claim.
 

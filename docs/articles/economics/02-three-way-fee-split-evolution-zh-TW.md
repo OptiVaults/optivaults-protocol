@@ -51,7 +51,7 @@ V1 啟動時的分配：
 
 幾個關鍵點：
 
-**Keeper 40% 看起來高，但實際上是 net cost-centre**。100K TVL × 6% 毛收益 × 4.5% × 40% ≈ $108/年 — 在 Phase 1 baseline 配置下完全不足以覆蓋一個獨立營運者的 VPS + 監控成本（典型約 $400–$1,000/年）。Keeper 40% 上限刻意推高，是為了讓未來開放 keeper 註冊時（白皮書 §7.2 PermissionlessWithBond）非創辦人 keeper 的損益平衡 TVL 降到約 $1M——舊的 25% 上限對應 ~$1.5M，40% 上限降到 ~$1M。這是 V1 為「Phase 3+ 真正開放 keeper」鋪的結構性路。
+**Keeper 40% 看起來高，但實際上是 net cost-centre**。100K TVL × 6% 毛收益 × 4.5% × 40% ≈ $108/年 — 在 Phase 1 baseline 配置下完全不足以覆蓋一個獨立營運者的基礎設施 + 監控成本（典型約 $400–$1,000/年）。Keeper 40% 上限刻意推高，是為了讓未來開放 keeper 註冊時（白皮書 §7.2 PermissionlessWithBond）非創辦人 keeper 的損益平衡 TVL 降到約 $1M——舊的 25% 上限對應 ~$1.5M，40% 上限降到 ~$1M。這是 V1 為「Phase 3+ 真正開放 keeper」鋪的結構性路。
 
 **Gov pool 啟動時為 0**。Phase 1 由 3-of-3 簽名者治理（或於 SPO 招募延後時退到單一簽名者 fallback），治理活動稀疏，gov pool 在這個階段沒有經濟必要。把 `gov_fee_bps` 設為 0 等同於「停用 gov pool」——不會有 USDCx 累積在 MultisigGov UTXO，治理動作的 timelock 與 cancel 機制照常運作。
 

@@ -90,7 +90,7 @@ Three guarantees hold unconditionally in deployed V1 Aiken validators, independe
 Additional invariants enforced on-chain (not exhaustive — see `docs/audit-scope.md §1`):
 
 - **Non-deposit token preservation.** `verify_other_tokens_preserved` pattern on 7+ redeemers prevents silent token injection or extraction.
-- **Allocation invariant.** Two variants enforced across the vault operational set — a stricter `alloc_sum + idle_buffer ≤ total_deposited` via the shared `validate_allocations` helper (used by `Compound` / `DeployToProtocol` / `RecallFromProtocol` / `UpdateStrategy` / `AdminDeployNonDeposit` / `vault_liqwid` ops) and a looser `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal` inline check in `vault_gov_emergency.EmergencyWithdraw`. `vault_recall.MergeUtxo` guards the looser form at the source of donation-driven state changes via `valid_merge_utxo_admissibility` (R73 F-1 fix) — a MergeUtxo post-state that satisfies the looser form automatically satisfies the stricter form downstream because NDV and Σ liqwid_principal are non-negative.
+- **Allocation invariant.** Two variants enforced across the vault operational set — a stricter `alloc_sum + idle_buffer ≤ total_deposited` via the shared `validate_allocations` helper (used by `Compound` / `DeployToProtocol` / `RecallFromProtocol` / `UpdateStrategy` / `AdminDeployNonDeposit` / `vault_liqwid` ops) and a looser `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal` inline check in `vault_gov_emergency.EmergencyWithdraw`. `vault_recall.MergeUtxo` guards the looser form at the source of donation-driven state changes via `valid_merge_utxo_admissibility` — a MergeUtxo post-state that satisfies the looser form automatically satisfies the stricter form downstream because NDV and Σ liqwid_principal are non-negative.
 - **First-depositor protection.** `initial_share_multiplier = 10^6` + `valid_deposited > 0` prevent ERC-4626-style inflation attacks.
 - **Minimum deposit.** 10 USDCx minimum on Direct Deposit (queued Order bypasses for dust-safe batching; BatchProcess enforces non-zero share mint).
 - **Anti-double-satisfaction.** `vault_user.Withdraw` enforces `receiver_output_idx` hard binding. BatchProcess enforces `payout_output_index` uniqueness across multiple orders.
@@ -117,14 +117,14 @@ The following depositor-facing promises depend on external infrastructure remain
 
 | Category | Coverage | Status |
 |----------|----------|--------|
-| Aiken unit tests | Deterministic cases across all 22 artefacts + cross-validator integration flows; includes inline tests in `minswap_v2_adapter`. Exact count reproducible via `cd contracts && aiken check` at the deployed commit. | All pass |
+| Aiken unit tests | Deterministic cases across all 24 artefacts + cross-validator integration flows; includes inline tests in `minswap_v2_adapter`. Exact count reproducible via `cd contracts && aiken check` at the deployed commit. | All pass |
 | Aiken property-based fuzz (`aiken/fuzz` v2.2.0) | Property tests in `lib/vault/tests/property_test.ak` with iteration-cap discipline (default 100 iter per property, early-exit on first failure). Exact property count reproducible via `aiken check`. | All pass |
-| Preprod E2E scripts (`tests/preprod/`) | Multi-phase coverage: ceremony health, user flows (Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw), zero-yield Compound, MergeUtxo donation paths (including negative-path rejections), governance state-machine flows (Queue / Execute / Cancel), oracle E2E (Tier 1 + Tier 2 + stale / disagreement / no-entry rejection), SwapAdapter dispatch (R77 F-1 attacker-recipient chain replay), and mock-Liqwid Supply / Recall / Compound / Distribute end-to-end. | All chain-verified on the relevant ceremonies |
+| Preprod E2E scripts (`tests/preprod/`) | Multi-phase coverage: ceremony health, user flows (Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw), zero-yield Compound, MergeUtxo donation paths (including negative-path rejections), governance state-machine flows (Queue / Execute / Cancel), oracle E2E (Tier 1 + Tier 2 + stale / disagreement / no-entry rejection), SwapAdapter dispatch (attacker-recipient chain replay), and mock-Liqwid Supply / Recall / Compound / Distribute end-to-end. | All chain-verified on the relevant ceremonies |
 | Keeper vitest | Reference keeper implementation lives in the operator repo; test suite scoped there. | — |
 | API vitest | Not in V1 scope (V1 covers protocol layer only — see `README.md` two-layer architecture). | — |
 | Frontend vitest | Not in V1 scope (V1 covers protocol layer only — see `README.md` two-layer architecture). | — |
 
-Preprod ceremonies have exercised the full deploy pipeline + post-deploy operational flows across multiple release tags. Per-ceremony chain TX evidence lives in `deploy/state/<network>-<release-tag>.json` (operator-only, gitignored). Most recent CRITICAL fix re-verified on a fresh post-fix ceremony: R77 F-1 attacker-recipient chain-replay defence (`SwapAdapterRedeemer.expected_recipient_addr` Layer-1 / Layer-2 enforcement).
+Preprod ceremonies have exercised the full deploy pipeline + post-deploy operational flows across multiple release tags. Per-ceremony chain TX evidence lives in `deploy/state/<network>-<release-tag>.json` (operator-only, gitignored). Internal-audit fixes are re-verified on a fresh post-fix ceremony before they are considered closed — including the attacker-recipient chain-replay defence (`SwapAdapterRedeemer.expected_recipient_addr` Layer-1 / Layer-2 enforcement).
 
 ---
 
@@ -134,16 +134,9 @@ Preprod ceremonies have exercised the full deploy pipeline + post-deploy operati
 
 V1 uses a **coverage-area methodology** (areas A–F, see `docs/audit-scope.md §4`) for its internal audit history. This replaces the per-round numbering earlier internal-verification versions used. Coverage areas map to validator clusters + cross-validator integration flows rather than being tied to chronological audit rounds.
 
-### Internal round history
+### Internal audit history
 
-Internal adversarial audit rounds executed against V1 contract code (additional rounds covered the internal-verification-phase heritage prior to V1 cutover — see `spec/architecture.md §4.1`):
-
-| Round | Scope | Severity breakdown | Status |
-|-------|-------|-------------------:|--------|
-| R72 | Post-Phase-77d hacker-mindset on full V1 set (17 logic + 4 NFT + 1 adapter) | 0 CRIT / 0 HIGH / 1 MEDIUM / 3 LOW / 6 INFO | MEDIUM + 3 LOW fixed on-chain; INFO documented |
-| R73 | `valid_allocs × vault_recall.MergeUtxo` admissibility gap | 0 CRIT / 0 HIGH / 1 MEDIUM | **FIXED** via `valid_merge_utxo_admissibility` in `lib/vault/validation.ak` + `vault_recall.MergeUtxo` invocation; 6 regression tests in `lib/vault/tests/r73_test.ak` |
-| R74 | Phase O pre-mainnet Minswap V2 decoder byte-for-byte verification against real mainnet order | 0 CRIT / 1 HIGH / 0 MEDIUM | **FIXED** via `hop_chain` redeemer + LP-name re-hash; see R74 F-1 entry in "Recently fixed" |
-| R77 | Independent hacker-mindset audit of full V1 set (17 logic + 4 NFT + 1 adapter + 5 lib modules) | 1 CRITICAL / 1 LOW / 2 INFO | **FIXED** this commit — see R77 F-1 entry in "Recently fixed" below |
+V1's contract code has undergone multiple rounds of internal adversarial audit, organised by coverage area (areas A–F — see `docs/audit-scope.md`). Each round is a structured adversarial read against a defined threat model; all non-INFO findings surfaced to date have been resolved in code with regression tests added. Per-finding detail is consolidated internally for the forthcoming third-party audit rather than enumerated here.
 
 ### Coverage-area status (pending external audit)
 
@@ -166,83 +159,7 @@ Internal adversarial audit rounds executed against V1 contract code (additional 
 
 ## Known open findings
 
-_No currently open audit findings above LOW severity. See "Recently fixed" below for recently-closed entries._
-
----
-
-## Recently fixed
-
-### R77 F-1 — `minswap_v2_adapter` order datum recipient fields unconstrained (CRITICAL, FIXED)
-
-**Discovery.** Independent R77 hacker-mindset audit of the post-R76 V1 contract set surfaced a deep gap in the SwapAdapter dispatch path. The R72-R76 audit history had verified that `verify_destination_whitelisted` correctly constrains the OUTPUT ADDRESS at `dest_output_idx` to a script in `protocol_hashes` (Minswap V2 batcher). What it did NOT check is what happens INSIDE that output's order datum.
-
-**Root cause.** `minswap_v2_adapter.ak::extract_minswap_v2_order_min_receive` decoded only the order datum's `lp_asset` (field[5]) and `step` (field[6]), validating routing topology + min_receive. It ignored:
-
-  - `field[1] = refund_addr` — destination of cancel/expire refund
-  - `field[3] = success_addr` — destination of swap fill output
-
-A compromised keeper (or post-CommunitySunset permissionless caller) could submit a `DeployToProtocol` TX where the Minswap V2 order datum had `success_addr = attacker_wallet` and `refund_addr = attacker_wallet`. All R72-R76 checks passed:
-
-  - `verify_destination_whitelisted` ✓ (output address is the Minswap V2 batcher script)
-  - `verify_swap_via_adapter` peg-floor ✓ (adapter only checked min_receive, not addresses)
-  - `valid_buffer` / `valid_token_deploy` / `valid_other_tokens` / `valid_allocs` ✓ (vault state changes were internally consistent)
-
-But on fill, the Minswap V2 batcher routes the target asset (DJED/USDM) to the order datum's `success_addr` — which the attacker controlled. **Direct theft, not bounded slippage griefing.** Per swap, attacker captures `deploy_amount × (1 - slippage 5-7% - batcher fee 0.3%) ≈ 92-95% of deploy_amount` worth of target asset. Total exposure: vault's idle_buffer + NDV (drained over multiple swaps).
-
-**Severity rationale.** CRITICAL because:
-- Direct vault drain modulo Minswap LP slippage (vault loses 100% of deploy_amount; attacker gains ~95%)
-- Two independent activation paths: (a) compromised keeper under normal operation, (b) post-sunset + governance unfreeze under permissionless `community_sunset_triggered = 1` bypass
-- Both paths are within V1's documented threat model (`docs/security-model.md §1`: compromised keeper + governance majority compromise)
-- No additional attacker capability required beyond what the threat model already grants
-
-**Why R72-R76 missed it.** The audit-scope.md & SECURITY.md previously framed keeper-compromise loss as "bounded by peg-floor (~5-7% per swap)" assuming the swap output flowed back to the vault. None of the prior rounds verified that assumption against the actual order datum field layout. R72 F-1 (cross-validator binding) checked Compound's gov_share path; R74 F-1 added hop_chain LP-name re-hashing for the swap routing topology; neither extended to the order datum's address fields.
-
-**Fix** (this commit, Option 1 — adapter interface extension):
-
-  - `lib/vault/swap_adapter.ak`: `SwapAdapterRedeemer` gains a fourth field `expected_recipient_addr: Address`. The composite helper `verify_swap_via_adapter` gains an additional caller parameter and asserts `adapter_r.expected_recipient_addr == expected_recipient_addr`.
-  - `validators/minswap_v2_adapter.ak::extract_minswap_v2_order_min_receive` reads `field[1]` (refund_addr) and `field[3]` (success_addr) from the order datum and verifies BOTH equal `redeemer.expected_recipient_addr`. Decoding is via Aiken's typed cast `if data is addr: Address {…}` — addresses that don't structurally match an `Address` record are rejected.
-  - `validators/vault_protocol.ak::DeployToProtocol` and `validators/vault_admin_deploy.ak::AdminDeployNonDeposit` pass `own_input.output.address` as the `expected_recipient_addr` argument — the vault's own address, an on-chain fact at validation time, not a redeemer-controlled value.
-
-Two-layer enforcement, both must agree:
-
-  - Layer 1 (caller): `redeemer.expected_recipient_addr == vault address`. Caller-side check; keeper cannot bypass since `own_input.output.address` is a Cardano-ledger fact.
-  - Layer 2 (adapter): order datum's `success_addr` AND `refund_addr` equal `redeemer.expected_recipient_addr`. Adapter-side check.
-
-Combined: keeper would need to either lie about `own_input.output.address` (impossible — it's the spending input the validator was invoked on) OR get the adapter to lie about decoded datum fields (impossible — adapter logic is fixed at compile time + the redeemer's `expected_recipient_addr` was already pinned by Layer 1 to be the vault address).
-
-8 new tests in `lib/vault/tests/r77_test.ak` cover redeemer structural shape with the new field, Address equality semantics across (Script vs VKH credential, different hash bytes, with/without stake credential), and the Layer-1 caller check pass/fail scenarios. `lib/vault/tests/swap_test.ak` updated to populate `expected_recipient_addr` in two existing fixtures. Integration coverage for Layer-2 (adapter validates real Minswap V2 datum) is in Preprod E2E (`tests/preprod/`) — Phase 110 oracle E2E + R74 mainnet decoder verification continue to exercise the full path; pre-mainnet adding an explicit F-1 attack-replay E2E (success_addr = attacker) is the natural follow-up.
-
-**Hash drift.** `minswap_v2_adapter` (5,020 → 6,258 B), `vault_protocol` (13,130 → 14,253 B), `vault_admin_deploy` (13,157 → ~14,200 B), and the parameterised `vault_proxy` applied form all change. Any off-chain TX builder emitting the adapter redeemer must populate `expected_recipient_addr = vault_proxy_address`. Tightest validator headroom post-fix is `vault_protocol` at ~2.1 KB free (~13% of 16 KB ceiling) — comfortably above the red zone; exact bytes reproducible via `aiken build` against the deployed commit. Pre-mainnet ceremony required to deploy the new hashes; full E2E suite re-runs on each fresh post-fix ceremony.
-
-Flagged for Q2-Q3 2027 external audit verification.
-
-### R74 F-1 — `minswap_v2_adapter` `lp_asset` decoder format mismatch (HIGH, FIXED)
-
-**Discovery.** Phase O pre-mainnet Minswap V2 decoder byte-for-byte verification against a real mainnet 3-hop SwapMultiRouting order caught the adapter rejecting the order during decoding.
-
-**Root cause.** `minswap_v2_adapter.ak::extract_target_from_lp` decoded the Minswap V2 order datum's `lp_asset` field as a 2-asset pair — either a 4-field flat `[policy_a, name_a, policy_b, name_b]` form or a 2-field nested `[Asset_a, Asset_b]` form. Real Minswap V2 `lp_asset` is a single LP-token identifier `Constr(0, [LP_policy_28B, LP_name_32B])` (the pool's LP-token asset, not its underlying pair). The nested-Constr branch invoked `un_constr_data` on the LP-name ByteArray and trapped in UPLC — every real Minswap V2 order would have been rejected on-chain.
-
-**Severity rationale.** The adapter was effectively non-functional on mainnet, so no direct exploit was possible in the shipped form. But the class of bug — an adapter accepting DEX datums without independently verifying the swap's output asset — is a HIGH severity concern: a compromised keeper could in principle route vault stablecoins to an arbitrary non-whitelisted pool and deliver worthless tokens masquerading as the committed target asset. Graded HIGH and treated as a pre-mainnet blocker.
-
-**Fix** (this commit): `SwapAdapterRedeemer` replaces the `target_asset_policy` + `target_asset_name` fields with `hop_chain: List<(ByteArray, ByteArray)>` — 2 entries for SwapExactIn (`[asset_in, target_out]`), N+1 entries for N-hop SwapMultiRouting. `minswap_v2_adapter.ak::compute_lp_asset_name` implements Minswap's canonical LP-name formula (`sha3_256(sha3_256(policy_a || name_a) || sha3_256(policy_b || name_b))`, with inputs canonically sorted policy-first-then-name). `verify_routing_chain` iterates each on-chain routing hop paired with adjacent `hop_chain` entries and rejects any TX where the on-chain LP name doesn't re-hash to the committed pair. `last_hop_target` exposes the chain's final entry for downstream Tier 2 peg-floor + optional Tier 1 oracle bound.
-
-27 new tests exercise the formula (including Minswap's own test vector and three real mainnet LPs), chain-verification happy/failure paths, and structural rules (empty chain / single-entry / adjacent duplicates all rejected). `swap_test.ak` is updated to the new redeemer shape.
-
-**Hash drift.** `minswap_v2_adapter`, `vault_protocol`, `vault_gov_emergency`, `vault_admin_deploy`, and the parameterised `vault_proxy` form all change. Any off-chain TX builder emitting the adapter redeemer must populate `hop_chain`.
-
-Flagged for Q2-Q3 2027 external audit verification.
-
-### R73 F-1 — `vault_recall.MergeUtxo` admissibility gap (MEDIUM, FIXED)
-
-**Root cause.** `vault_recall.MergeUtxo` accepted deposit-token (USDCx) donations that pushed `idle_buffer` without bumping `total_deposited` / `non_deposit_value` / `liqwid_principal` correspondingly. Downstream, seven redeemers (`vault_keeper_hot.Compound`, `vault_protocol.DeployToProtocol`, `vault_recall.RecallFromProtocol`, `vault_liqwid` Supply/Recall, `vault_gov_policy.UpdateStrategy`, `vault_admin_deploy.AdminDeployNonDeposit`, `vault_gov_emergency.EmergencyWithdraw`) enforced an allocation invariant of `alloc_sum + idle_buffer ≤ RHS` where RHS was one of two forms (stricter `total_deposited` or looser `total_deposited + non_deposit_value + Σ liqwid_principal`). A donation that pushed `idle_buffer` past RHS bricked all seven until Compound yield caught up, giving an attacker sub-dollar-per-day sustained DoS on keeper + governance paths at Phase 1 TVL.
-
-**Not fund theft** — donated USDCx accrued to existing depositors pro-rata on subsequent Withdraw activity; donor received nothing back. Attack class was DoS on operational + governance liveness, not principal loss. User `Withdraw` was never affected (no `validate_allocations` call on that path).
-
-**Fix** (this commit): `valid_merge_utxo_admissibility` predicate in `lib/vault/validation.ak` enforces the looser-form invariant at the source of the state change (`vault_recall.MergeUtxo`). Guarding the looser form is strictly sufficient because NDV and Σ liqwid_principal are non-negative, so any post-merge state satisfying the looser form also satisfies the stricter form downstream. Attack prevented because the donation that would break the invariant is rejected at MergeUtxo time, so the vault never enters the broken state.
-
-Six regression tests in `lib/vault/tests/r73_test.ak` cover: legitimate donation (pass), over-donation (reject), stable-token donation bumping NDV on both sides (pass), exact-boundary equality (pass), Liqwid principal contribution to RHS (pass), `alloc_sum` contribution to LHS with over-allocation (reject).
-
-Flagged for Q2-Q3 2027 external audit verification.
+_No currently open findings above LOW severity from internal audit._
 
 ---
 
@@ -292,7 +209,7 @@ recognition framework. Full terms in `docs/audit-scope.md §6`.
 Summary:
 
 - **Scope**: matches the §"In scope" list above (Aiken contracts +
-  deploy pipeline + 22 compiled artefacts). Operator-layer findings
+  deploy pipeline + 24 compiled artefacts). Operator-layer findings
   (keeper / API / frontend) are still accepted and triage-routed to
   `optivaults-reference` per the §Scope note above.
 - **Disclosure window**: 90 days from triage (extendable by 30 days if

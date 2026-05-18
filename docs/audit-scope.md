@@ -202,9 +202,9 @@ Disclosure Policy (RDP)** + **ex gratia recognition** framework.
 ### 6.1 Responsible Disclosure Policy
 
 **Scope:** V1 on-chain validators (**17 logic validators + 4 one-shot
-NFT mint policies + 1 DEX adapter = 22 compiled artefacts total** — see
-`spec/architecture.md` §4.1 for partitioning rationale) + deploy
-scripts. Operator-layer code (keeper / API server / frontend) is out of
+NFT mint policies + `minswap_v2_adapter` + 2 SundaeSwap artefacts = 24
+compiled artefacts total** — see `spec/architecture.md` §4.1 for
+partitioning rationale) + deploy scripts. Operator-layer code (keeper / API server / frontend) is out of
 this repo's scope — it lives in `optivaults-reference`; operator-layer
 findings sent here are accepted and triage-routed.
 
@@ -323,7 +323,7 @@ V1 is positioned as a non-commercial Cardano DeFi public-goods reference impleme
 
 - **(a) Grant stack — Catalyst + Cardano Foundation + Intersect Member Committee + Aiken Foundation**: $30K-$150K combined potential, $30K-$50K from Catalyst alone if a suitable Round opens. **Status as of writing: Cardano Project Catalyst is paused / restructuring with no confirmed timeline for Round resumption.** Parallel outreach to Cardano Foundation, Intersect, and Aiken Foundation reduces single-source dependency. V1 retains (a) as candidate funding pending resumption / approval but does not depend on any single grant source; the Q2-Q3 2027 audit timeline (§5) is set to allow either Catalyst re-opening within the window or coverage from the broader grant pool plus (b)+(c)+(d).
 - **(b) Audit-firm public-goods rate**: 30-50% discount on $50K-$150K base; multi-reviewer engagement model can also push the base toward $70K-$100K. Outreach pending.
-- **(c) Scope reduction via extensive internal audit history** (heritage work in §1): lets external audit focus on critical paths rather than full 17-logic-validator + 1-DEX-adapter scope (22 artefacts total — see §6 for full count), saving $15K-$25K.
+- **(c) Scope reduction via extensive internal audit history** (heritage work in §1): lets external audit focus on critical paths rather than full 17-logic-validator + 2-DEX-adapter scope (24 artefacts total — see §6 for full count), saving $15K-$25K.
 - **(d) Founder gap-fill contribution (capped, NOT underwriter)**: the founder commits **up to approximately $15K personal out-of-pocket** to bridge small shortfalls between (a)/(b)/(c) delivery and the final audit price. The founder **explicitly does NOT commit to underwriting the full $50K-$150K audit cost in any scenario** — V1 is a volunteer-built public good (whitepaper §0.2), not a founder-underwritten product. If the funding stack underperforms beyond the $15K gap-fill capacity, V1 follows the whitepaper §8.1 Options A-D contingency tree (timeline extension / scope-reduced audit / community crowdfund / permanent pre-audit 100K cap) — all four options keep V1 live on mainnet, they only determine the cap-lift pathway.
 
 This positioning may be relevant for audit firms evaluating engagement:

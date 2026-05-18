@@ -116,10 +116,10 @@ Stack the three layers and V1's response maps onto four concrete scenarios:
 
 Honest disclosure of boundaries matters. Layer 3's recovery range does **not** cover:
 
-- **ADA locked in deployment ref-scripts** (V1 launch ceremony locks roughly 870 ADA across 18 ref-script UTXOs).
-- **Stake credential registration deposits** (12 staking validators × 2 ADA = 24 ADA) — these are handled by the `ActDeregisterStake` governance action, which requires the founder's wallet signature.
+- **ADA locked in deployment ref-scripts** (V1 launch ceremony locks roughly 962 ADA across 20 ref-script UTXOs).
+- **Stake credential registration deposits** (14 staking validators × 2 ADA = 28 ADA) — these are handled by the `ActDeregisterStake` governance action, which requires the founder's wallet signature.
 
-These two portions bind the founder's deployment wallet and the A2 governance path as residual costs of single-signer governance — roughly 894 ADA in total. Depositors' USDCx principal does not fall in this residual range; it is always recoverable through Layer 1/2/3 + Direct Withdraw.
+These two portions bind the founder's deployment wallet and the A2 governance path as residual costs of single-signer governance — roughly 990 ADA in total. Depositors' USDCx principal does not fall in this residual range; it is always recoverable through Layer 1/2/3 + Direct Withdraw.
 
 ---
 

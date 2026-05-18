@@ -163,7 +163,7 @@ DistributeSignerCompensation { triggering_signer: VerificationKeyHash }
 | `RotateSigners`         | 14 天        | 7 天    | 14 天       | 改多簽成員 / 門檻 |
 | `SlashBond`             | 14 天        | 7 天    | 14 天       | **僅 Phase 3+**(`active_bonds` 非空);沒收違規 keeper 的 bond。V1 啟動時不可達。 |
 | `UpdateOracleSource`    | 14 天        | 7 天    | 14 天       | 切換 SwapAda oracle 來源(Charli3/Orcfax feed 輪替)。見 `spec/ada-swap.md §7`。 |
-| `DeregisterStake`       | 14 天        | 7 天    | 14 天       | 拆解後,取回每個 staking validator 的 2 ADA Cardano stake-registration 押金。涵蓋 **V1 全部 12 個 staking credential**:`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`、`keeper_stake_script`、`minswap_v2_adapter`(SwapAdapter)。|
+| `DeregisterStake`       | 14 天        | 7 天    | 14 天       | 拆解後,取回每個 staking validator 的 2 ADA Cardano stake-registration 押金。涵蓋 **V1 全部 14 個 staking credential**:`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`、`keeper_stake_script`、`minswap_v2_adapter`(SwapAdapter)、`sundaeswap_adapter`、`sundaeswap_cancel_guard`。|
 | `Heartbeat`             | 0(self)    | N/A     | N/A         | 1-of-self 簽名者 liveness;直接 redeemer,不 queue |
 | `DistributeSignerCompensation` | 0(1-of-n) | N/A | N/A         | 季度 pool 分配;直接 redeemer,不 queue |
 
@@ -279,7 +279,7 @@ type StrategyPayload {
 
 觸發後,任何 vUSDCx 持有者都能驅動 Recall → Swap → Withdraw,完全不需要 keeper 或治理介入。Redeemer **只開回收路徑**——它不能修改任何含值欄位;攻擊者無法用它把 vault drain 或 brick 掉。
 
-**範圍外**:**不**回收 ~870 ADA 的 reference-script 鎖定(在創辦人部署錢包),也**不**回收 ~24 ADA 的 stake-credential 押金(只能透過治理 A2 ActDeregisterStake)。這兩部分作為單一簽名者治理的殘留成本被接受。
+**範圍外**:**不**回收 ~962 ADA 的 reference-script 鎖定(在創辦人部署錢包),也**不**回收 ~28 ADA 的 stake-credential 押金(只能透過治理 A2 ActDeregisterStake)。這兩部分作為單一簽名者治理的殘留成本被接受。
 
 ### 4.5 AdminDeployNonDeposit
 
@@ -371,7 +371,7 @@ type StrategyPayload {
 **用途**:取回 V1 部署 ceremony 時,每個 staking validator 的 credential 被註冊時繳的 2 ADA Cardano stake-registration 押金。解決 `deploy/state/recovery-verification.md §2` 中文件化的 V1 design-gap——原本 staking validator 的 `else(_) { fail }` catch-all 拒絕 ledger 的 Publish purpose。
 
 **V1 啟動時的範圍**:
-- **V1 全部 12 個 staking credential** 都帶 gov 閘控的 `publish` handler,都可透過此 action deregister:`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`、`keeper_stake_script`,以及 SwapAdapter `minswap_v2_adapter`。切分理由見 `spec/architecture.md §4.1`。
+- **V1 全部 14 個 staking credential** 都帶 gov 閘控的 `publish` handler,都可透過此 action deregister:`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`、`keeper_stake_script`、SwapAdapter `minswap_v2_adapter`,以及 SundaeSwap 這一對 `sundaeswap_adapter` + `sundaeswap_cancel_guard`。切分理由見 `spec/architecture.md §4.1`。
 
 **Publish handler 模式**:
 ```aiken

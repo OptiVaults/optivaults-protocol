@@ -17,7 +17,7 @@ deploy/
 │   ├── config.ts               Config loader + validation
 │   └── state.ts                Ceremony state checkpoint
 ├── state/                       (gitignored — runtime state per release)
-├── compile.ts                  Apply params to 22 artefacts (17 logic + 4 NFT + 1 adapter) (offline)
+├── compile.ts                  Apply params to 24 artefacts (17 logic + 4 NFT + minswap_v2_adapter + 2 SundaeSwap artefacts) (offline)
 ├── deploy.ts                   Ceremony orchestrator (online)
 └── README.md                   This file
 ```
@@ -28,11 +28,11 @@ deploy/
 
 - ✅ Config loader + validation (`lib/config.ts`) — supports `keyDaemonSocket` + env-var Blockfrost key (no secrets in the JSON).
 - ✅ State checkpoint manager (`lib/state.ts`) — tracks mints, ref scripts, stake registrations, and state UTXOs.
-- ✅ Offline compile step (`compile.ts`) — applies parameters to all **22 artefacts** (17 logic validators + 4 NFT mint policies + 1 DEX adapter) per the dependency graph, outputs `state/<network>-hashes.json` with every on-chain hash the ceremony will produce.
+- ✅ Offline compile step (`compile.ts`) — applies parameters to all **24 artefacts** (17 logic validators + 4 NFT mint policies + `minswap_v2_adapter` + 2 SundaeSwap artefacts) per the dependency graph, outputs `state/<network>-hashes.json` with every on-chain hash the ceremony will produce.
 - ✅ Datum builders (`lib/datumBuilders.ts`) — pure, testable Constr builders for RegistryDatum (9 fields post §5.4 P3 + B@launch=1) / TreasuryDatum / KeeperAuthDatum / GovDatum / VaultDatum (29-field V1 schema post §5.4 P2 slippage caps + Phase 1 dead-man-switch).
-- ✅ Phase functions (`lib/phases.ts`) — idempotent PHASE 2 (3 NFT mints + minswap_v2_adapter), PHASE 3 (**18 ref scripts**), PHASE 4a (**12 stake credential registrations**), PHASE 4b (5 state UTXO inits).
+- ✅ Phase functions (`lib/phases.ts`) — idempotent PHASE 2 (3 NFT mints), PHASE 3 (**20 ref scripts**), PHASE 4a (**14 stake credential registrations**), PHASE 4b (5 state UTXO inits).
 - ✅ Ceremony orchestrator (`deploy.ts`) — wires PHASE 0 → 4b end-to-end with resume-after-failure semantics per step.
-- ⚠️ **Preprod verification status**: An earlier v1-a2-preprod ceremony was captured on a smaller validator topology and is STALE relative to the current 12-staking-credential / 18-ref-script set. Full re-verification required on the current topology before mainnet — see §11 in README.md Troubleshooting.
+- ⚠️ **Preprod verification status**: An earlier v1-a2-preprod ceremony was captured on a smaller validator topology and is STALE relative to the current 14-staking-credential / 20-ref-script set. Full re-verification required on the current topology before mainnet — see §11 in README.md Troubleshooting.
 
 ---
 
@@ -163,10 +163,10 @@ npx tsx deploy/compile.ts --network Preprod --utxoRefs /tmp/utxorefs.json
     registry (unparameterised — but registry_auth NFT gate is above)──────┘
 ```
 
-**22 compiled artefacts total**:
+**24 compiled artefacts total**:
 - 4 one-shot NFT minting policies (vault_nft, governance_nft, registry_auth_nft, gov_signer_nft)
-- 17 spend / withdraw validators (vault_proxy + 12 WZ-dispatched staking validators + treasury + keeper_stake_script + multisig_gov + registry + order + vusdcx)
-- 1 DEX adapter (minswap_v2_adapter, §B@launch=1 SwapAdapter)
+- 17 spend / withdraw validators (vault_proxy + 10 WZ-dispatched staking validators + treasury + keeper_stake_script + multisig_gov + registry + order + vusdcx)
+- `minswap_v2_adapter` + 2 SundaeSwap artefacts (`sundaeswap_adapter` + `sundaeswap_cancel_guard`)
 
 Partitioning rationale (4 orthogonal seams: authorization-boundary / response-latency / bytecode-cost-center / size-fix) is documented in `spec/architecture.md §4.1`. Per-extraction details live in the engineering memory store.
 
@@ -187,7 +187,7 @@ Partitioning rationale (4 orthogonal seams: authorization-boundary / response-la
     "governanceNft": {...},
     "registryAuthNft": {...}
   },
-  "hashes": { ... all 23 compiled hashes (17 logic + 4 NFT + 1 adapter + governanceNftName + registryAuthName) ... },
+  "hashes": { ... all compiled hashes (24 artefacts + governanceNftName + registryAuthName) ... },
   "refScripts": {
     "vaultProxy":      { "txHash": "...", "outputIndex": 0, "scriptHash": "...", "sizeBytes": 4576, "minAda": "..." },
     "vaultUser":       {...},
@@ -206,8 +206,10 @@ Partitioning rationale (4 orthogonal seams: authorization-boundary / response-la
     "registry":        {...},
     "order":           {...},
     "vusdcx":          {...},
-    "minswapV2Adapter": {...}   // §B@launch=1 SwapAdapter
-    // 18 entries total — one per logic validator + 1 adapter
+    "minswapV2Adapter": {...},  // §B@launch=1 SwapAdapter
+    "sundaeswapAdapter": {...},
+    "sundaeswapCancelGuard": {...}
+    // 20 entries total — one per logic validator + minswap_v2_adapter + 2 SundaeSwap artefacts
   },
   "stateUtxos": {
     "registry": {...}, "treasury": {...}, "keeperAuth": {...},
@@ -223,7 +225,7 @@ Each step writes to state immediately after its TX confirms. Re-running the cere
 ## Known open items
 
 1. **Datum encoders for the 5 state UTxOs** — shape is correct in `deploy.ts` RegistryDatum example, but Treasury / KeeperAuth / Governance / Vault full encoders still need per-field testing against the contract-side `Data`-parsing expectations.
-2. **Staking credential registration** — post Phase 77b/77c/77d there are **12 staking credentials** needing `certificates.registerStake` TXs: `vault_user` / `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada` / `vault_protocol` / `vault_recall` / `vault_liqwid` / `vault_gov_policy` / `vault_gov_emergency` / `vault_admin_deploy` / `keeper_stake_script` / `minswap_v2_adapter`. `runPhase4aStakes` in `lib/phases.ts` handles all 12 (one per stake cred × 12 TX, each reclaims its 2 ADA via A2 deregister `publish` handler post-sunset).
+2. **Staking credential registration** — post Phase 77b/77c/77d there are **14 staking credentials** needing `certificates.registerStake` TXs: `vault_user` / `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada` / `vault_protocol` / `vault_recall` / `vault_liqwid` / `vault_gov_policy` / `vault_gov_emergency` / `vault_admin_deploy` / `keeper_stake_script` / `minswap_v2_adapter` / `sundaeswap_adapter` / `sundaeswap_cancel_guard`. `runPhase4aStakes` in `lib/phases.ts` handles all 14 (one per stake cred × 14 TX, each reclaims its 2 ADA via A2 deregister `publish` handler post-sunset).
 3. **Publishing ref scripts for vault_nft / governance_nft / registry_auth_nft** — currently we use inline scripts for NFT mint policies. Revisit if future burn TXs get frequent enough that ref scripts save gas.
 4. **Live Preprod verification** — PHASE 2-4 wiring + an actual Preprod run is the next concrete test.
 
@@ -233,5 +235,5 @@ Each step writes to state immediately after its TX confirms. Re-running the cere
 
 1. Never commit `config/<network>.json` (real values). `.gitignore` enforces this. Use the `.example.json` template + local copy.
 2. Mainnet seed phrase should ideally not sit on disk at all — prefer hardware-wallet signing for mainnet deploys (tracked in `docs/runbooks/v1-mainnet-ceremony.md`).
-3. Lockup reminder: the **18 ref-script UTxOs** at the deploy wallet address tie up **~870 ADA** (V1 Preprod 2026-04-22 measured 871.51 ADA exactly — Conway-era `minFeeRefScriptCostPerByte` × deploy script's 1.10× safety multiplier × actual compiled validator sizes 1,327 B–13,482 B), plus **12 staking-credential stake deposits** (2 ADA each = 24 ADA) for **~894 ADA reclaimable**, plus ~22 ADA in non-recoverable network TX fees + ~27 ADA in state-UTXO seed ADA = **~944 ADA total ceremony cost** (see whitepaper §8.2). The reclaimable portion: ref scripts via `tools/reclaim-refs.ts` (single TX, ~2.5 ADA fee) + stake deposits via A2 deregister `publish` path (12 Queue + 12 Execute TXs after 14d gov timelock). Budget at least **1,000 ADA** for ceremony with 5-10% headroom.
+3. Lockup reminder: the **20 ref-script UTxOs** at the deploy wallet address tie up **~962 ADA** (V1 Preprod measured 962.07 ADA exactly — Conway-era `minFeeRefScriptCostPerByte` × deploy script's 1.10× safety multiplier × actual compiled validator sizes 1,327 B–13,482 B), plus **14 staking-credential stake deposits** (2 ADA each = 28 ADA) for **~990 ADA reclaimable**, plus ~22 ADA in non-recoverable network TX fees + ~27 ADA in state-UTXO seed ADA = **~1,039 ADA total ceremony cost** (see whitepaper §8.2). The reclaimable portion: ref scripts via `tools/reclaim-refs.ts` (single TX, ~2.5 ADA fee) + stake deposits via A2 deregister `publish` path (14 Queue + 14 Execute TXs after 14d gov timelock). Budget at least **1,100 ADA** for ceremony with 5-10% headroom.
 4. Pre-ceremony dry-run **should be standard practice** before mainnet — it prints the compiled hashes so governance signers can pre-announce the intended addresses publicly.

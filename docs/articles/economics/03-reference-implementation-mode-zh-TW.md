@@ -47,7 +47,7 @@ Default cadence 一年 keeper gas 成本（weekly Compound + heartbeat）
 協議收益：$13.5 / 年（全部進 treasury + 創辦人 keeper share）
 ```
 
-這個情境下，預設 cadence 的鏈上 gas 反而超過 keeper 從中提取的收入，更不用說覆蓋 VPS / 監控的營運基礎設施。**用 default cadence 跑 $5K TVL 在經濟上不合理，也違背 V1 公共財定位**。
+這個情境下，預設 cadence 的鏈上 gas 反而超過 keeper 從中提取的收入，更不用說覆蓋主機 / 監控的營運基礎設施。**用 default cadence 跑 $5K TVL 在經濟上不合理，也違背 V1 公共財定位**。
 
 Reference Implementation Mode 就是 V1 給這個問題的合約 + 營運層回應。
 
@@ -128,7 +128,7 @@ Reference Implementation Mode 不是「想啟用就啟用」——它需要**兩
 - Heartbeat × 4-5 次 × 0.5-1 ADA ≈ 2-5 ADA
 - **總計 ≈ 4-15 ADA / 年**
 
-降幅約 85-95%。這個數字加上「不需要付雲端 keeper VPS 高階方案」（Reference Implementation Mode 下單一 ARM VPS 約 $50/年就足夠），讓 V1 在低 TVL 下的營運成本壓到約 **$80/年**——這個數字寫在白皮書 §4.3.1 cost-scaling 表的最低區段。
+降幅約 85-95%。這個數字加上「不需要付雲端 keeper 高階代管方案」（Reference Implementation Mode 下單一小型 ARM 伺服器約 $50/年就足夠），讓 V1 在低 TVL 下的營運成本壓到約 **$80/年**——這個數字寫在白皮書 §4.3.1 cost-scaling 表的最低區段。
 
 $80/年是個關鍵的閾值。它意味著創辦人從個人收入吸收這個成本的負擔輕到「不需要動用任何啟動資本儲備」——這就是 V1「結構性可永續」這個聲明的具體含意。
 

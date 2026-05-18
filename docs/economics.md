@@ -72,7 +72,7 @@ All figures in USDCx. Numbers are illustrative reference points, not forecasts.
 | Category | Ratio | $/yr at 100K TVL | $/yr at 1M TVL | $/yr at 10M TVL | Purpose |
 |----------|-------|------------------:|----------------:|----------------:|---------|
 | Audit reserve (40%) | 65 | 648 | 6,480 | Accumulates toward the next third-party audit invoice (24% of total fee, same accumulation rate as historical 80%×30%) |
-| Operations (25%) | 41 | 405 | 4,050 | Platform-layer infrastructure: VPS (frontend/landing/API), Blockfrost (platform queries), monitoring, domains, CF Pages — per-keeper infra now funded directly via 40% keeper share, not from this bucket |
+| Operations (25%) | 41 | 405 | 4,050 | Platform-layer infrastructure: hosting (frontend/landing/API), Blockfrost (platform queries), monitoring, domains, CF Pages — per-keeper infra now funded directly via 40% keeper share, not from this bucket |
 | R&D (25%) | 41 | 405 | 4,050 | Protocol development, future bounty program (post-audit + TVL-scale, `docs/audit-scope.md §6.3`), ecosystem grants |
 | Buffer (10%) | 16 | 162 | 1,620 | Unexpected costs, legal consultation, incident response |
 
@@ -84,7 +84,7 @@ A minimum-viable V1 deployment requires:
 
 | Item | Cost (order of magnitude) | Notes |
 |------|---------------------------|-------|
-| VPS for keeper (dual-instance for HA) | $10–25/mo × 2 instances = $20–50/mo | Hetzner / DO / similar. Dual-instance preferred for keeper high-availability (see whitepaper §8.4). |
+| Server for keeper (dual-instance for HA) | $10–25/mo × 2 instances = $20–50/mo | Dual-instance preferred for keeper high-availability (see whitepaper §8.4). |
 | Blockfrost API access | $0–100/mo | Free tier supports ~50 req/min sustained; paid tier required above that or for dedicated key rotation |
 | Monitoring + alerting | $5–20/mo | Grafana Cloud free tier, or self-hosted stack |
 | Domain + CDN (frontend + landing) | $2–10/mo | Cloudflare Pages free for static; domain registrar |
@@ -105,7 +105,7 @@ Under E2 launch sub-allocation (25% of 60% = 15% of fees to operations bucket):
 - Crossover (ops budget = $360/yr low-end cost): `TVL = $360 / (6% * 4.5% * 15%) ≈ $889,000`
 - Crossover (ops budget = $2,400/yr high-end cost): `TVL = $2,400 / (6% * 4.5% * 15%) ≈ $5.93M`
 
-The "operations bucket alone covers basic infrastructure" threshold is approximately **USD 900K TVL** for minimum viability, **USD 6M TVL** for comfortable margin under E2 — pushed back ~2× from the pre-E2 numbers because ops bucket shrunk from 32% to 15% of fee. **The shift is offset by the 40% keeper direct share absorbing per-keeper infra cost directly** (combined keeper-related budget actually slightly increased, from 52% of fee to 55% of fee). Platform-layer ops (frontend, landing, API server, treasury monitoring) is what the smaller ops bucket needs to cover — individual keeper VPS / Blockfrost / monitoring is funded by the keeper's own 40% share.
+The "operations bucket alone covers basic infrastructure" threshold is approximately **USD 900K TVL** for minimum viability, **USD 6M TVL** for comfortable margin under E2 — pushed back ~2× from the pre-E2 numbers because ops bucket shrunk from 32% to 15% of fee. **The shift is offset by the 40% keeper direct share absorbing per-keeper infra cost directly** (combined keeper-related budget actually slightly increased, from 52% of fee to 55% of fee). Platform-layer ops (frontend, landing, API server, treasury monitoring) is what the smaller ops bucket needs to cover — individual keeper infrastructure / Blockfrost / monitoring is funded by the keeper's own 40% share.
 
 Below this, V1 operates in a **bootstrapping phase** where running costs exceed treasury inflow. Initial shortfalls are absorbed by the project's founding capital. Above the crossover, OptiVaults' own revenue funds the baseline protocol operation, and higher TVL incrementally funds audit reserve + R&D + buffer categories.
 
@@ -142,9 +142,9 @@ Audit timeline (Q2-Q3 2027 target — see `audit-scope.md §5`) is set explicitl
 
 ### 5.3 Keeper share viability
 
-Keeper share is 40% of performance fee at V1 launch; per-year = `TVL × gross_APY × 0.018`. The table below assumes 6% current reference blended APY + a **3-keeper rotation** each taking ⅓ of keeper pool + $360/yr VPS-amortised infrastructure cost per keeper:
+Keeper share is 40% of performance fee at V1 launch; per-year = `TVL × gross_APY × 0.018`. The table below assumes 6% current reference blended APY + a **3-keeper rotation** each taking ⅓ of keeper pool + $360/yr amortised infrastructure cost per keeper:
 
-| TVL | Keeper pool/yr | Per keeper (3 active) | Net of $360/yr VPS cost |
+| TVL | Keeper pool/yr | Per keeper (3 active) | Net of $360/yr infra cost |
 |-----|-----------------|------------------------|--------------------------|
 | 100K | 108 | 36 | −324 (loss) |
 | 500K | 540 | 180 | −180 (loss) |
@@ -162,7 +162,7 @@ This is why V1 ships with `RegistrationMode = GovernanceOnly` — there's no poi
 | Tier | What it covers | Annual cost | Breakeven TVL (6% current APY) | Breakeven TVL (2% pessimistic APY) |
 |------|---------------|------------:|------------------------------:|------------------------------------:|
 | (a) Single founder-keeper, marginal ops | Founder absorbs own labour and shares existing infra | $100–$300 | $185K – $555K | $555K – $1.67M |
-| (b) Single non-founder professional keeper | Independent operator, dedicated VPS + monitoring | $400–$800 | $740K – $1.48M | $2.22M – $4.44M |
+| (b) Single non-founder professional keeper | Independent operator, dedicated server + monitoring | $400–$800 | $740K – $1.48M | $2.22M – $4.44M |
 | (b') 3-keeper rotation (table above) | 3 independent operators each absorbing $360/yr | $1,080 total | ~$2M | ~$6M |
 | (c) Institutional-grade ops + audit-reserve accrual | Full protocol self-sustain including future audit cost ($30–50K every 18–24 months amortised) | $1,500–$3,000 + audit amortisation | $20M+ | $50M+ |
 
@@ -305,7 +305,7 @@ Each Compound / MergeUtxo / BatchProcess / Supply / Recall TX routes `keeper_fee
 
 | Cost item | Low-end | Standard | High-availability |
 |-----------|---------|----------|-------------------|
-| VPS (keeper instance) | $60/yr | $240/yr | $600/yr |
+| Server (keeper instance) | $60/yr | $240/yr | $600/yr |
 | Blockfrost keys ×2 | $360/yr | $720/yr | $1,800/yr |
 | Monitoring + alerting | $50/yr | $200/yr | $500/yr |
 | Backup / HA tooling | $0 | $100/yr | $500/yr |

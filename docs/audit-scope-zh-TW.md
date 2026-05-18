@@ -191,7 +191,7 @@ V1 改採業界標準的**責任揭露政策(RDP)+ 酬庸式(ex gratia)肯定**�
 
 ### 6.1 責任揭露政策
 
-**範圍:** V1 的鏈上 validator(**17 個 logic validator + 4 個 one-shot NFT mint policy + 1 個 DEX adapter = 22 個編譯 artefact**——切分理由見 `spec/architecture.md` §4.1)+ 部署腳本。鏈下 operator 層程式(keeper / API server / frontend)不在本 repo 範圍——它們位於 `optivaults-reference`;送到這裡的 operator 層發現會被接受並 triage 轉送。
+**範圍:** V1 的鏈上 validator(**17 個 logic validator + 4 個 one-shot NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact = 24 個編譯 artefact**——切分理由見 `spec/architecture.md` §4.1)+ 部署腳本。鏈下 operator 層程式(keeper / API server / frontend)不在本 repo 範圍——它們位於 `optivaults-reference`;送到這裡的 operator 層發現會被接受並 triage 轉送。
 
 **我們承諾的事:**
 
@@ -262,7 +262,7 @@ V1 定位為 Cardano DeFi **非商業公共財**參考實作。審計接洽資�
 
 - **(a) Grant 堆疊 — Catalyst + Cardano Foundation + Intersect Member Committee + Aiken Foundation**：合計潛在 $30K-$150K，Catalyst 單一來源若有合適 Round 開可取得 $30K-$50K。**撰寫時的狀態：Cardano Project Catalyst 處於暫停 / 重組狀態，下一個 Round 何時恢復尚無明確時程。** 並行接洽 Cardano Foundation、Intersect、Aiken Foundation 以降低單一來源依賴。V1 把 (a) 列為候選資金來源、等恢復 / 核准，但**不依賴任何單一 grant 來源**；Q2-Q3 2027 審計時程（§5）即為了讓 Catalyst 在此區間恢復、或讓 funding 由較廣的 grant pool 加上 (b)+(c)+(d) 覆蓋兩種路徑都留得到時間。
 - **(b) 審計事務所公共財優惠費率**：從 $50K-$150K base 折 30-50%；多 reviewer 委託模式也可把 base 壓到 $70K-$100K。接洽中。
-- **(c) 大量 heritage 內部審計史帶來的範圍縮減**（見 §1）：讓外部審計聚焦在關鍵路徑、而不是完整 17 logic validator + 1 DEX adapter 的範圍（共 22 個 artefact——數字見 §6），可省 $15K-$25K。
+- **(c) 大量 heritage 內部審計史帶來的範圍縮減**（見 §1）：讓外部審計聚焦在關鍵路徑、而不是完整 17 logic validator + 2 DEX adapter 的範圍（共 24 個 artefact——數字見 §6），可省 $15K-$25K。
 - **(d) 創辦人 gap-fill 補貼（有上限、非 underwriter）**：創辦人承諾**最多約 $15K 個人自掏**用於 bridging (a)/(b)/(c) 到位之後與最終審計報價之間的**微額短缺**。創辦人**明確不承諾在任何情境下 underwriting 完整 $50K-$150K 審計成本**——V1 是 volunteer-built 公共財（白皮書 §0.2），不是 founder-underwritten 商業產品。若資金堆疊表現低於 $15K gap-fill 容量，V1 走白皮書 §8.1 Options A-D contingency tree（時程延後 / 縮減 scope 審計 / 社群 crowdfund / 永久 pre-audit 100K cap）——所有四個 option 都讓 V1 留在 mainnet，只決定 cap-lift 路徑。
 
 這個定位對評估合作的審計事務所可能有參考價值:

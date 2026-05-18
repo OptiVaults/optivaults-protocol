@@ -4,14 +4,14 @@
 the reclaim order is **fixed** and non-negotiable:
 
 ```
-1. A2 QueueAction × 12 stake credentials
+1. A2 QueueAction × 14 stake credentials
 2. Wait   timelock_deregister_stake_ms
            (Preprod: 1 hour ; Mainnet: 14 days)
-3. A2 ExecuteAction × 12 stake credentials  → recovers 24 ADA
-4. reclaim-refs                              → recovers ~870 ADA
+3. A2 ExecuteAction × 14 stake credentials  → recovers 28 ADA
+4. reclaim-refs                              → recovers ~962 ADA
 ```
 
-Reverse this order and **~24 ADA in stake deposits become permanently
+Reverse this order and **~28 ADA in stake deposits become permanently
 unrecoverable on-chain**. This runbook explains why and how to avoid it.
 
 ---
@@ -30,8 +30,8 @@ Step 3 (A2 ExecuteAction) needs TWO ref scripts on-chain at TX evaluation time:
 
 Both ref scripts are **destroyed** when step 4 (`reclaim-refs`) spends
 their UTXOs back to the wallet. Once destroyed, they can only be
-re-created by re-deploying them (each ~40-65 ADA min-UTXO) — which
-costs more than the 24 ADA being recovered.
+re-created by re-deploying them (each ~40-70 ADA min-UTXO) — which
+costs more than the 28 ADA being recovered.
 
 **Historical incident**: 2026-04-22 `v1-postphase77d-preprod` sunset.
 Reclaim-refs was run before A2. All 18 ref scripts consumed. Attempt to
@@ -46,9 +46,9 @@ Lesson captured in `memory/feedback_ceremony_reclaim_order.md`.
 
 ---
 
-## The 12 stake credentials
+## The 14 stake credentials
 
-A2 must run against **all 12** (order is irrelevant — they're independent
+A2 must run against **all 14** (order is irrelevant — they're independent
 governance actions, but each needs its own Queue + Execute round-trip):
 
 ```
@@ -56,6 +56,7 @@ vaultUser              vaultKeeperHot          vaultBatcher
 vaultSwapAda           vaultProtocol           vaultRecall
 vaultLiqwid            vaultGovPolicy          vaultGovEmergency
 vaultAdminDeploy       keeperStakeScript       minswapV2Adapter
+sundaeswapAdapter      sundaeswapCancelGuard
 ```
 
 Each stake credential carries 2 ADA of Cardano-protocol deposit that is
@@ -104,13 +105,13 @@ Preprod:
 
 | Step | TX count | Per-TX fee | Total fee | Recovered |
 |------|----------|-----------:|----------:|----------:|
-| Queue A2 × 12 | 12 | ~0.35 ADA | ~4.2 ADA | — |
+| Queue A2 × 14 | 14 | ~0.35 ADA | ~4.9 ADA | — |
 | Wait | — | — | — | — |
-| Execute A2 × 12 | 12 | ~0.5 ADA | ~6 ADA | 24 ADA |
-| Reclaim 18 refs | 1 | 5.11 ADA | 5.11 ADA | 871 ADA |
-| **Net** | **25** | — | **~15.3 ADA** | **895 ADA** |
+| Execute A2 × 14 | 14 | ~0.5 ADA | ~7 ADA | 28 ADA |
+| Reclaim 20 refs | 1 | 5.11 ADA | 5.11 ADA | 962 ADA |
+| **Net** | **29** | — | **~17 ADA** | **990 ADA** |
 
-Net recovery: **~880 ADA per sunset** (post Phase 77b/77c/77d topology).
+Net recovery: **~973 ADA per sunset** (post Phase 77b/77c/77d topology).
 
 ---
 
@@ -123,7 +124,7 @@ Each step can be run independently:
 TARGET=vaultUser npx tsx deploy/tools/a2-queue-deregister.ts \
   --network Preprod --releaseTag <tag>
 
-# Repeat for all 12 targets.
+# Repeat for all 14 targets.
 
 # 2. Wait 1h (Preprod) or 14d (Mainnet).
 
@@ -131,9 +132,9 @@ TARGET=vaultUser npx tsx deploy/tools/a2-queue-deregister.ts \
 TARGET=vaultUser npx tsx deploy/tools/a2-execute-deregister.ts \
   --network Preprod --releaseTag <tag>
 
-# Repeat for all 12.
+# Repeat for all 14.
 
-# 4. Reclaim refs (ONLY after all 12 executes succeeded).
+# 4. Reclaim refs (ONLY after all 14 executes succeeded).
 npx tsx deploy/tools/reclaim-refs.ts \
   --network Preprod --releaseTag <tag>
 ```
@@ -149,9 +150,9 @@ UTXOs are the script validators; their ref scripts are consumed by
 step 4, and the Plutus-V3 validator bytecode is too large (8-13 KB each)
 to inline in a spend TX under the 16 KB `maxTxSize` ceiling.
 
-Expect net sunset loss per release: **~27 ADA + ~15 ADA in fees =
-~42 ADA** (≈ $27 USD at $0.64/ADA). Reclaimable: ~895 ADA from 18 ref
-scripts + 12 stake deposits.
+Expect net sunset loss per release: **~27 ADA + ~17 ADA in fees =
+~44 ADA** (≈ $28 USD at $0.64/ADA). Reclaimable: ~990 ADA from 20 ref
+scripts + 14 stake deposits.
 
 ---
 
@@ -163,7 +164,7 @@ Before starting any sunset:
 - [ ] Deploy wallet has ≥ 20 ADA for fees
 - [ ] Governance signer keys are accessible (2 of 3 signers needed for
       every Queue + Execute TX; at least 2 signers' keys must be available)
-- [ ] On Mainnet: you have 14 days before you need those 24 ADA back.
+- [ ] On Mainnet: you have 14 days before you need those 28 ADA back.
       On Preprod: 1 hour.
 - [ ] No operational keeper activity expected during sunset (a Compound
       or BatchProcess running concurrently wouldn't break anything but

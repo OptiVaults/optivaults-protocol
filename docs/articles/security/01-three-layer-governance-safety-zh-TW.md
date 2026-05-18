@@ -116,10 +116,10 @@ Layer 3 觸發條件選 `max(last_compound_time, last_realloc_time)`，表面看
 
 誠實揭露邊界很重要。Layer 3 解鎖的回收範圍**不**涵蓋：
 
-- **部署用的 ref-script 鎖定 ADA**（V1 啟動部署 ceremony 共鎖定大約 870 ADA，分散在 18 個 ref-script UTXO 上）。
-- **stake credential 押金**（12 個 staking validator × 2 ADA = 24 ADA）——這部分由 `ActDeregisterStake` 治理動作處理，需要創辦人錢包簽名。
+- **部署用的 ref-script 鎖定 ADA**（V1 啟動部署 ceremony 共鎖定大約 962 ADA，分散在 20 個 ref-script UTXO 上）。
+- **stake credential 押金**（14 個 staking validator × 2 ADA = 28 ADA）——這部分由 `ActDeregisterStake` 治理動作處理，需要創辦人錢包簽名。
 
-這兩部分綁定創辦人部署錢包與 A2 治理路徑，作為單一簽名者治理的殘留成本——大約 894 ADA。存入者的 USDCx 本金不在這個殘留範圍內，永遠可透過 Layer 1/2/3 + Direct Withdraw 回收。
+這兩部分綁定創辦人部署錢包與 A2 治理路徑，作為單一簽名者治理的殘留成本——大約 990 ADA。存入者的 USDCx 本金不在這個殘留範圍內，永遠可透過 Layer 1/2/3 + Direct Withdraw 回收。
 
 ---
 

@@ -6,7 +6,7 @@
 
 OptiVaults V1 is the first non-custodial stablecoin auto-yield vault on Cardano. Depositors lock USDCx and receive vUSDCx share tokens; the vault routes capital into Liqwid's DJED and USDM lending markets to earn interest, then compounds yield back into share price periodically. Every operation that touches principal is enforced by Aiken PlutusV3 contracts — the protocol operator cannot move user principal under any redeemer path.
 
-If your background is Ethereum / Solidity ERC-4626 vaults, the equivalent on Cardano's eUTXO model will look unfamiliar at first. **The underlying model is fundamentally different.** This series explains V1's contract architecture: why it ships with 17 logic validators + 4 NFT mint policies + 1 DEX adapter (22 compiled artefacts in total), why it adopts the Withdraw-Zero Forwarding Pattern, why state lives in a single UTXO, and what problem the compile-time Vault NFT anchor solves.
+If your background is Ethereum / Solidity ERC-4626 vaults, the equivalent on Cardano's eUTXO model will look unfamiliar at first. **The underlying model is fundamentally different.** This series explains V1's contract architecture: why it ships with 17 logic validators + 4 NFT mint policies + `minswap_v2_adapter` + 2 SundaeSwap artefacts (24 compiled artefacts in total), why it adopts the Withdraw-Zero Forwarding Pattern, why state lives in a single UTXO, and what problem the compile-time Vault NFT anchor solves.
 
 This first part starts at the foundation: the four structural constraints you hit when designing a vault on eUTXO. Understanding these four constraints gives you the full context for the design choices in Parts 2–4.
 

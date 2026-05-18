@@ -90,7 +90,7 @@
 其他鏈上強制的不變量(不完整——詳見 `docs/audit-scope.md §1`):
 
 - **非存入代幣的保留。** `verify_other_tokens_preserved` 模式套用在 7+ 個 redeemer 上,防止 token 被靜默注入或抽走。
-- **Allocation invariant。** 金庫操作集上強制兩個版本——較嚴的 `alloc_sum + idle_buffer ≤ total_deposited`,透過共用的 `validate_allocations` helper 強制(用於 `Compound` / `DeployToProtocol` / `RecallFromProtocol` / `UpdateStrategy` / `AdminDeployNonDeposit` / `vault_liqwid` ops);較寬鬆的 `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal`,以 inline 方式檢查於 `vault_gov_emergency.EmergencyWithdraw`。`vault_recall.MergeUtxo` 在捐贈導致狀態變更的源頭以 `valid_merge_utxo_admissibility` 守住較寬鬆那條(R73 F-1 修補)——MergeUtxo 的 post-state 只要通過較寬鬆,下游較嚴版本也自動通過,因為 NDV 與 Σ liqwid_principal 均為非負。
+- **Allocation invariant。** 金庫操作集上強制兩個版本——較嚴的 `alloc_sum + idle_buffer ≤ total_deposited`,透過共用的 `validate_allocations` helper 強制(用於 `Compound` / `DeployToProtocol` / `RecallFromProtocol` / `UpdateStrategy` / `AdminDeployNonDeposit` / `vault_liqwid` ops);較寬鬆的 `alloc_sum + idle_buffer ≤ total_deposited + non_deposit_value + Σ liqwid_principal`,以 inline 方式檢查於 `vault_gov_emergency.EmergencyWithdraw`。`vault_recall.MergeUtxo` 在捐贈導致狀態變更的源頭以 `valid_merge_utxo_admissibility` 守住較寬鬆那條——MergeUtxo 的 post-state 只要通過較寬鬆,下游較嚴版本也自動通過,因為 NDV 與 Σ liqwid_principal 均為非負。
 - **首位存入者保護。** `initial_share_multiplier = 10^6` + `valid_deposited > 0` 防止 ERC-4626 式通膨攻擊。
 - **最低存款門檻。** Direct Deposit 最低 10 USDCx(Queued Order 走 dust-safe 批次路徑;BatchProcess 強制份額鑄造量必須非零)。
 - **防雙重兌現。** `vault_user.Withdraw` 強制 `receiver_output_idx` 綁定。BatchProcess 強制多個 order 的 `payout_output_index` 互不重複。
@@ -117,14 +117,14 @@
 
 | 類別 | 覆蓋面 | 狀態 |
 |-----|--------|------|
-| Aiken 單元測試 | 全部 22 個 artefact 的確定性案例 + 跨 validator 整合流程；含 `minswap_v2_adapter` 內的 inline test。實際數可在部署 commit 跑 `cd contracts && aiken check` 取得。 | 全過 |
+| Aiken 單元測試 | 全部 24 個 artefact 的確定性案例 + 跨 validator 整合流程；含 `minswap_v2_adapter` 內的 inline test。實際數可在部署 commit 跑 `cd contracts && aiken check` 取得。 | 全過 |
 | Aiken property-based fuzz（`aiken/fuzz` v2.2.0） | `lib/vault/tests/property_test.ak` 內 property test，使用 iteration cap 紀律（預設每 property 100 iter，首次失敗 early-exit）。實際 property 數可在 `aiken check` 取得。 | 全過 |
-| Preprod E2E 腳本（`tests/preprod/`） | 多階段覆蓋：ceremony health、用戶流程（Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw）、zero-yield Compound、MergeUtxo 捐贈路徑（含負測路徑）、治理狀態機（Queue / Execute / Cancel）、oracle E2E（Tier 1 + Tier 2 + stale / disagreement / no-entry 拒絕）、SwapAdapter dispatch（R77 F-1 攻擊接收方鏈上重演）、以及 mock-Liqwid Supply / Recall / Compound / Distribute 端對端。 | 全部已在對應 ceremony 鏈上驗證 |
+| Preprod E2E 腳本（`tests/preprod/`） | 多階段覆蓋：ceremony health、用戶流程（Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw）、zero-yield Compound、MergeUtxo 捐贈路徑（含負測路徑）、治理狀態機（Queue / Execute / Cancel）、oracle E2E（Tier 1 + Tier 2 + stale / disagreement / no-entry 拒絕）、SwapAdapter dispatch（攻擊接收方鏈上重演）、以及 mock-Liqwid Supply / Recall / Compound / Distribute 端對端。 | 全部已在對應 ceremony 鏈上驗證 |
 | Keeper vitest | 參考 keeper 實作位於 operator repo，測試套件設於該 repo。 | — |
 | API vitest | 不在 V1 scope（V1 只涵蓋協議層——見 `README.md` 雙層架構）。 | — |
 | Frontend vitest | 不在 V1 scope（V1 只涵蓋協議層——見 `README.md` 雙層架構）。 | — |
 
-Preprod ceremony 已跨多個 release tag 演練完整 deploy pipeline + 部署後操作流程。每次 ceremony 鏈上 TX 證據存於 `deploy/state/<network>-<release-tag>.json`（operator-only，gitignored）。近期 CRITICAL 修補已在 post-fix 全新 ceremony 重新驗證：R77 F-1 攻擊接收方鏈上重演防線（`SwapAdapterRedeemer.expected_recipient_addr` Layer-1 / Layer-2 強制檢查）。
+Preprod ceremony 已跨多個 release tag 演練完整 deploy pipeline + 部署後操作流程。每次 ceremony 鏈上 TX 證據存於 `deploy/state/<network>-<release-tag>.json`（operator-only，gitignored）。內部審計的修補一律會在 post-fix 全新 ceremony 重新驗證後才算關閉——含攻擊接收方鏈上重演防線（`SwapAdapterRedeemer.expected_recipient_addr` Layer-1 / Layer-2 強制檢查）。
 
 ---
 
@@ -134,15 +134,9 @@ Preprod ceremony 已跨多個 release tag 演練完整 deploy pipeline + 部署�
 
 V1 的內部審計採**涵蓋區方法論**(A–F 區,見 `docs/audit-scope.md §4`),取代先前 prototype 版本使用的逐輪編號制。涵蓋區對應到 validator 群組 + 跨 validator 整合流程,而不是綁在某個時間順序的審計輪次。
 
-### 內部審計輪次歷史
+### 內部審計歷史
 
-針對 V1 合約程式碼執行過的內部對抗性審計輪次(更早的輪次涵蓋 V1 切換前的 prototype 階段——見 `spec/architecture.md §4.1`):
-
-| 輪次 | 範圍 | 嚴重性分佈 | 狀態 |
-|------|------|----------:|------|
-| R72 | Phase-77d 後對完整 V1 集合(17 logic + 4 NFT + 1 adapter)的 hacker-mindset 審視 | 0 CRIT / 0 HIGH / 1 MEDIUM / 3 LOW / 6 INFO | MEDIUM + 3 LOW 已鏈上修補;INFO 已文件化 |
-| R73 | `valid_allocs × vault_recall.MergeUtxo` admissibility 缺口 | 0 CRIT / 0 HIGH / 1 MEDIUM | **已修補**——透過 `lib/vault/validation.ak` 的 `valid_merge_utxo_admissibility` + `vault_recall.MergeUtxo` 呼叫;6 個 regression test 在 `lib/vault/tests/r73_test.ak` |
-| R74 | Phase O pre-mainnet Minswap V2 decoder 對真實 mainnet order 做 byte-for-byte 驗證 | 0 CRIT / 1 HIGH / 0 MEDIUM | **已修補**(本次 commit)——見下方「最近修補」中的 R74 F-1 條目 |
+V1 的合約程式碼已經過多輪內部對抗性審計,以涵蓋區(A–F 區——見 `docs/audit-scope.md`)為組織單位。每一輪都是針對既定威脅模型的結構化對抗性審視;迄今所有非 INFO 級的發現都已在程式碼中修補並補上 regression test。逐 finding 的細節是整理在內部、供即將進行的第三方審計使用,不在此處逐條列出。
 
 ### 涵蓋區狀態(待外部審計)
 
@@ -165,39 +159,7 @@ V1 的內部審計採**涵蓋區方法論**(A–F 區,見 `docs/audit-scope.md �
 
 ## 已知開放中的審計發現
 
-_目前沒有任何 LOW 以上嚴重性的開放審計發現。最近關閉的項目見下方「最近修補」。_
-
----
-
-## 最近修補
-
-### R74 F-1 — `minswap_v2_adapter` `lp_asset` decoder 格式不相符(HIGH,已修補)
-
-**發現過程。** Phase O pre-mainnet Minswap V2 decoder byte-for-byte 驗證,對一筆真實 mainnet 3-hop SwapMultiRouting order 做驗證時,抓到 adapter 在 decode 階段就拒絕了該 order。
-
-**根因。** `minswap_v2_adapter.ak::extract_target_from_lp` 把 Minswap V2 order datum 的 `lp_asset` 欄位當成「兩個資產的 pair」來解——預期是 4-field 扁平格式 `[policy_a, name_a, policy_b, name_b]`,或 2-field 巢狀格式 `[Asset_a, Asset_b]`。實際上 Minswap V2 的 `lp_asset` 是**單一 LP-token 識別碼** `Constr(0, [LP_policy_28B, LP_name_32B])`(pool 的 LP-token 本身,不是底層 pair)。Aiken decoder 走到 nested-Constr 分支、對 LP-name 這個 ByteArray 呼叫 `un_constr_data` → 在 UPLC 中 trap → 每一筆真實 Minswap V2 order 都會被鏈上拒絕。
-
-**嚴重性說明。** Adapter 在 ship 出來的那一版在 mainnet 上實質不可用,因此沒有直接的攻擊可以成立。但這**類**的 bug——adapter 接受 DEX datum 卻不獨立驗證 swap 的輸出資產——屬於 HIGH 嚴重性:在理論上,被入侵的 keeper 有機會把金庫穩定幣路由到任意未白名單的 pool,讓 vault 收到毫無價值的代幣、但會計上偽裝成所承諾的目標資產。分級為 HIGH,作為 pre-mainnet blocker 處理。
-
-**修補**(本次 commit):`SwapAdapterRedeemer` 把 `target_asset_policy` + `target_asset_name` 替換為 `hop_chain: List<(ByteArray, ByteArray)>`——SwapExactIn 用 2 項(`[asset_in, target_out]`),N-hop SwapMultiRouting 用 N+1 項。`minswap_v2_adapter.ak::compute_lp_asset_name` 實作 Minswap 的 canonical LP-name 公式(`sha3_256(sha3_256(policy_a || name_a) || sha3_256(policy_b || name_b))`,輸入按 policy-先-name-後的順序做 canonical sort)。`verify_routing_chain` 逐對比對每個鏈上 routing hop 與相鄰的 `hop_chain` 項目,若鏈上 LP name 重新雜湊後對不上承諾的 pair 就拒絕。`last_hop_target` 暴露 chain 的最末項供下游 Tier 2 peg-floor + 選用的 Tier 1 oracle 查詢。
-
-27 個新增 test 覆蓋 LP 公式(含 Minswap 自家 test vector 與三組真實 mainnet LP)、chain 驗證的正負路徑、以及結構規則(空 chain / 單項 chain / 相鄰重複的情況全部拒絕)。`swap_test.ak` 也已更新到新的 redeemer 形狀。
-
-**Hash 漂移。** `minswap_v2_adapter`、`vault_protocol`、`vault_gov_emergency`、`vault_admin_deploy`,以及參數化後的 `vault_proxy` 形式全部會變。任何鏈下 TX builder 要送出 adapter redeemer 時,必須填 `hop_chain`。
-
-標記為 Q2-Q3 2027 外部審計驗證時覆查。
-
-### R73 F-1 — `vault_recall.MergeUtxo` admissibility 缺口(MEDIUM,已修補)
-
-**根因。** `vault_recall.MergeUtxo` 接受 deposit token(USDCx)捐贈、把 `idle_buffer` 加上來,但沒有同步抬升 `total_deposited` / `non_deposit_value` / `liqwid_principal`。下游有七個 redeemer(`vault_keeper_hot.Compound`、`vault_protocol.DeployToProtocol`、`vault_recall.RecallFromProtocol`、`vault_liqwid` Supply/Recall、`vault_gov_policy.UpdateStrategy`、`vault_admin_deploy.AdminDeployNonDeposit`、`vault_gov_emergency.EmergencyWithdraw`)會檢查 `alloc_sum + idle_buffer ≤ RHS`,其中 RHS 為兩種其中之一(較嚴的 `total_deposited`、或較寬鬆的 `total_deposited + non_deposit_value + Σ liqwid_principal`)。若捐贈把 `idle_buffer` 推過 RHS,這七個路徑會全部 brick,一直到 Compound 收益把差距補回來——在 Phase 1 TVL 下,相當於攻擊者以每天 sub-dollar 級別的成本,對 keeper + 治理路徑做持續 DoS。
-
-**不是盜取本金**——捐進來的 USDCx 會在後續 Withdraw 活動中按比例分配給既有存入者,捐贈者什麼也拿不回來。這是對營運面 + 治理 liveness 的 DoS,不是本金損失。使用者的 `Withdraw` 路徑從來不受影響(該路徑沒有呼叫 `validate_allocations`)。
-
-**修補**(本次 commit):`lib/vault/validation.ak` 內新增 `valid_merge_utxo_admissibility` 斷言,在狀態變更的源頭(`vault_recall.MergeUtxo`)強制「較寬鬆」那條不變量。守住「較寬鬆」就嚴格足夠——因為 NDV 與 Σ liqwid_principal 均為非負,任何 post-merge 狀態只要通過較寬鬆版本,下游的較嚴版本也自動通過。會打破不變量的捐贈在 MergeUtxo 時就被拒絕,金庫永遠不會進入壞狀態,攻擊因此被擋在源頭。
-
-`lib/vault/tests/r73_test.ak` 六個 regression test 覆蓋:合法捐贈(通過)、超額捐贈(拒絕)、同時抬高 LHS 與 RHS 的穩定幣捐贈(通過)、等號邊界(通過)、Liqwid principal 納入 RHS(通過)、`alloc_sum` 抬高 LHS 並超額配置(拒絕)。
-
-標記為 Q2-Q3 2027 外部審計驗證時覆查。
+_目前內部審計沒有任何 LOW 以上嚴重性的開放發現。_
 
 ---
 
@@ -238,7 +200,7 @@ Bounty tier 表適合「post-external-audit、TVL 大到 audit-reserve 的累積
 
 V1 改以標準的**責任揭露政策(RDP)+ 酬庸式(ex gratia)肯定**框架釋出。完整條款見 `docs/audit-scope.md §6`。摘要:
 
-- **範圍**:與上方 §「在範圍內」相同(Aiken 合約 + 部署流程 + 22 個編譯 artefact)。鏈下 operator 層的發現(keeper / API / frontend)仍接受,並依上方 §Scope 註記 triage 轉送至 `optivaults-reference`。
+- **範圍**:與上方 §「在範圍內」相同(Aiken 合約 + 部署流程 + 24 個編譯 artefact)。鏈下 operator 層的發現(keeper / API / frontend)仍接受,並依上方 §Scope 註記 triage 轉送至 `optivaults-reference`。
 - **揭露窗口**:triage 後 90 天(若修補需要與 Liqwid / Minswap V2 / Circle-xReserve 延伸協調,可再延 30 天)。
 - **確認回應**:72 小時內;7 天內完成 triage + 初步修補計畫。
 - **肯定方式(操作方裁量、酬庸式)**:在 V1 審計報告 + repo 公開致謝、合撰 finding + fix 的 case-study、對未來內部審計草稿 + pre-mainnet 測試部署有優先存取權、以及來自創辦人啟動資金的酬庸式感謝支付(明確**不是**市場行情 bounty——V1 Phase 1 treasury audit-reserve 的累積速率支撐不了;見 `docs/audit-scope.md §6.2`)。

@@ -51,7 +51,7 @@ None require keeper cooperation. Depositor principal security doesn't rely on "w
 
 7 days is the trade-off between two considerations:
 
-**Too short → false positive**. The keeper may halt briefly for legitimate reasons: VPS maintenance, transient Cardano mainnet congestion, brief unavailability of Blockfrost / Ogmios, operator on short leave. If dead-man-switch were 1-3 days, these scenarios would be misjudged as "keeper is dead," triggering early-withdraw-fee waiver and giving depositors a misleading signal.
+**Too short → false positive**. The keeper may halt briefly for legitimate reasons: host maintenance, transient Cardano mainnet congestion, brief unavailability of Blockfrost / Ogmios, operator on short leave. If dead-man-switch were 1-3 days, these scenarios would be misjudged as "keeper is dead," triggering early-withdraw-fee waiver and giving depositors a misleading signal.
 
 **Too long → insufficient depositor protection**. If dead-man-switch were 30-60 days, depositors would have to wait 1-2 months after an actual keeper runaway to exit without fee. For emergency scenarios (e.g., Liqwid sudden trouble), the window is too long.
 

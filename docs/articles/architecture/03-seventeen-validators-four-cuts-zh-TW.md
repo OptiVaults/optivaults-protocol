@@ -6,7 +6,7 @@
 
 [第 2 篇](./02-withdraw-zero-forwarding-pattern-zh-TW.md)介紹了 Withdraw-Zero Forwarding Pattern：把 vault 業務邏輯從 spending validator 搬到多個 staking validator。但「拆成多個」沒有講清楚拆成幾個、沿哪條線切。本篇回答這個問題。
 
-OptiVaults V1 把 vault 邏輯切成 **17 個 logic validator + 4 個 NFT mint policy + 1 個 DEX adapter = 22 個編譯產物**。對 Cardano vault 而言這算相當激進的拆法——很多現有 vault 設計只有 5–8 個 validator。V1 為什麼這麼多？
+OptiVaults V1 把 vault 邏輯切成 **17 個 logic validator + 4 個 NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact = 24 個編譯產物**。對 Cardano vault 而言這算相當激進的拆法——很多現有 vault 設計只有 5–8 個 validator。V1 為什麼這麼多？
 
 **因為拆分沿著四條正交切割線**，每一條都對應一個明確的設計約束。本篇逐條解釋。
 
@@ -104,11 +104,11 @@ V1 引入 oracle / asset_oracles / Minswap V2 SwapAdapter dispatch 之後，原�
 | `order` | 訂單 Process / Cancel / Expire | 3.8 KB |
 | `vusdcx` | 份額代幣鑄造政策 | 1.3 KB |
 
-加上 4 個 NFT mint policy（`vault_nft` / `governance_nft` / `registry_auth_nft` / `gov_signer_nft`）+ 1 個 DEX adapter（`minswap_v2_adapter`），總共 22 個編譯產物。
+加上 4 個 NFT mint policy（`vault_nft` / `governance_nft` / `registry_auth_nft` / `gov_signer_nft`）+ `minswap_v2_adapter` + 2 個 SundaeSwap artefact,總共 24 個編譯產物。
 
-最緊的目前是 `vault_liqwid` 還剩約 3 KB headroom。所有 22 個編譯產物都安全落在 16 KB 之內。
+最緊的目前是 `vault_liqwid` 還剩約 3 KB headroom。所有 24 個編譯產物都安全落在 16 KB 之內。
 
-> **註——可選的第二個 DEX adapter。** V1 可以帶一個可選的第二個 SwapAdapter 部署,對應 SundaeSwap(`sundaeswap_adapter` 加上配套的 `sundaeswap_cancel_guard`)。它在部署儀式中 config-gated:啟用會多 2 個編譯產物(共 24 個);省略則部署與 22 產物的基準完全 byte-identical。它是 opt-in 的擴充,不屬於本文描述的、由 size 推動的核心拆分——見 `spec/swap-adapter.md §8`。
+> **註——第二個 DEX adapter。** V1 的 24 個 artefact 裡有兩個是 SundaeSwap SwapAdapter（`sundaeswap_adapter` 加上配套的 `sundaeswap_cancel_guard`）。它們在部署儀式中綁定——是每一次 V1 launch 部署的一部分——但它們屬於 DEX adapter 的擴充,與本文討論的、由 size 推動的核心拆分是不同的兩件事。見 `spec/swap-adapter.md §8`。
 
 ---
 
@@ -116,11 +116,11 @@ V1 引入 oracle / asset_oracles / Minswap V2 SwapAdapter dispatch 之後，原�
 
 完整起見，把代價也說清楚：
 
-**(a) Ceremony 部署 TX 數變多**：V1 ceremony 需要 38 筆 TX（3 個 NFT 鑄造 + 18 個 ref script 部署 + 12 個 stake credential 註冊 + 5 個 state UTXO 初始化），總共約 944 ADA 的 ref-script 鎖倉與註冊押金（ref scripts 可在 sunset 時透過 `reclaim-refs.ts` 回收）。如果整個 vault 是單一 validator，ceremony 大概只需 5–10 筆 TX。
+**(a) Ceremony 部署 TX 數變多**：V1 ceremony 需要 42 筆 TX（3 個 NFT 鑄造 + 20 個 ref script 部署 + 14 個 stake credential 註冊 + 5 個 state UTXO 初始化），總共約 1,039 ADA 的 ref-script 鎖倉與註冊押金（ref scripts 可在 sunset 時透過 `reclaim-refs.ts` 回收）。如果整個 vault 是單一 validator，ceremony 大概只需 5–10 筆 TX。
 
 **(b) 審計表面變大**：每個 staking validator 是獨立的審計目標。內部審計累積多輪審查並修復 findings，其中有些 finding（例如 `vault_keeper_hot` 的 Compound 路徑當初沒驗證 gov input 的 spending redeemer 是 `ReceiveCompoundShare`，導致 gov_share 可能被誤認為其他治理動作的副產物）正是因為 validator 拆得多、跨 validator 之間的 binding 不顯眼才漏掉的。
 
-**(c) 部署時序更脆弱**：18 個 ref script 部署的順序與依賴鏈（vault_proxy 的編譯期參數需要 10 個 stake hash 都已決定）讓 ceremony 很容易踩到 TX 排序與 wallet UTXO 競爭問題。V1 的 `deploy.ts` 整套有 checkpoint 機制 + 自動 resume，這在這個拆分規模下是必備的。
+**(c) 部署時序更脆弱**：20 個 ref script 部署的順序與依賴鏈（vault_proxy 的編譯期參數需要 10 個 stake hash 都已決定）讓 ceremony 很容易踩到 TX 排序與 wallet UTXO 競爭問題。V1 的 `deploy.ts` 整套有 checkpoint 機制 + 自動 resume，這在這個拆分規模下是必備的。
 
 但拆分的好處——能突破 16 KB、能讓使用者只付實際 ref-script fee、能讓授權邊界天然分離——對使用者體驗與安全模型的價值比這些代價大很多。所以 V1 選擇了這個方向。
 
