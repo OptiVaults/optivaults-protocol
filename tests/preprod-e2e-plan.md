@@ -1,6 +1,6 @@
 # OptiVaults V1 — Preprod E2E Test Plan
 
-**Status**: Draft. Implements the test cases listed below as TypeScript scripts under `tests/preprod/` once the V1 keeper / API / deploy pipeline is wired (currently pending — see `keeper/` and `contracts/` empty trees in README.md).
+**Status**: Draft. Enumerates the V1 redeemer test cases to be implemented as TypeScript Preprod E2E scripts.
 
 **Audience**: V1 implementation engineers + future external auditor. The plan enumerates every redeemer that V1 ships with and the minimum verification scenarios required before Mainnet ceremony.
 
@@ -25,16 +25,16 @@ This plan covers **on-chain Preprod transaction submission and verification** fo
 Each E2E run requires:
 
 1. **Preprod deploy artifacts** (one-time per release tag):
-   - All 11 V1 validators deployed as reference scripts (CIP-33)
+   - All 20 V1 reference scripts deployed (CIP-33)
    - Vault NFT minted (one-shot UTXO consumed)
    - Governance NFT minted
    - Registry auth NFT minted
-   - Initial Vault UTXO at vault_proxy address (26-field VaultDatum)
+   - Initial Vault UTXO at vault_proxy address (29-field VaultDatum)
    - Initial MultisigGov UTXO (3-of-3 launch signers)
    - Initial Registry UTXO (whitelist + Liqwid markets)
    - Initial Treasury UTXO (4 buckets, all balances zero)
    - Initial KeeperAuth UTXO (GovernanceOnly mode, 1 founder PKH)
-   - core/protocol/liqwid/keeper_stake_script stake credentials registered
+   - All 14 V1 staking credentials registered
 2. **Test wallets** (TestUSDC funded):
    - `userA` — 1000 TestUSDC + 100 ADA
    - `userB` — 1000 TestUSDC + 100 ADA
