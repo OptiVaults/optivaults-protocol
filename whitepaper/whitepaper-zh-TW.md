@@ -953,9 +953,9 @@ V1 的原始碼**拆在兩個獨立的公開 repo**,各自有自己的審計範�
 
 **現實：100K TVL 下協議收益不足以覆蓋營運成本。**
 
-V1 處於**啟動期(bootstrapping phase)**,直到 TVL 達到自給規模,範圍**約 $135K–$1.8M(三情境分布;baseline 約 $500K)**。以下時期,初期虧損由專案**啟動資金(founding capital)**承擔——這是新 DeFi 協議啟動的正常狀態。達到門檻後,OptiVaults 自身營收可覆蓋基礎營運,更高 TVL 則逐步充實審計儲備、研發、緩衝類別。
+V1 處於**啟動期(bootstrapping phase)**,直到 TVL 達到自給規模。自給範圍約 **$135K–$1.8M**,涵蓋樂觀 / 基準 / 保守三個情境,baseline 約 $500K。低於該門檻時,初期虧損由專案的啟動資金(founding capital)承擔,這是新 DeFi 協議啟動的正常狀態。達到門檻後,OptiVaults 自身營收可覆蓋基礎營運,更高 TVL 則逐步充實審計儲備、研發、緩衝類別。
 
-**Phase 1 期望重設**(對存入者預先說清楚)。**$135K–$1.8M 自給區間(baseline 約 $500K)** 依其構造是 §2.6 預設節奏下的 **Phase 2+ post-audit reference milestone**——在 pre-audit 100K USDCx 上限下無法到達。我們對 Phase 1（pre-audit、100K cap 下）TVL 的內部估算是頭 6-12 個月落在 **$500-$25K** 區間，基於保守的使用者取得假設加上 permissionless-only 立場（沒有 closed-beta gate、沒有 invitation list — 實際 TVL 完全取決於 organic discovery）；這是推測性區間，不是預測，我們公開標示是為了誠實揭露模型假設——不是在做承諾。100K 上限是**風險包絡，不是銷售目標**。在 §4.3.1 volunteer-operator 模型下，Phase 1 的營運缺口（協議收入 < 營運成本）由創辦人從個人收入持續補貼吸收（年化 ~$80–$200），**不是**從一筆預先撥定、規模涵蓋審計預算的啟動資金 runway 中扣除。完整資金姿態見 §0.2 + §4.3.1；完整「Phase 1 即協議驗證」framing 見 §8.2。
+**Phase 1 期望重設**(對存入者預先說清楚)。**$135K–$1.8M 自給區間(baseline 約 $500K)** 依其構造是 §2.6 預設節奏下的 **Phase 2+ post-audit reference milestone**，在 pre-audit 100K USDCx 上限下無法到達。我們對 Phase 1（pre-audit、100K cap 下）TVL 的內部估算是頭 6-12 個月落在 **$500–$25K** 區間，基於保守的使用者取得假設加上 permissionless-only 立場（沒有 closed-beta gate、沒有 invitation list，實際 TVL 完全取決於 organic discovery）。這是推測性區間而非預測，我們公開標示是為了誠實揭露模型假設，不是在做承諾。100K 上限是**風險包絡，不是銷售目標**。在 §4.3.1 volunteer-operator 模型下，Phase 1 的營運缺口（協議收入 < 營運成本）由創辦人從個人收入持續補貼吸收（年化 ~$80–$200），**不是**從一筆預先撥定、規模涵蓋審計預算的啟動資金 runway 中扣除。完整資金姿態見 §0.2 + §4.3.1；完整「Phase 1 即協議驗證」framing 見 §8.2。
 
 **自給 TVL 門檻會隨情境怎麼變動**(取決於 Liqwid 供應 APY 與營運成本)。§4.1 的 **$135K–$1.8M 區間**涵蓋下列樂觀 / 基準 / 保守三情境,並同時呈現 §2.6 預設節奏與 §2.6.1 Reference Implementation Mode 下的數字;baseline 自給門檻約 $500K:
 
@@ -996,7 +996,7 @@ V1 處於**啟動期(bootstrapping phase)**,直到 TVL 達到自給規模,範圍
 3. **90 天窗口期間：** 不接受新存入（frontend gate + keeper 拒絕 BatchProcess deposit orders）、withdraw 完全開放、0% 績效費、keeper 持續送 zero-yield Compound heartbeat 保持 7 天 inactivity guard 有效。
 4. **90 天後：** 剩餘 < dust 門檻的部位可透過治理 `EmergencyWithdraw` 合併；ref-script 資本透過 `deploy/tools/reclaim-refs.ts`（隨 V1 實作一併發佈）回收。
 
-**Sunset 觸發時的啟動資金保留下限。** Sunset protocol 觸發時，啟動實體承諾於啟動資本中保留至少 **~150 ADA**（約 $75-100 USD，依當下 ADA 市價）專款，覆蓋 sunset 的 90 天結算窗口所需鏈上費用：(a) 90 天 keeper 營運週期（zero-yield heartbeat 每 5 天 + 週六排程 Compound + Liqwid market 監控）≈ 60-80 ADA；(b) 1× Liqwid full recall 跨 3 個 market ≈ 6 ADA；(c) Minswap V2 router gas 為 stable → USDCx 轉換 ≈ 6 ADA；(d) Conway 期 ref-script fee 附加費(~1.2 ADA × 40 TX)≈ 48 ADA；(e) 20% 安全緩衝。此 150 ADA 保留與「fee=0% 承諾」共同形成 sunset 期間的操作性保證——即使主要啟動資金已耗盡（sunset 觸發條件本身之一），sunset 的 90 天結算仍有獨立資金覆蓋，存入者不會因營運方資金見底而陷入「提領 TX 送不出去」的絕境。
+**Sunset 觸發時的啟動資金保留下限。** Sunset protocol 觸發時，啟動實體承諾於啟動資本中保留至少 **~150 ADA**（約 $75-100 USD，依當下 ADA 市價）專款，覆蓋 sunset 的 90 天結算窗口所需鏈上費用：(a) 90 天 keeper 營運週期（zero-yield heartbeat 每 5 天 + 週六排程 Compound + Liqwid market 監控）≈ 60-80 ADA；(b) 1× Liqwid full recall 跨 3 個 market ≈ 6 ADA；(c) Minswap V2 router gas 為 stable → USDCx 轉換 ≈ 6 ADA；(d) Conway 期 ref-script fee 附加費(~1.2 ADA × 40 TX)≈ 48 ADA；(e) 20% 安全緩衝。此 150 ADA 保留與「fee=0% 承諾」共同形成 sunset 期間的操作性保證。即使主要啟動資金已耗盡（sunset 觸發條件本身之一），sunset 的 90 天結算仍有獨立資金覆蓋，存入者不會因營運方資金見底而陷入「提領 TX 送不出去」的絕境。
 
 90 天預告期 + fee 歸零 + 前置清理是一個強存入者承諾——任何持倉人有 ≥ 3 個月不付績效費退出的窗口，並保證 vault state 在時鐘啟動前已處於 withdraw-ready 狀態。這刻意比天真的 30 天預告寬裕：V1 是 pre-audit 產品，sunset 期間存入者遷移摩擦是我們最想最小化的損失。
 
