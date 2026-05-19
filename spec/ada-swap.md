@@ -34,7 +34,7 @@ Single integer argument: the lovelace amount of ADA the keeper contributes to th
 
 ## 3. Validation
 
-The `SwapAda` redeemer on `vault_swap_ada` (post-Phase-77b; extracted from vault_keeper_hot into a standalone staking validator to hoist the dual-feed oracle reader + 6-tuple registry read out of Compound's host, via Withdraw-Zero forwarding from `vault_proxy` with the `UseSwapAda` route) enforces the following invariants. Key V1 note: **keeper authorization goes through the stake-script zero-withdraw pattern**, not a `keeper_pkh` datum field (which does not exist in V1 VaultDatum). The keeper PKH for output routing is derived from `tx.extra_signatories` at runtime, matched against the `keeper_output_idx` output address.
+The `SwapAda` redeemer lives on `vault_swap_ada` — a standalone staking validator extracted from `vault_keeper_hot` to hoist the dual-feed oracle reader + 6-tuple registry read out of Compound's host. It is reached via Withdraw-Zero forwarding from `vault_proxy` with the `UseSwapAda` route. The redeemer enforces the following invariants. Key V1 note: **keeper authorization goes through the stake-script zero-withdraw pattern**, not a `keeper_pkh` datum field (which does not exist in V1 VaultDatum). The keeper PKH for output routing is derived from `tx.extra_signatories` at runtime, matched against the `keeper_output_idx` output address.
 
 ```aiken
 SwapAda { amount_ada, keeper_output_idx } -> {

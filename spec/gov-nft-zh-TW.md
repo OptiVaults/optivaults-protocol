@@ -6,13 +6,13 @@
 
 ## 1. 目的
 
-V1 啟動時(以及 Phase 2-3 擴張期間)的治理簽名者**沒有**顯著的金錢補償——Phase 1 為 $0、Phase 2 約每位每年 $16–33、Phase 3 典型 TVL 下約每年 $100–200。這個角色的主要價值是**非金融**的:
+V1 啟動時(以及 Phase 2-3 擴張期間)的治理簽名者**沒有**顯著的金錢補償:Phase 1 為 $0、Phase 2 約每位每年 $16–33、Phase 3 典型 TVL 下約每年 $100–200。這個角色的主要價值是**非金融**的:
 
 - 聲譽:「我是 OptiVaults 治理簽名者」是一個可驗證的公開主張
 - 影響力:簽名者形塑費用政策、treasury 開支、keeper 授權
 - 可課責:簽名者身份公開,鏈上簽名是其紀錄
 
-**Gov Signer NFT** 是讓這個聲譽主張可驗證的鏈上 artifact。它是 soul-bound(不能轉讓)、輪替出去時會 burn、**不帶任何投票或金融權利**——那些東西住在 `multisig_gov` 自己的 datum 裡。
+**Gov Signer NFT** 是讓這個聲譽主張可驗證的鏈上 artifact。它是 soul-bound(不能轉讓)、輪替出去時會 burn、**不帶任何投票或金融權利**;那些東西住在 `multisig_gov` 自己的 datum 裡。
 
 ---
 
@@ -29,7 +29,7 @@ validator gov_signer_nft(
 }
 ```
 
-把治理 NFT policy + name 作為編譯時參數,把這個 minting policy 密碼學地綁到**這個特定 MultisigGov 實例**。Gov Signer NFT 只有在同一筆 TX 中 MultisigGov UTxO 被 spend 時才可 mint——兩個 NFT 互相依存。
+把治理 NFT policy + name 作為編譯時參數,把這個 minting policy 密碼學地綁到**這個特定 MultisigGov 實例**。Gov Signer NFT 只有在同一筆 TX 中 MultisigGov UTxO 被 spend 時才可 mint,兩個 NFT 互相依存。
 
 ### 2.2 Asset-name schema
 
@@ -133,12 +133,12 @@ V1 mainnet 部署時,一筆 `MintForSignerSet` TX:
 
 | 權利 | NFT 是否賦予? |
 |------|---------------|
-| 對治理動作的投票 | ❌ 沒有——投票走 `gov_datum.signers` list + TX 簽名 |
-| 對 treasury 資金的請求權 | ❌ 沒有——treasury 資金流走 `TreasurySpend` redeemer,不是靠 NFT 所有權 |
-| 績效費分成 | ❌ 沒有——gov fee split 進 MultisigGov UTxO 的 `signer_compensation_pool`,由 `DistributeSignerCompensation` 分到簽名者地址,**不**以 NFT 閘控 |
-| 可轉讓性 | ❌ 沒有——soul-bound |
-| 再售 / 二級市場 | ❌ 沒有——soul-bound 意味著不能在 NFT 市集掛牌 |
-| 在 DAO 快照中的代表性 | ❌ 沒有——V1 不使用 DAO 快照式治理 |
+| 對治理動作的投票 | ❌ 沒有,投票走 `gov_datum.signers` list + TX 簽名 |
+| 對 treasury 資金的請求權 | ❌ 沒有,treasury 資金流走 `TreasurySpend` redeemer,不是靠 NFT 所有權 |
+| 績效費分成 | ❌ 沒有,gov fee split 進 MultisigGov UTxO 的 `signer_compensation_pool`,由 `DistributeSignerCompensation` 分到簽名者地址,**不**以 NFT 閘控 |
+| 可轉讓性 | ❌ 沒有,soul-bound |
+| 再售 / 二級市場 | ❌ 沒有,soul-bound 意味著不能在 NFT 市集掛牌 |
+| 在 DAO 快照中的代表性 | ❌ 沒有,V1 不使用 DAO 快照式治理 |
 
 **NFT 只是一份可見、可驗證的「我是 / 曾是 V1 治理簽名者」聲明**。僅此而已。
 
@@ -153,7 +153,7 @@ Frontend(optivaults.app/governance)顯示:
 - 他們的任期(從 GovDatum 的 `signer_joined_at_ms`)
 - 季度資格狀態(從 `signer_last_qualified_ms`)
 
-簽名者可以在 Cardano 錢包 UI(Eternl、Lace、Vespr)中顯示 NFT 作為角色證明。有些錢包會把它當「collectible」顯示——簽名者可以自訂顯示方式。
+簽名者可以在 Cardano 錢包 UI(Eternl、Lace、Vespr)中顯示 NFT 作為角色證明。有些錢包會把它當「collectible」顯示,簽名者可以自訂顯示方式。
 
 ---
 
@@ -171,9 +171,9 @@ V2+ 可能會把 NFT 系統擴展為:
 ## 8. 安全考量
 
 - **NFT 偽造**:不可能。Mint policy 以治理 NFT policy / name 為參數,鑄造要求消費治理 UTxO。其他實體無法鑄造。
-- **NFT 冒充**:每個 NFT 的 asset name 含該簽名者 PKH 的 28 bytes——冒充者無法鑄出一個宣稱**不同**簽名者身份的 NFT。
-- **NFT 遺失**:簽名者可以在自己 UTxO 間移動(soul-bound 強制 payment PKH 不變)。若錢包完全被入侵,治理應該 `RotateSigners` 把他移除、NFT 隨之 burn。**不需要** recovery 路徑——NFT 是非金融的。
-- **部署時 vs. 輪替時的 NFT**:啟動時鑄的 NFT 與未來輪替時鑄的 NFT 走同一個 policy——行為一致,沒有特例邏輯。
+- **NFT 冒充**:每個 NFT 的 asset name 含該簽名者 PKH 的 28 bytes;冒充者無法鑄出一個宣稱**不同**簽名者身份的 NFT。
+- **NFT 遺失**:簽名者可以在自己 UTxO 間移動(soul-bound 強制 payment PKH 不變)。若錢包完全被入侵,治理應該 `RotateSigners` 把他移除、NFT 隨之 burn。**不需要** recovery 路徑,NFT 是非金融的。
+- **部署時 vs. 輪替時的 NFT**:啟動時鑄的 NFT 與未來輪替時鑄的 NFT 走同一個 policy,行為一致,沒有特例邏輯。
 
 ---
 

@@ -1,6 +1,6 @@
 # OptiVaults V1 — Vault ADA 補充(`SwapAda`)
 
-**範圍**:`SwapAda` redeemer——讓 keeper 以 oracle 定價的公平匯率,原子性地把 ADA 貢獻進金庫、換回 USDCx,用於補充被 Minswap V2 swap batcher fee 消耗掉的金庫運營 ADA。
+**範圍**:`SwapAda` redeemer,讓 keeper 以 oracle 定價的公平匯率,原子性地把 ADA 貢獻進金庫、換回 USDCx,用於補充被 Minswap V2 swap batcher fee 消耗掉的金庫運營 ADA。
 
 ---
 
@@ -172,21 +172,21 @@ SwapAda { amount_ada, keeper_output_idx } -> {
 | `ada_swap_cooldown_ms` | 3_600_000(1 小時) | SwapAda TX 之間最小間隔(anti-spam + oracle-stale 邊界) |
 | `ada_price_oracle_source` | Charli3/Orcfax 的 policy + asset_name,或 Minswap V2 ADA/USDCx pool script hash | Reference-input 的身份來源,供 price 讀取 |
 
-**改動任一參數都要完整 V1 重部署**(新 validator hash、新 vault 地址)。這是刻意的——這些邊界決定了 SwapAda 的信任模型,V1 不讓治理可調。
+**改動任一參數都要完整 V1 重部署**(新 validator hash、新 vault 地址)。這是刻意的:這些邊界決定了 SwapAda 的信任模型,V1 不讓治理可調。
 
 ---
 
 ## 5. Oracle 來源
 
-**§5.4 P5——透過 `lib/vault/oracle.ak` 的共用 dual-feed 讀取器。** SwapAda 透過與 P4 Tier 1 peg-floor(on `DeployToProtocol`)相同的 `read_fair_price` helper 讀取 ADA/USDCx 價格。Oracle 設定來自 registry 的 `asset_oracles` list——一個 `AssetOracleEntry` 釘在 ADA 慣例 `(asset_policy = #"", asset_name = #"")`。治理透過 `UpdateRegistry`(14 天 timelock)填入 ADA 條目;V1 啟動時 `asset_oracles = []`,代表 SwapAda **在治理啟用之前處於 inactive**——啟動窗口內,金庫 ADA top-up 走 `MergeUtxo` 捐贈(operator 路徑)。
+**§5.4 P5:透過 `lib/vault/oracle.ak` 的共用 dual-feed 讀取器。** SwapAda 透過與 P4 Tier 1 peg-floor(on `DeployToProtocol`)相同的 `read_fair_price` helper 讀取 ADA/USDCx 價格。Oracle 設定來自 registry 的 `asset_oracles` list:一個 `AssetOracleEntry` 釘在 ADA 慣例 `(asset_policy = #"", asset_name = #"")`。治理透過 `UpdateRegistry`(14 天 timelock)填入 ADA 條目;V1 啟動時 `asset_oracles = []`,代表 SwapAda **在治理啟用之前處於 inactive**;啟動窗口內,金庫 ADA top-up 走 `MergeUtxo` 捐贈(operator 路徑)。
 
 ### 5.1 Registry 條目佈局
 
 `RegistryDatum.asset_oracles` 中的 ADA 條目釘:
 
-- **資產身份**:`(asset_policy = #"", asset_name = #"")`——Cardano lovelace 慣例。
+- **資產身份**:`(asset_policy = #"", asset_name = #"")`,Cardano lovelace 慣例。
 - **Feeds list**(通常 2 項):每個 `AssetOracleFeed` 以 `(feed_script_hash, feed_auth_policy, feed_auth_name)` 標定 reference-UTXO 位置。Auth NFT 防止在同 script 地址的誘餌 UTxO。V1 啟動慣例是 1 個 Charli3 feed + 1 個 Orcfax feed,oracle operator 在鏈下做 aggregate 後寫入 canonical `PriceSample` 格式(見 5.2)。
-- **`max_disagreement_bps`**:跨 feed spread 上限。建議 200(2%)——對應 legacy MVP 的 `diff_pct <= 2` 行為。
+- **`max_disagreement_bps`**:跨 feed spread 上限。建議 200(2%),對應 legacy MVP 的 `diff_pct <= 2` 行為。
 - **`max_staleness_ms`**:各 feed 相對 `tx.validity_range.lower_bound` 的年齡上限。建議 600_000(10 分鐘)。比 legacy MVP 的 40 分鐘緊,因為 dual-feed 聚合已經補償單一 feed 的延遲。
 - **`min_feeds`**:所需健康 feed 數。設 2(所有 feed 都要同意)。
 
@@ -216,11 +216,11 @@ let usdcx_out_expected = amount_ada * ada_price_bps / 10_000_000
 1. 至少 `entry.min_feeds` 份健康 sample(feed UTxO 存在 + auth NFT 存在 + `price_bps > 0`)。
 2. 每份 sample 的 `timestamp_ms` 比 `tx.validity_range.lower_bound - entry.max_staleness_ms` 更新。過時的 sample 會從聚合中掉出。
 3. 跨 feed spread(`(max − min) × 10_000 / min`)至多 `entry.max_disagreement_bps`。
-4. 回傳的公平價是健康 sample 的中位點——對 2 feed 條目而言等同 median。
+4. 回傳的公平價是健康 sample 的中位點,對 2 feed 條目而言等同 median。
 
 任何失敗(無條目、健康 feed 太少、過時、disagreement、價格退化)回傳 `None`,`SwapAda` 內的 `expect Some(...)` 會強制 TX revert。
 
-配合 SwapAda 的 1 小時 cooldown 與 10 分鐘最大 feed 過期,**想做單一 oracle 操弄的攻擊者必須讓兩個 feed 在 10 分鐘窗口內各自說同樣的謊**——dual-feed 共識把門檻從「一個 oracle 被入侵」提升到「兩個獨立 oracle 在 10 分鐘窗口內同時被入侵」。
+配合 SwapAda 的 1 小時 cooldown 與 10 分鐘最大 feed 過期,**想做單一 oracle 操弄的攻擊者必須讓兩個 feed 在 10 分鐘窗口內各自說同樣的謊**:dual-feed 共識把門檻從「一個 oracle 被入侵」提升到「兩個獨立 oracle 在 10 分鐘窗口內同時被入侵」。
 
 ---
 
@@ -264,7 +264,7 @@ let usdcx_out_expected = amount_ada * ada_price_bps / 10_000_000
 |------|------|
 | Oracle feed spread > 2%(操弄 / 停機) | TX 被拒;keeper 等候、或自費在外部 Minswap V2 手動 USDCx→ADA |
 | 兩個 oracle 都過期 > 40 分鐘 | TX 被拒;同上 |
-| Keeper 錢包 ADA 不足(20-50 ADA) | Keeper 運營責任;`docs/integration-playbook.md` 文件化——keeper 應維持 100+ ADA 儲備 |
+| Keeper 錢包 ADA 不足(20-50 ADA) | Keeper 運營責任;`docs/integration-playbook.md` 文件化,keeper 應維持 100+ ADA 儲備 |
 | 惡意 keeper 在金庫 ADA **未**低於門檻時觸發 SwapAda | 合約檢查拒絕(`ada_below_threshold = false`) |
 | 惡意 keeper 靠 SwapAda 做 stale oracle 套利(最多 50 ADA × 2% tolerance = 每次 1 USDCx × 每日 24 次) | Cooldown 1h + bounded spread + 50 ADA 上限,把每日損失限制在約 24 USDCx(100K TVL 下最壞 0.024%) |
 | Oracle 來源(Charli3 + Orcfax)同時被入侵 | 治理可以 queue `UpdateOracleSource` 動作,經 14 天 timelock 換 feed;期間 `EmergencyWithdraw` 把金庫凍結(frozen=1)擋住 SwapAda 呼叫 |

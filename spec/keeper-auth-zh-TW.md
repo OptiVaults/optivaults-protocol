@@ -6,7 +6,7 @@
 
 ## 1. 目的
 
-OptiVaults V1 需要一種**能隨時間演進**的 keeper 動作授權方式——從「只有協議 operator 白名單的特定錢包」開始,可能演化到「任何人繳保證金」——**而不改動 vault 合約**。`keeper_stake_script` 提供這層:把授權規則編在一個 Cardano staking validator 中,vault 合約透過 zero-withdraw 檢查查詢。
+OptiVaults V1 需要一種**能隨時間演進**的 keeper 動作授權方式:從「只有協議 operator 白名單的特定錢包」開始,可能演化到「任何人繳保證金」,而**不改動 vault 合約**。`keeper_stake_script` 提供這層:把授權規則編在一個 Cardano staking validator 中,vault 合約透過 zero-withdraw 檢查查詢。
 
 Vault 合約(`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`)**不直接**編碼 keeper 身份。這些合約中每個 keeper redeemer 只做一個檢查:
 
@@ -70,23 +70,23 @@ type KeeperAuthDatum {
 
 ## 3. Redeemer
 
-### 3.1 `WithdrawAsAuthorized`——keeper 執行 vault 操作
+### 3.1 `WithdrawAsAuthorized`:keeper 執行 vault 操作
 
 當 keeper 想執行一個 keeper 授權的 vault redeemer 時觸發。Vault redeemer 會失敗,除非 TX 包含對 `keeper_stake_script` 的 zero-withdrawal;這個 redeemer 授權該筆 withdrawal。
 
 **Keeper 授權的 redeemer 集合(都走這個閘門)。** 每個 validator 的 redeemer 所在:
-- `vault_keeper_hot.Compound`——productive + zero-yield heartbeat
-- `vault_keeper_hot.RebalanceBuffer`——allocation-only idle-buffer rebalance
-- `vault_batcher.BatchProcess`——填 queued deposit / withdraw order
-- `vault_swap_ada.SwapAda`——透過 keeper↔vault oracle 等值交換的閉環 vault-ADA 補充(見 `spec/ada-swap.md`)
-- `vault_protocol.DeployToProtocol`——透過 SwapAdapter 分派送 DEX swap(bounded ADA 支出)
-- `vault_recall.RecallFromProtocol`——cancel / 收回待處理 DEX order
-- `vault_recall.MergeUtxo`——整合 vault + NoDatum UTxO
-- `vault_admin_deploy.AdminDeployNonDeposit`——把滯留非存入 token 換回 USDCx(gov-gated,7d keeper 停擺 + 21d registry 穩定為前置條件,不是例行 keeper redeemer,但當 keeper 活躍時仍走 keeper_stake_script 閘門)
-- `vault_liqwid.SupplyToLiqwid`——把 buffer → qToken
-- `vault_liqwid.RecallFromLiqwid`——贖回 qToken → buffer
+- `vault_keeper_hot.Compound`:productive + zero-yield heartbeat
+- `vault_keeper_hot.RebalanceBuffer`:allocation-only idle-buffer rebalance
+- `vault_batcher.BatchProcess`:填 queued deposit / withdraw order
+- `vault_swap_ada.SwapAda`:透過 keeper↔vault oracle 等值交換的閉環 vault-ADA 補充(見 `spec/ada-swap.md`)
+- `vault_protocol.DeployToProtocol`:透過 SwapAdapter 分派送 DEX swap(bounded ADA 支出)
+- `vault_recall.RecallFromProtocol`:cancel / 收回待處理 DEX order
+- `vault_recall.MergeUtxo`:整合 vault + NoDatum UTxO
+- `vault_admin_deploy.AdminDeployNonDeposit`:把滯留非存入 token 換回 USDCx(gov-gated,7d keeper 停擺 + 21d registry 穩定為前置條件,不是例行 keeper redeemer,但當 keeper 活躍時仍走 keeper_stake_script 閘門)
+- `vault_liqwid.SupplyToLiqwid`:把 buffer → qToken
+- `vault_liqwid.RecallFromLiqwid`:贖回 qToken → buffer
 
-以上每個 vault redeemer 都需要 `tx.extra_signatories` keeper 簽名**且** `keeper_stake_script` zero-withdraw(雙重檢查)。純治理 redeemer(UpdateStrategy、UpdateFee、UpdateFeeSplit、UpdateRegistry、TreasurySpend、UpdateKeeperAuth、RotateSigners、EmergencyWithdraw、UpdateOracleSource)繞過此閘門——改以 `multisig_gov` 的 m-of-n 簽名授權。
+以上每個 vault redeemer 都需要 `tx.extra_signatories` keeper 簽名**且** `keeper_stake_script` zero-withdraw(雙重檢查)。純治理 redeemer(UpdateStrategy、UpdateFee、UpdateFeeSplit、UpdateRegistry、TreasurySpend、UpdateKeeperAuth、RotateSigners、EmergencyWithdraw、UpdateOracleSource)繞過此閘門,改以 `multisig_gov` 的 m-of-n 簽名授權。
 
 Keeper 停擺 7 天後(以 `last_compound_time` 衡量),治理可透過 vault validator 中的 `require_keeper_or_governance_fallback` 模式,介入處理上述 keeper 授權 redeemer;治理用 GovNFT spend 簽 TX,本 `WithdrawAsAuthorized` redeemer 不會被呼叫(vault validator 改走 gov-fallback 分支)。
 
@@ -94,7 +94,7 @@ Keeper 停擺 7 天後(以 `last_compound_time` 衡量),治理可透過 vault va
 WithdrawAsAuthorized { keeper_pkh: VerificationKeyHash }
 ```
 
-**V1 採「A-Plain」授權變體——每筆 keeper TX 都必須 spend 那個 keeper_auth UTxO、並產出 continuing output,其 `last_successful_tx_at` 推進到 `tx.validity_range.lower`、`nonce` +1。** 這把每筆 keeper 動作**原子性地**綁到授權狀態,避免 reference-input race。
+**V1 採「A-Plain」授權變體:每筆 keeper TX 都必須 spend 那個 keeper_auth UTxO、並產出 continuing output,其 `last_successful_tx_at` 推進到 `tx.validity_range.lower`、`nonce` +1。** 這把每筆 keeper 動作**原子性地**綁到授權狀態,避免 reference-input race。
 
 **驗證**:
 
@@ -121,9 +121,9 @@ WithdrawAsAuthorized { keeper_pkh: VerificationKeyHash }
 
 Active 集合恰好 1 人時(V1 啟動),`current_primary_pkh` 永遠回那位 PKH、failover 閘門不被啟用。單一創辦人 keeper 可以無額外限制地送 TX。
 
-**Anti-spam cooldown**:鏈上的 `last_successful_tx_at` 更新代表 same-PKH 垃圾流量會被 TX 計時自然 capped;明確的 `cooldown_ms` 檢查只在 validator 看到 same-PKH 在窗口內再嘗試時強制——V1 啟動時 `cooldown_ms = 60_000`(1 分鐘),遠在正常 keeper 運作節奏內。
+**Anti-spam cooldown**:鏈上的 `last_successful_tx_at` 更新代表 same-PKH 垃圾流量會被 TX 計時自然 capped;明確的 `cooldown_ms` 檢查只在 validator 看到 same-PKH 在窗口內再嘗試時強制;V1 啟動時 `cooldown_ms = 60_000`(1 分鐘),遠在正常 keeper 運作節奏內。
 
-### 3.2 `PostBond`——第三方透過 bond 註冊為 keeper
+### 3.2 `PostBond`:第三方透過 bond 註冊為 keeper
 
 只在 `Mixed` 與 `PermissionlessWithBond` 模式下可用。
 
@@ -144,7 +144,7 @@ PostBond { bond_owner: VerificationKeyHash }
 - 其他 KeeperAuthDatum 欄位不變
 - **不得重複 bond**:此動作前 `bond_owner ∉ (active_bonds.map(bond_owner))`
 
-### 3.3 `RequestBondWithdrawal`——bond-owner 發起解除 bond
+### 3.3 `RequestBondWithdrawal`:bond-owner 發起解除 bond
 
 ```aiken
 RequestBondWithdrawal { bond_owner: VerificationKeyHash }
@@ -157,7 +157,7 @@ RequestBondWithdrawal { bond_owner: VerificationKeyHash }
 - 其他欄位不變
 - **效果**:bond 作為 keeper 的授權**立即**停止(依 `WithdrawAsAuthorized` 檢查:`withdrawal_requested_at == None`)。接著 30 天 cooldown,才能把 bond 取回。
 
-### 3.4 `WithdrawBond`——cooldown 後退回 bond
+### 3.4 `WithdrawBond`:cooldown 後退回 bond
 
 ```aiken
 WithdrawBond { bond_owner: VerificationKeyHash }
@@ -172,9 +172,9 @@ WithdrawBond { bond_owner: VerificationKeyHash }
 - 新 datum:該條目從 `active_bonds` 移除
 - 其他欄位不變
 
-**實作備註——bond-backing UTXO 不變量。** `keeper_auth` UTxO 必須帶實體 lovelace ≥ `Σ active_bonds.bond_amount + min_utxo`。當 keeper `PostBond` 時,TX 在 datum 更新的同時把該 bond 的 lovelace 加進 `keeper_auth` UTxO 餘額。`WithdrawBond` 在退款時對應地扣掉該 bond 的 lovelace。管理 `keeper_auth` UTxO 的 operator 必須確保它**不被 split**、**不被除了 `WithdrawBond` / `SlashBond` 以外的路徑抽走 lovelace**,否則 bond-refund 不變量會失敗、某 keeper 的 bond 會無法取回。這在 validator 層由上方 continuing-lovelace 檢查強制;違反的 TX 被拒絕。
+**實作備註:bond-backing UTXO 不變量。** `keeper_auth` UTxO 必須帶實體 lovelace ≥ `Σ active_bonds.bond_amount + min_utxo`。當 keeper `PostBond` 時,TX 在 datum 更新的同時把該 bond 的 lovelace 加進 `keeper_auth` UTxO 餘額。`WithdrawBond` 在退款時對應地扣掉該 bond 的 lovelace。管理 `keeper_auth` UTxO 的 operator 必須確保它**不被 split**、**不被除了 `WithdrawBond` / `SlashBond` 以外的路徑抽走 lovelace**,否則 bond-refund 不變量會失敗、某 keeper 的 bond 會無法取回。這在 validator 層由上方 continuing-lovelace 檢查強制;違反的 TX 被拒絕。
 
-### 3.5 `UpdateAuthDatum`——治理調整授權規則
+### 3.5 `UpdateAuthDatum`:治理調整授權規則
 
 由 MultisigGov 的 `ExecuteAction` 對應一筆已 queue 的 `UpdateKeeperAuth` 提案觸發。
 
@@ -194,18 +194,18 @@ UpdateAuthDatum {
 - `new_datum.cooldown_ms in [60_000, 86_400_000]`(1 分鐘到 24 小時之間)
 - `new_datum.rotation_period_ms in [86_400_000, 2_592_000_000]`(1 天到 30 天之間)
 - `new_datum.failover_window_ms in [600_000, 7_200_000]`(10 分鐘到 2 小時之間)
-- `new_datum.active_bonds == old_datum.active_bonds`(治理**不能**直接操弄 bond——只能透過 bond redeemer 新增 / 移除)
+- `new_datum.active_bonds == old_datum.active_bonds`(治理**不能**直接操弄 bond,只能透過 bond redeemer 新增 / 移除)
 - `new_datum.last_config_update_time == tx.validity_range.upper`
 - `new_datum.nonce == old_datum.nonce + 1`
 - **Rotation 重錨定規則**:若 `new_datum.authorized_pkhs != old_datum.authorized_pkhs`,或模式從其他模式切到(或從)`PermissionlessWithBond`(active 集合組成可能顯著改變),則 `new_datum.rotation_epoch_start_ms == tx.validity_range.lower`。否則 `new_datum.rotation_epoch_start_ms == old_datum.rotation_epoch_start_ms`。
 - Value 全數保留:stake-script UTxO output 必須帶與 input 相同(或更多)的 ADA
 - **不得降級既有 bond**:若模式從 `PermissionlessWithBond` 改到 `GovernanceOnly`,既有 bond 仍保持授權,直到他們自願 `RequestBondWithdrawal`(他們的授權綁在 bond 條目、不是模式)。這防止治理單方「取消所有 bonded keeper 授權」卻不退 bond。
 
-### 3.6 `SlashBond`——治理對違規 keeper 沒收 bond
+### 3.6 `SlashBond`:治理對違規 keeper 沒收 bond
 
 > **V1 啟動時不可達。** V1 出廠時 `RegistrationMode = GovernanceOnly`;無 bonded keeper,`active_bonds` 為空,任何 `SlashBond` TX 都無法通過驗證。MultisigGov action 目錄(`governance.md §4`)中定義了 `SlashKeeper` action kind 以利向前相容,但若在空 bond 集上嘗試,會在 execute 時被 MultisigGov `ExecuteAction` validator 拒絕。本節規格化 redeemer 的形狀以備 Phase 3+;**不要假設 slashing 在 V1 可用**。
 
-由(Phase 3+)MultisigGov 的 `ExecuteAction` 對應一筆已 queue 的 `SlashKeeper` 提案觸發。預期用於**可證實的違規**(例如 keeper 違反 registry 白名單、把 swap 路由到攻擊者地址——這在 registry 檢查層會被鏈上擋下,但若出現某種被 vault validator 沒直接抓到的 grief 行為,這就是恢復機制)。
+由(Phase 3+)MultisigGov 的 `ExecuteAction` 對應一筆已 queue 的 `SlashKeeper` 提案觸發。預期用於**可證實的違規**(例如 keeper 違反 registry 白名單、把 swap 路由到攻擊者地址;這在 registry 檢查層會被鏈上擋下,但若出現某種被 vault validator 沒直接抓到的 grief 行為,這就是恢復機制)。
 
 ```aiken
 SlashBond {
@@ -225,7 +225,7 @@ SlashBond {
 - SlashKeeper 治理動作套 14 天 timelock(比標準 7 天長,反映此主張的對抗性)
 - **被指控方的救濟管道**:14 天 timelock 窗口讓被指控 keeper 能公開回應;治理簽名者若證據不足可以 CancelAction。
 
-V1 啟動時**刻意不提供** slashing——V1 出廠為 `GovernanceOnly` 模式,keeper 是人工管理的,slashing 是 overkill(治理只需從 `authorized_pkhs` 透過 UpdateAuthDatum 移除他們即可)。`SlashBond` redeemer 在這裡規格化,是為了未來存在 bonded permissionless keeper、slashing 成為課責機制的模式。
+V1 啟動時**刻意不提供** slashing:V1 出廠為 `GovernanceOnly` 模式,keeper 是人工管理的,slashing 是 overkill(治理只需從 `authorized_pkhs` 透過 UpdateAuthDatum 移除他們即可)。`SlashBond` redeemer 在這裡規格化,是為了未來存在 bonded permissionless keeper、slashing 成為課責機制的模式。
 
 ---
 
@@ -240,11 +240,11 @@ V1 啟動時**刻意不提供** slashing——V1 出廠為 `GovernanceOnly` 模�
 - 非 primary keeper 待命;只有在 primary 沉默 `failover_window_ms`(預設 30 分鐘)後才能執行
 - 跨 N 個輪替週期,每人約 1/N 的時間是 primary,賺約 1/N 累積的 keeper fee
 
-V1 啟動時 1 位 keeper,「輪替」週期為 1,那位單一 keeper 永遠是 primary——實際上不發生輪替。
+V1 啟動時 1 位 keeper,「輪替」週期為 1,那位單一 keeper 永遠是 primary,實際上不發生輪替。
 
 ### 4.2 輪替公式(純時間推導)
 
-**不需要明確的輪替觸發 TX**——輪替隨 wall-clock 自動前進:
+**不需要明確的輪替觸發 TX**:輪替隨 wall-clock 自動前進:
 
 ```aiken
 fn active_keeper_set(auth: KeeperAuthDatum) -> List<VerificationKeyHash> {
@@ -276,7 +276,7 @@ Primary 離線時,非 primary keeper 可以在 30 分鐘沉默後介入:
 - 要求 `tx.validity_range.lower - last_successful_tx_at >= failover_window_ms`(30 分鐘)
 - 成功時 `last_successful_tx_at` 更新 → primary 也必須等 30 分鐘才能收回(自然形成 handoff 節奏)
 
-若 primary 在自己那週內回來,可以**立即**恢復 primary 路徑(無等待——primary 簽名者永遠被允許)。只有非 primary 簽名者面對 failover 閘門。
+若 primary 在自己那週內回來,可以**立即**恢復 primary 路徑(無等待;primary 簽名者永遠被允許)。只有非 primary 簽名者面對 failover 閘門。
 
 ### 4.4 授權集合變動時重錨定
 
@@ -284,7 +284,7 @@ Primary 離線時,非 primary keeper 可以在 30 分鐘沉默後介入:
 
 Trade-off:正在服務的 primary 的那週可能被切短。緩解:
 - `UpdateAuthDatum` 有 14 天治理 timelock(即將離任的 primary 能預見變更並規劃交接)
-- `PostBond` 會加到集合、但**不在週中重錨定**(輪替從下一個 slot 邊界挑進新 bonded keeper——比治理 add 更不干擾)
+- `PostBond` 會加到集合、但**不在週中重錨定**(輪替從下一個 slot 邊界挑進新 bonded keeper,比治理 add 更不干擾)
 
 ### 4.5 費用分配
 
@@ -326,14 +326,14 @@ fn current_primary_pkh_weighted(auth: KeeperAuthDatum, now_ms: Int) -> Verificat
 }
 ```
 
-**等值 bond fallback**:若所有 active keeper 的 bond 相等(或 `GovernanceOnly` 無 bond),演算法退回等值時間 round-robin——與 §4.2 相同。
+**等值 bond fallback**:若所有 active keeper 的 bond 相等(或 `GovernanceOnly` 無 bond),演算法退回等值時間 round-robin,與 §4.2 相同。
 
-**Phase 3 啟用**:當 `registration_mode` 透過 `UpdateAuthDatum` 治理動作設為 `Mixed` 時,這個自動發生。**不需要**治理每季評估 keeper 順序——bond 決定排程。
+**Phase 3 啟用**:當 `registration_mode` 透過 `UpdateAuthDatum` 治理動作設為 `Mixed` 時,這個自動發生。**不需要**治理每季評估 keeper 順序;bond 決定排程。
 
-**Phase 4 啟用**:`PermissionlessWithBond` 模式,開放 bond 發行。任何人都可以 `PostBond` 並以 bond 加權 slot 比例進入輪替。更高 bond 買更多 primary 時間——bond 同時是 liveness 承諾(可 slash)與經濟訊號。
+**Phase 4 啟用**:`PermissionlessWithBond` 模式,開放 bond 發行。任何人都可以 `PostBond` 並以 bond 加權 slot 比例進入輪替。更高 bond 買更多 primary 時間;bond 同時是 liveness 承諾(可 slash)與經濟訊號。
 
 **安全性質**:
-- 單一擁有不成比例大 bond 的 keeper**不能**阻止其他人賺——加權輪替仍把 cycle 在所有 bonded keeper 間切分
+- 單一擁有不成比例大 bond 的 keeper**不能**阻止其他人賺;加權輪替仍把 cycle 在所有 bonded keeper 間切分
 - `bond_amount_required >= 50_000_000`(50 ADA)最低 bond,防零權重 bonded 條目
 - 任一 keeper 的最大 bond 時間份額為 `bond[k] / total_bond` → 只有在所有其他 bond 為零時才會是 100%;否則自然有界
 
@@ -350,7 +350,7 @@ V1 mainnet 部署時,KeeperAuthDatum 初始化為:
 | 欄位 | 啟動值 | 理由 |
 |------|------|------|
 | `registration_mode` | `GovernanceOnly` | V1 出廠時 keeper 集合人工管理;permissionless 註冊延到有真實需求再開 |
-| `authorized_pkhs` | `[founder_pkh]` | 誠實的初始狀態——啟動時只有創辦人跑 keeper |
+| `authorized_pkhs` | `[founder_pkh]` | 誠實的初始狀態,啟動時只有創辦人跑 keeper |
 | `active_bonds` | `[]` | 啟動時無 bond;permissionless 模式未啟用 |
 | `bond_amount_required` | `100_000_000`(100 ADA) | 為未來 permissionless 啟用的合理預設;模式變更前不用 |
 | `last_config_update_time` | 啟動時為 `tx.validity_range.upper` | |
@@ -375,14 +375,14 @@ V1 mainnet 部署時,KeeperAuthDatum 初始化為:
 當 TVL 與生態成熟度足以支撐 permissionless keeper 註冊時,切換是**單一鏈上事件、不需重部署 vault**:
 
 1. **產品負責人提案**:治理 queue `UpdateKeeperAuth`,`new_datum.registration_mode = PermissionlessWithBond`(或 `Mixed`)、設想的 `bond_amount_required`
-2. **7 天 timelock**——任一 gov 簽名者可以 1-of-n 否決 CancelAction
-3. **Execute**——任一簽名者執行;stake-script datum 更新
+2. **7 天 timelock**:任一 gov 簽名者可以 1-of-n 否決 CancelAction
+3. **Execute**:任一簽名者執行;stake-script datum 更新
 4. **任何人可以 bond**:第三方透過 `PostBond` 發 bond,成為授權 keeper
-5. **Vault 合約不動**——`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid` 仍只檢查「有 zero-withdraw 對 keeper_stake_script 嗎?」,不管 stake script 內部規則如何
+5. **Vault 合約不動**:`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid` 仍只檢查「有 zero-withdraw 對 keeper_stake_script 嗎?」,不管 stake script 內部規則如何
 
 這就是 stake-validator 方法**相對於其他方案**(硬編碼 PKH list、License NFT minting policy 等)的**主要架構好處**:授權政策**在單一 validator 自己的 datum 內演進**,對協議其他部分不可見。
 
-**層級界定**:上述 `UpdateKeeperAuth` 治理動作是**協議層**事件——它變動一個特定 vault 實例的鏈上狀態。**Operator 層**(`optivaults-reference` 的 keeper TypeScript 程式、錢包金鑰管理、代管基礎設施)**完全獨立**——fork 運營者決定在自己實例中要註冊哪些 keeper PKH,是**該實例的治理決策**,與 TypeScript keeper 如何實作無關。**同一份 operator 層程式可以對任何把其 PKH 白名單的協議層 vault 運作**。
+**層級界定**:上述 `UpdateKeeperAuth` 治理動作是**協議層**事件,它變動一個特定 vault 實例的鏈上狀態。**Operator 層**(`optivaults-reference` 的 keeper TypeScript 程式、錢包金鑰管理、代管基礎設施)**完全獨立**:fork 運營者決定在自己實例中要註冊哪些 keeper PKH,是**該實例的治理決策**,與 TypeScript keeper 如何實作無關。**同一份 operator 層程式可以對任何把其 PKH 白名單的協議層 vault 運作**。
 
 ---
 
@@ -427,9 +427,9 @@ License NFT 層可以在 V2+ 作為 stake script 之上的補充憑證檢查加�
 `keeper_stake_script` 帶一個 gov-gated `publish` handler(A2),用標準 `is_gov_authorized(ActDeregisterStake)` 檢查、對自己既有的編譯時 `governance_nft_policy` + `governance_nft_name` 參數。流程:
 
 1. 治理 queue `ActDeregisterStake`,`target_script = keeper_stake_script_hash`、`payload_hash = blake2b_256(cbor.serialise(keeper_stake_script_hash))`。
-2. 14 天 timelock 過(Preprod 驗證覆寫 1 小時——見 `lib/vault/constants.ak`)。
+2. 14 天 timelock 過(Preprod 驗證覆寫 1 小時,見 `lib/vault/constants.ak`)。
 3. 任一簽名者執行 TX,該 TX:(a) 消費 `multisig_gov` UTxO 以 `ExecuteAction(action_id)`、(b) 為 `keeper_stake_script` 的 stake credential 包含 Cardano `Deregister` 憑證、(c) 產生對應狀態轉移的 continuing `multisig_gov` output。
 
 Cardano ledger 在 Deregister cert 上呼叫 `keeper_stake_script.publish`;我們的 handler 重驗證治理授權並回傳 True。Ledger 接受 cert + 退 2 ADA。
 
-Deregister 後,vault **不可運作**——任何對 `keeper_stake_script` 的 Withdraw-Zero 企圖都會失敗(credential 不再註冊)。Deregister 因此是**生命終點 / 下架**動作,不是例行運營。Post-Phase-77 + 77b/77c/77d,同樣模式套用到 V1 全部 14 個 staking credential(`vault_user` / `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada` / `vault_protocol` / `vault_recall` / `vault_liqwid` / `vault_gov_policy` / `vault_gov_emergency` / `vault_admin_deploy` / `keeper_stake_script` / `minswap_v2_adapter` SwapAdapter / `sundaeswap_adapter` / `sundaeswap_cancel_guard`)。Pre-Phase-77 的 16 KB 上限曾擋住 `vault_core` 的 `publish` handler,那個限制透過把 vault_core 切成 `vault_user` + `vault_keeper_hot` 解決——見 `spec/governance.md §4.13`。
+Deregister 後,vault **不可運作**:任何對 `keeper_stake_script` 的 Withdraw-Zero 企圖都會失敗(credential 不再註冊)。Deregister 因此是**生命終點 / 下架**動作,不是例行運營。Post-Phase-77 + 77b/77c/77d,同樣模式套用到 V1 全部 14 個 staking credential(`vault_user` / `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada` / `vault_protocol` / `vault_recall` / `vault_liqwid` / `vault_gov_policy` / `vault_gov_emergency` / `vault_admin_deploy` / `keeper_stake_script` / `minswap_v2_adapter` SwapAdapter / `sundaeswap_adapter` / `sundaeswap_cancel_guard`)。Pre-Phase-77 的 16 KB 上限曾擋住 `vault_core` 的 `publish` handler,那個限制透過把 vault_core 切成 `vault_user` + `vault_keeper_hot` 解決,見 `spec/governance.md §4.13`。

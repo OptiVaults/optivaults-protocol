@@ -1,6 +1,6 @@
 # OptiVaults V1 — MultisigGov Validator 規格
 
-**範圍**:`multisig_gov` validator 的內部實作細節——action_id 計算、GovDatum spend / 轉移規則、跨 validator 授權 helper,以及本 validator 與 `governance.md`(公開動作目錄)的職責分離。
+**範圍**:`multisig_gov` validator 的內部實作細節:action_id 計算、GovDatum spend / 轉移規則、跨 validator 授權 helper,以及本 validator 與 `governance.md`(公開動作目錄)的職責分離。
 
 本文件是 `spec/governance.md` 的**實作層級**伴隨文件。如果 `governance.md` 回答「治理能做什麼、什麼時候能做?」,本文件回答「validator 怎麼強制這些規則?」
 
@@ -36,7 +36,7 @@ type GovDatum {
   signers: List<VerificationKeyHash>,              // 目前 m-of-n 集合(3..20 項)
   signer_joined_at_ms: List<Int>,                   // 與 signers 平行;tenure 起始
   signer_last_qualified_ms: List<Int>,              // 與 signers 平行;上次合格 TX
-  threshold: Int,                                   // m(2..signer_count——允許 unanimity)
+  threshold: Int,                                   // m(2..signer_count,允許 unanimity)
 
   // --- 帶 timelock 的動作佇列 ---
   queued: List<QueuedAction>,                       // 0..10 待處理
@@ -88,7 +88,7 @@ type GovRedeemer {
 }
 ```
 
-**平行 list 不變量**:`list.length(signers) == list.length(signer_joined_at_ms) == list.length(signer_last_qualified_ms)`。任何會動到這三個 list 之一的 redeemer,都必須保留此不變量——破壞它會造成 off-by-one 讀取,並誤派季度報酬。
+**平行 list 不變量**:`list.length(signers) == list.length(signer_joined_at_ms) == list.length(signer_last_qualified_ms)`。任何會動到這三個 list 之一的 redeemer,都必須保留此不變量;破壞它會造成 off-by-one 讀取,並誤派季度報酬。
 
 ---
 
@@ -97,7 +97,7 @@ type GovRedeemer {
 每個會改動 `signers` 的 redeemer 都強制:
 
 - `3 <= list.length(signers) <= 20`(最低 3 才有「多簽 + 1-of-n cancel」意義;上限 20 以限制 datum 大小)
-- `2 <= threshold <= list.length(signers)`(最低 2 才是真的多簽;**unanimity `threshold == n` 明確允許**)。**理由**:V1 啟動時 **3-of-3(threshold = n = 3)**,因為創辦人同時是 keeper operator + 在治理內——unanimity 強迫創辦人必須說服**其他兩位**簽名者才能通過任何動作,而不只是一位。Post-audit Phase 2+ 的最佳實務是 `threshold < n`,好讓至少一位簽名者永遠在通過 quorum 之外、能 1-of-n cancel——但這是運營政策慣例,**不是 validator 強制約束**。
+- `2 <= threshold <= list.length(signers)`(最低 2 才是真的多簽;**unanimity `threshold == n` 明確允許**)。**理由**:V1 啟動時 **3-of-3(threshold = n = 3)**,因為創辦人同時是 keeper operator + 在治理內;unanimity 強迫創辦人必須說服**其他兩位**簽名者才能通過任何動作,而不只是一位。Post-audit Phase 2+ 的最佳實務是 `threshold < n`,好讓至少一位簽名者永遠在通過 quorum 之外、能 1-of-n cancel,但這是運營政策慣例,**不是 validator 強制約束**。
 - 所有 `signers` 項互不相同
 - 所有 `signer_joined_at_ms[i] > 0`(時間戳非零)
 - 所有 `signer_last_qualified_ms[i] >= 0`(0 代表「加入後從未合格」)
@@ -129,7 +129,7 @@ fn compute_action_id(
 
 **唯一性屬性**:`nonce_at_queue` 在整個 GovDatum 生命週期嚴格單調,所以兩個在相同 `queued_at_ms` 且 `payload_hash` 相同的動作,仍會產生**不同** `action_id`。
 
-**防重放**:因為 `action_id` 是 `queued` 的一部分,而 `queued` 條目在 `CancelAction` / `ExecuteAction` 時被移除,所以同樣的 `(action_kind, target_script, payload_hash)` 組合可以**在移除後再 queue 一次**——但會有新的 `nonce_at_queue`、進而新的 `action_id`。合法的重新 queue 是可能的;**同一個 queue 條目的重複執行**不可能。
+**防重放**:因為 `action_id` 是 `queued` 的一部分,而 `queued` 條目在 `CancelAction` / `ExecuteAction` 時被移除,所以同樣的 `(action_kind, target_script, payload_hash)` 組合可以**在移除後再 queue 一次**,但會有新的 `nonce_at_queue`、進而新的 `action_id`。合法的重新 queue 是可能的;**同一個 queue 條目的重複執行**不可能。
 
 ---
 
@@ -149,16 +149,16 @@ payload_hash = blake2b_256(cbor.serialise(payload))
 | UpdateFee | `(new_performance_fee_bps, new_early_withdraw_fee_bps, new_min_hold_seconds)` |
 | UpdateFeeSplit | `(new_keeper_fee_bps, new_gov_fee_bps)` |
 | EmergencyWithdraw | `(loss_amount, freeze_flag)` — 註:`loss_amount` 在 `vault_gov_emergency` 被 Phase 1 治理安全設計 Layer 1 強制為 0(freeze-only)。欄位保留在 payload-hash 中是為了 action_id 推導的向後相容性。見 `governance.md` §4.4。 |
-| AdminDeployNonDeposit | `(deploy_amount, deploy_token_policy, deploy_token_name)`——`new_allocations` + `dest_output_idx` 是運營選擇、不預先承諾 |
+| AdminDeployNonDeposit | `(deploy_amount, deploy_token_policy, deploy_token_name)`;`new_allocations` + `dest_output_idx` 是運營選擇、不預先承諾 |
 | UpdateRegistry | `<new_registry_datum>`(整個 RegistryDatum 值作為 payload) |
 | FastUpdateMarkets | `<new_registry_datum>`(整個 RegistryDatum 值) |
 | UpdateKeeperAuth | `<new_keeper_auth_datum>`(整個 KeeperAuthDatum 值) |
-| TreasurySpend | `(category_tag_byte, amount, recipient_address, audit_invoice_ref)`——category tag:`#"01"` audit / `#"02"` ops / `#"03"` rd / `#"04"` buffer |
+| TreasurySpend | `(category_tag_byte, amount, recipient_address, audit_invoice_ref)`;category tag:`#"01"` audit / `#"02"` ops / `#"03"` rd / `#"04"` buffer |
 | UpdateTreasuryParams | `(audit_bps, ops_bps, rd_bps, buffer_bps, cap_audit, cap_ops, cap_rd, cap_buffer)` |
 | RotateSigners | `(new_signers, new_threshold)` |
 | SlashBond | `(bond_owner, evidence_ref, slash_amount)` |
-| UpdateOracleSource | **TBD**——保留的 ActionKind;payload 佈局在 V1.x 把 SwapAda oracle source 從編譯時錨點改為 mutable 欄位時定案 |
-| ActDeregisterStake | `target_hash`——stake validator 自己的 28-byte script hash。`payload_hash_deregister_stake(target_hash) = blake2b_256(cbor.serialise(target_hash))`。看起來冗餘(動作的 `target_script` 欄也釘這個),但保留跨所有 ActionKind 一致的 `payload_hash_*` 模式,並擋住 off-chain 工具構造 `target_script ≠ payload_hash_input` 的 QueueAction。涵蓋的 validator:`vault_protocol`、`vault_liqwid`、`vault_admin`、`keeper_stake_script`。**不涵蓋**:`vault_core`(publish handler 因 16 KB 上限省略——見 governance.md §4.13)。 |
+| UpdateOracleSource | **TBD**:保留的 ActionKind;payload 佈局在 V1.x 把 SwapAda oracle source 從編譯時錨點改為 mutable 欄位時定案 |
+| ActDeregisterStake | `target_hash`:stake validator 自己的 28-byte script hash。`payload_hash_deregister_stake(target_hash) = blake2b_256(cbor.serialise(target_hash))`。看起來冗餘(動作的 `target_script` 欄也釘這個),但保留跨所有 ActionKind 一致的 `payload_hash_*` 模式,並擋住 off-chain 工具構造 `target_script ≠ payload_hash_input` 的 QueueAction。涵蓋的 validator:`vault_protocol`、`vault_liqwid`、`vault_admin`、`keeper_stake_script`。**不涵蓋**:`vault_core`(publish handler 因 16 KB 上限省略,見 governance.md §4.13)。 |
 
 ExecuteAction 時,validator 從實際傳給 target validator 的 redeemer 重新計算 `payload_hash`,並與 queued 的 `payload_hash` 比對。不相符 → 拒絕。
 
@@ -199,7 +199,7 @@ QueueAction {
 6. `len(queued_old) + 1 <= 10`(DoS 上限)
 7. `payload_hash` 剛好 32 bytes
 8. Continuing datum:
-   - `signers, threshold, signer_joined_at_ms, signer_last_qualified_ms` 不變(除了本 TX 中簽名的每位 signer 的 `signer_last_qualified_ms[i]` 更新——他們在本季「合格」)
+   - `signers, threshold, signer_joined_at_ms, signer_last_qualified_ms` 不變(除了本 TX 中簽名的每位 signer 的 `signer_last_qualified_ms[i]` 更新,他們在本季「合格」)
    - `signer_compensation_pool, last_distribute_ms, distribute_period_ms` 不變
    - `nonce = old.nonce + 1`
    - `queued = old.queued ++ [new_queued_action]`,其中:
@@ -229,7 +229,7 @@ CancelAction { action_id: ByteArray }
    - `nonce = old.nonce + 1`
    - 其他欄位不變
 
-**1-of-n 授權的理由**:這是緊急煞車。任何單一簽名者——包含原本反對 queue 的那位——都能 cancel。若 cancel 也要求多簽,quorum 可以 queue 惡意動作、同時擋住對自己的 cancel。
+**1-of-n 授權的理由**:這是緊急煞車。任何單一簽名者,包含原本反對 queue 的那位,都能 cancel。若 cancel 也要求多簽,quorum 可以 queue 惡意動作、同時擋住對自己的 cancel。
 
 ### 6.3 ExecuteAction
 
@@ -284,7 +284,7 @@ RotateSignersRedeemer {
      - 對每個新加入者:`signer_joined_at_ms[i] = tx.validity_range.lower`
    - `signer_last_qualified_ms` 同樣對留任者保留;對新加入者重置為 0
    - `queued = list.remove_at(old.queued, i)`(RotateSigners queue 條目被消耗)
-   - `signer_compensation_pool` 不變(備註:operator 慣例是若 pool > 0 先跑 DistributeSignerCompensation,但這**不是**合約強制——見 governance.md §2.4)
+   - `signer_compensation_pool` 不變(備註:operator 慣例是若 pool > 0 先跑 DistributeSignerCompensation,但這**不是**合約強制,見 governance.md §2.4)
    - `nonce = old.nonce + 1`
 
 ### 6.5 Heartbeat
@@ -322,7 +322,7 @@ DistributeSignerCompensation { triggering_signer: VerificationKeyHash }
 8. 令 `forfeit_total = old.signer_compensation_pool - (len(qualified_signers) * per_signer)`
 9. **TX output**:
    - 對每位 `(signer_pkh, _) ∈ qualified_signers`:一筆 UTxO 到 `signer_pkh` 的付款地址,帶剛好 `per_signer` USDCx
-   - **Forfeit output**:Treasury UTxO 也在本 TX 被 spent,其 continuing output `audit_reserve_balance += forfeit_total`(由 treasury 的 `ReceiveGovForfeit` redeemer 觸發——見 `spec/treasury.md §3.3`)
+   - **Forfeit output**:Treasury UTxO 也在本 TX 被 spent,其 continuing output `audit_reserve_balance += forfeit_total`(由 treasury 的 `ReceiveGovForfeit` redeemer 觸發,見 `spec/treasury.md §3.3`)
 10. Continuing gov datum:
     - `signer_compensation_pool = 0`
     - `last_distribute_ms = tx.validity_range.lower`
@@ -363,7 +363,7 @@ pub fn is_gov_authorized(
 }
 ```
 
-Caller 用 `helpers.ak` 中的 `payload_hash_*` helper(與上面的 canonical tuple 佈局對齊)預計算 `expected_payload_hash`。範例——`vault_admin.UpdateFee`:
+Caller 用 `helpers.ak` 中的 `payload_hash_*` helper(與上面的 canonical tuple 佈局對齊)預計算 `expected_payload_hash`。範例,`vault_admin.UpdateFee`:
 
 ```aiken
 let expected_payload_hash = payload_hash_update_fee(
@@ -380,7 +380,7 @@ let governance_authorized = is_gov_authorized(
 
 **鏈下義務**。提交 `QueueAction` 者必須**用相同的 canonical tuple 佈局**在鏈下計算**同一**個 payload hash(`scripts/governance/opti-gov.ts` 必須與 `payload_hash_*` byte-for-byte 一致),否則執行會被拒。
 
-這關閉了 V1 內部審計 H-1 發現:較早的 V1 草稿只檢查「GovNFT 在 tx.inputs 中」,這讓 m-of-n signer 可以 queue 一個良性 payload(在 timelock + 1-of-n cancel 窗口期間接受公開揭露),然後在同一 TX 執行**不同的** payload——**完全繞過公開審視防禦**。
+這關閉了 V1 內部審計 H-1 發現:較早的 V1 草稿只檢查「GovNFT 在 tx.inputs 中」,這讓 m-of-n signer 可以 queue 一個良性 payload(在 timelock + 1-of-n cancel 窗口期間接受公開揭露),然後在同一 TX 執行**不同的** payload,**完全繞過公開審視防禦**。
 
 ---
 
@@ -399,7 +399,7 @@ let governance_authorized = is_gov_authorized(
 - `action_id` 用 blake2b_256(原生 primitive,比組合 sha2_256 便宜)
 - 平行 list(`signers`、`signer_joined_at_ms`、`signer_last_qualified_ms`)共用 index;單次 traversal 處理三者
 
-若編譯大小超過 16 KB,fallback 是把 `multisig_gov` 切成兩個 validator(一個做 queue/cancel/execute、一個做 rotate/heartbeat/distribute),以 Withdraw-Zero 模式連接——與 `vault_core` / `vault_protocol` / `vault_liqwid` 的切分類似。
+若編譯大小超過 16 KB,fallback 是把 `multisig_gov` 切成兩個 validator(一個做 queue/cancel/execute、一個做 rotate/heartbeat/distribute),以 Withdraw-Zero 模式連接,與 `vault_core` / `vault_protocol` / `vault_liqwid` 的切分類似。
 
 ---
 

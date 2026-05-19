@@ -1,6 +1,6 @@
 # OptiVaults V1 — Order Queue 與 Batch Processing
 
-**範圍**:`order` validator、OrderDatum,以及 `vault_batcher` 上的 BatchProcess redeemer(這個 standalone keeper-authorized staking validator 擁有 4 個 fold 迴圈 + OrderDatum/OrderRedeemer decode + list.unique + anti-leak 不變量)——存款與提款如何被排進批次處理。
+**範圍**:`order` validator、OrderDatum,以及 `vault_batcher` 上的 BatchProcess redeemer(這個 standalone keeper-authorized staking validator 擁有 4 個 fold 迴圈 + OrderDatum/OrderRedeemer decode + list.unique + anti-leak 不變量),說明存款與提款如何被排進批次處理。
 
 ---
 
@@ -64,7 +64,7 @@ Order UTxO 內容:
 
 ## 4. Redeemer
 
-### 4.1 `Process`——keeper 在 batch 中處理 order
+### 4.1 `Process`:keeper 在 batch 中處理 order
 
 當 keeper 把 Order UTxO 納入 BatchProcess TX 時,vault 側觸發這個。
 
@@ -90,7 +90,7 @@ Process {
   - Tip 收件地址不受合約約束(keeper 自由選自己錢包)
 - 退款:Order UTxO 剩下的 ADA(押金減 min-UTXO 減 tip)回到 `owner` 地址
 
-### 4.2 `Cancel`——owner 取消待處理 order
+### 4.2 `Cancel`:owner 取消待處理 order
 
 ```aiken
 Cancel
@@ -101,9 +101,9 @@ Cancel
 - Order UTxO 全部 value(USDCx / vUSDCx + 所有 ADA)退回 owner 地址
 - 不涉 vault
 
-Cancel 無論 `expires_at` 為何都可用——owner 在 order 被 Process 之前對 order 保有完整控制權。
+Cancel 無論 `expires_at` 為何都可用:owner 在 order 被 Process 之前對 order 保有完整控制權。
 
-### 4.3 `Expire`——過期後任何人都能觸發的退款
+### 4.3 `Expire`:過期後任何人都能觸發的退款
 
 ```aiken
 Expire
@@ -113,9 +113,9 @@ Expire
 - `tx.validity_range.lower >= ord.expires_at`
 - Order UTxO 全部 value 退回 `ord.owner` 地址
 - 不涉 vault
-- **不要求簽名者**——任何人都可送這筆 TX。Order 的完整 value 流向 owner,**不是**流向觸發者,所以 Expire 不會被武器化(觸發者付 TX fee、拿不到回饋)。
+- **不要求簽名者**:任何人都可送這筆 TX。Order 的完整 value 流向 owner,**不是**流向觸發者,所以 Expire 不會被武器化(觸發者付 TX fee、拿不到回饋)。
 
-Expire 是「keeper 停擺」的 failsafe:即使 keeper 完全離線,24 小時後待處理 order 可以透過**任何**其他 Cardano 使用者送出 Expire TX 退款給使用者。**這代表使用者的本金絕不會被卡在未處理的 order 裡**——最壞情境是「等 24 小時自動退款」。
+Expire 是「keeper 停擺」的 failsafe:即使 keeper 完全離線,24 小時後待處理 order 可以透過**任何**其他 Cardano 使用者送出 Expire TX 退款給使用者。**這代表使用者的本金絕不會被卡在未處理的 order 裡**;最壞情境是「等 24 小時自動退款」。
 
 ---
 
@@ -149,7 +149,7 @@ BatchProcess {
 
 ---
 
-## 6. Pre-batch snapshot 定價——詳細說明
+## 6. Pre-batch snapshot 定價:詳細說明
 
 同一 batch 中所有 order 都以 **pre-batch 匯率快照**定價,意即:
 
@@ -163,7 +163,7 @@ share_price_in_batch = old_total_deposited / old_total_shares
 
 Vault 強制 per-batch 的聚合不變量:`Σ minted_shares_per_deposit_order + Σ burned_shares_per_withdraw_order == mint_total - burn_total`。要讓整數算術下這個和精確成立,所有 order 必須用同一 share price。Running accumulator(第 N 筆用 1..N-1 處理後的狀態)在邊界情境下破壞此不變量,並重新引入**一個曾被內部驗證關閉的、順序相關的費用抽取漏洞**。
 
-**結果**:若使用者的 Withdraw 與同 batch 中的大 Deposit 並存,Withdraw 按**pre-batch** 狀態定價。反之,Deposit 與大 Withdraw 並存,Deposit 也按 pre-batch 定價。**兩個方向都一樣**——使用者拿到清楚、事後可驗證的定價規則;**keeper 沒有任何順序操弄的優勢**。
+**結果**:若使用者的 Withdraw 與同 batch 中的大 Deposit 並存,Withdraw 按**pre-batch** 狀態定價。反之,Deposit 與大 Withdraw 並存,Deposit 也按 pre-batch 定價。**兩個方向都一樣**:使用者拿到清楚、事後可驗證的定價規則;**keeper 沒有任何順序操弄的優勢**。
 
 **定價漂移界限**:TVL 成熟時,`max_single_order / total_deposited` 在 basis point 級,pre-batch vs post-batch 的定價漂移可忽略。在 pre-audit 100K TVL 上限下,5K 的單筆 order 對 100K vault 會產生約 5% 的漂移窗口。**低 TVL 下送大單的使用者應優先走 Direct Deposit / Direct Withdraw 以避開這個漂移**。
 
@@ -177,7 +177,7 @@ Vault 強制 per-batch 的聚合不變量:`Σ minted_shares_per_deposit_order + 
 - 納入 order 的 gas 成本(每筆 order 增加 TX size 與計算成本)
 - 過期截止臨近度(快接近 24h 到期的 order 會被處理,否則走 Expire 退款)
 
-**最低可行 tip**(**frontend 強制,不是合約強制**):frontend 拒絕 `max_batcher_tip < 100_000` lovelace(0.1 ADA)的 order,防 spam。透過 Cardano CLI 直接送單的使用者可繞過,但這類 order 不太可能被任何 keeper 拾起——經濟誘因不存在。
+**最低可行 tip**(**frontend 強制,不是合約強制**):frontend 拒絕 `max_batcher_tip < 100_000` lovelace(0.1 ADA)的 order,防 spam。透過 Cardano CLI 直接送單的使用者可繞過,但這類 order 不太可能被任何 keeper 拾起,經濟誘因不存在。
 
 **V1 啟動時的 tip 範圍**:
 - 低優先:100,000–200,000 lovelace(0.1–0.2 ADA)
@@ -206,7 +206,7 @@ Vault 強制 per-batch 的聚合不變量:`Σ minted_shares_per_deposit_order + 
 
 1. **排隊期間本金安全**:你的存款 USDCx(或提款的 vUSDCx)留在 `order` script 地址的 Order UTxO;只有**你**(透過 Cancel)、**keeper**(透過 Process)、或 24 小時後**任何人**(透過 Expire)能動它。**沒有其他人能動。**
 2. **取消權**:在 Process 之前任何時候都能 Cancel、全額退款保證。
-3. **24 小時復原保證**:若 keeper 永不處理,24 小時後透過 Expire 自動退款——**絕不會被卡住**。
+3. **24 小時復原保證**:若 keeper 永不處理,24 小時後透過 Expire 自動退款,**絕不會被卡住**。
 4. **滑點保護**:`DepositOrder.min_shares` 與 `WithdrawOrder.min_receive` 設最低接受門檻;若 batch 價格給得少於你指定,order 失敗(不執行)。
 5. **批次中無隱藏費**:你指定的 `max_batcher_tip` 是唯一不可退的 ADA 成本;批次操作**沒有** USDCx 協議費。
 6. **Payout 地址保證**:WithdrawOrder 指定 `receiver: Address`;合約驗證 USDCx 精準流向該地址。
