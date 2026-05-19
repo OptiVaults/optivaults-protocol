@@ -1,6 +1,6 @@
 # 貢獻 OptiVaults V1
 
-感謝對 OptiVaults V1 的關注。V1 以 **Cardano DeFi 公共財參考實作** 的姿態、Apache 2.0 授權釋出——只要是能強化程式碼、強化審計可信度、或讓人更容易 fork 來做特化的貢獻,都歡迎。
+感謝對 OptiVaults V1 的關注。V1 以 **Cardano DeFi 公共財參考實作** 的姿態、Apache 2.0 授權釋出;只要是能強化程式碼、強化審計可信度、或讓人更容易 fork 來做特化的貢獻,都歡迎。
 
 本文件說明:怎麼建置開發環境、我們歡迎哪些類型的貢獻(以及哪些需要先討論),PR 的期待、測試與審計姿態,以及安全性通報流程。
 
@@ -8,14 +8,14 @@
 
 OptiVaults V1 拆成兩個 repo(見 `README-zh-TW.md §「兩層架構」`):
 
-- **本 repo(`optivaults-protocol`)**——**協議層**:Aiken validators、協議 spec、whitepaper、部署流程。**合約變更、spec 修正、白皮書編輯、部署腳本改善**,都走這個 repo。
-- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)**——**operator 參考實作**:TypeScript keeper、API server、frontend、CLI 工具。**Keeper runtime bug、frontend UX、API 改善、CLI 打磨**,走那個 repo。
+- **本 repo(`optivaults-protocol`)**:**協議層**:Aiken validators、協議 spec、whitepaper、部署流程。**合約變更、spec 修正、白皮書編輯、部署腳本改善**,都走這個 repo。
+- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)**:**operator 參考實作**:TypeScript keeper、API server、frontend、CLI 工具。**Keeper runtime bug、frontend UX、API 改善、CLI 打磨**,走那個 repo。
 
-**不確定就開在這裡**——維護者會在 repo 歸屬錯誤時移動 PR。
+**不確定就開在這裡**:維護者會在 repo 歸屬錯誤時移動 PR。
 
 ---
 
-## TL;DR——開 PR 前先看這幾點
+## TL;DR:開 PR 前先看這幾點
 
 1. 讀過 `README.md` + `whitepaper/whitepaper.md`(或 `whitepaper-zh-TW.md`),先理解定位與信任模型。
 2. `contracts/` 裡 `aiken check` 必須全綠(194 個 test / 689 個隨機化 check / 0 error)。
@@ -30,7 +30,7 @@ OptiVaults V1 拆成兩個 repo(見 `README-zh-TW.md §「兩層架構」`):
 
 **前置需求**:
 
-- Aiken `v1.1.x`(確切 patch 版本看 `contracts/aiken.toml`——PlutusV3 的 cost model 對 patch 版本敏感,可重現性很重要)
+- Aiken `v1.1.x`(確切 patch 版本看 `contracts/aiken.toml`;PlutusV3 的 cost model 對 patch 版本敏感,可重現性很重要)
 - Node.js 20.x+,搭配 `tsx` 來跑部署工具與 E2E 腳本
 - Blockfrost Preprod project ID(開發與測試用免費版就夠)
 - 一個已解鎖的 key daemon,或 Preprod 測試用的 seed phrase 環境變數(貢獻者環境**絕對不要**放 mainnet seed)
@@ -60,27 +60,27 @@ tsx deploy/deploy.ts --network Preprod --releaseTag <your-test-tag> --dryRun
 
 ### 直接開 PR 沒問題
 
-- **Bug fix**——Aiken validator 的修正(必須附一個 regression test,示範舊版錯誤 + 新版正確)。
-- **測試覆蓋強化**——更多 property-based test(`aiken/fuzz`)、更多邊界條件單元測試、`tests/preprod/` 裡更多 E2E 情境。
-- **文件清晰化**——錯字修正、規格與文件與白皮書與 Aiken inline 註解的用字改善。
-- **部署工具打磨**——冪等性改善、錯誤訊息改善、可觀測性。
-- **i18n**——product-overview / whitepaper 除了現有的 EN + 繁體中文以外的新語言翻譯。
-- **鏈下參考工具**——helper 腳本、decode 驗證器(像 `deploy/tools/verify-minswap-v2-decode.ts`)、部署健檢。
+- **Bug fix**:Aiken validator 的修正(必須附一個 regression test,示範舊版錯誤 + 新版正確)。
+- **測試覆蓋強化**:更多 property-based test(`aiken/fuzz`)、更多邊界條件單元測試、`tests/preprod/` 裡更多 E2E 情境。
+- **文件清晰化**:錯字修正、規格與文件與白皮書與 Aiken inline 註解的用字改善。
+- **部署工具打磨**:冪等性改善、錯誤訊息改善、可觀測性。
+- **i18n**:product-overview / whitepaper 除了現有的 EN + 繁體中文以外的新語言翻譯。
+- **鏈下參考工具**:helper 腳本、decode 驗證器(像 `deploy/tools/verify-minswap-v2-decode.ts`)、部署健檢。
 
 ### 請先討論(開 issue 或寄信,再開 PR)
 
 - **新增 validator** 或 **調整 validator 拓撲**(例如切分 / 合併)。這會影響審計範圍、ceremony TX 數、部署資金需求,以及對已部署 Preprod ceremony 的向後相容性。實作前先討論動機。
 - **新增治理 action kind**(`ActionKind` 新增 enum)。每個新 action 都多一層審計面 + timelock 表條目 + payload hash helper。先說明為什麼不能沿用現有的。
-- **新增 SwapAdapter 整合**(例如 SundaeSwap V3、Splash V2)。這走 `spec/swap-adapter.md §7` 的流程——先做規格討論,再做 adapter 實作 + 審計,最後送治理白名單提案。
-- **經濟參數變更**(費用上限、buffer 目標、oracle 容忍度)。治理用 `UpdateStrategy` / `UpdateFee` / `UpdateSlippagePolicy` 在 runtime 調整實際值——如果 PR 要改的是寫死在合約裡的**上限常數**,那是政策層級的變更,需要社群討論。
+- **新增 SwapAdapter 整合**(例如 SundaeSwap V3、Splash V2)。這走 `spec/swap-adapter.md §7` 的流程:先做規格討論,再做 adapter 實作 + 審計,最後送治理白名單提案。
+- **經濟參數變更**(費用上限、buffer 目標、oracle 容忍度)。治理用 `UpdateStrategy` / `UpdateFee` / `UpdateSlippagePolicy` 在 runtime 調整實際值;如果 PR 要改的是寫死在合約裡的**上限常數**,那是政策層級的變更,需要社群討論。
 - **VaultDatum 欄位的 breaking change**。29 欄位的結構在 V1 上線時鎖定;任何 schema 變更都會觸發 V2,並且打掉 sunset / migration 路徑。
 
 ### 不接受
 
-- **移除 4.5% 績效費硬上限**——`constants.ak` 裡的 `max_performance_fee_bps = 450` 是核心安全不變量。費率在 [0, 450] 範圍內透過治理 `UpdateFee` 調整;上限本身要往上推,必須走 V2。
-- **新增 admin-drain redeemer**——任何可能把金庫資金送到非存入者地址的 redeemer,在 V1 都不在範圍內。緊急路徑一律走治理 + 公開揭露。
+- **移除 4.5% 績效費硬上限**:`constants.ak` 裡的 `max_performance_fee_bps = 450` 是核心安全不變量。費率在 [0, 450] 範圍內透過治理 `UpdateFee` 調整;上限本身要往上推,必須走 V2。
+- **新增 admin-drain redeemer**:任何可能把金庫資金送到非存入者地址的 redeemer,在 V1 都不在範圍內。緊急路徑一律走治理 + 公開揭露。
 - **自動化 adapter 註冊**(任何人部署 adapter 就能直接用,不經治理審視)。V1 要求人類治理白名單,見 `spec/swap-adapter.md §10`。
-- **閉源 keeper 實作**。Keeper 必須維持 Apache 2.0 + 可重現——這正是讓存入者在預設 keeper 停擺時,能透過 `emergency-withdraw` 自助退場的前提。
+- **閉源 keeper 實作**。Keeper 必須維持 Apache 2.0 + 可重現,這正是讓存入者在預設 keeper 停擺時,能透過 `emergency-withdraw` 自助退場的前提。
 
 ---
 
@@ -91,7 +91,7 @@ tsx deploy/deploy.ts --network Preprod --releaseTag <your-test-tag> --dryRun
 - 一個 commit 對應一個邏輯變更。用 rebase,不用 squash-and-merge。
 - Commit message:祈使句、標題 ≤ 72 字元、body 說明**為什麼**(參考現有的 `git log`)。
 - **不要**加 `Co-Authored-By:` 尾行,除非使用者明確要求。
-- **不要**在訊息中寫「still pending」「deferred work」「memory update」或對未來的臆測——commit 描述的是「這筆 commit 裡有什麼」,不是「還沒進去的是什麼」。
+- **不要**在訊息中寫「still pending」「deferred work」「memory update」或對未來的臆測;commit 描述的是「這筆 commit 裡有什麼」,不是「還沒進去的是什麼」。
 - 不要把規劃文件 / 決策紀錄 commit 進 diff,除非使用者明確要求。
 
 ### PR 說明
@@ -104,7 +104,7 @@ tsx deploy/deploy.ts --network Preprod --releaseTag <your-test-tag> --dryRun
 
 ### 審視
 
-- 動到 Aiken validator 的 PR,需要走過一輪內部 review + CI 的 `aiken check` 通過才合併(CI 目前還沒架——V1 pre-mainnet 期間暫時接受「自行在本機跑」,由合併者做;提交者需自備 CI 證據)。
+- 動到 Aiken validator 的 PR,需要走過一輪內部 review + CI 的 `aiken check` 通過才合併(CI 目前還沒架;V1 pre-mainnet 期間暫時接受「自行在本機跑」,由合併者做;提交者需自備 CI 證據)。
 - 純文件 PR 可以在一位 reviewer 通過的情況下合併(如果 V1 早期 operator 與 reviewer 是同一個身份,也可以自我批准)。
 - Keeper 參考實作的 PR(`keeper/` 開工後)有自己一套 review 慣例,TBD。
 
@@ -119,7 +119,7 @@ tsx deploy/deploy.ts --network Preprod --releaseTag <your-test-tag> --dryRun
 
 ### 單元測試
 
-任何新的 validator 行為或不變量,都必須至少有一個單元測試。放在 `contracts/lib/vault/tests/<feature>_test.ak`。測試套件透過 `aiken check` 跑——整個 suite 的隨機化 check 數請保持合理(加一個 property test × 100 iter 沒問題;要加 × 10,000 請先討論,因為 `aiken check` 的耗時是 operator 面的體驗)。
+任何新的 validator 行為或不變量,都必須至少有一個單元測試。放在 `contracts/lib/vault/tests/<feature>_test.ak`。測試套件透過 `aiken check` 跑;整個 suite 的隨機化 check 數請保持合理(加一個 property test × 100 iter 沒問題;要加 × 10,000 請先討論,因為 `aiken check` 的耗時是 operator 面的體驗)。
 
 ### Property 測試
 
@@ -133,7 +133,7 @@ tsx deploy/deploy.ts --network Preprod --releaseTag <your-test-tag> --dryRun
 
 ### CI / 可重現性
 
-- Aiken 版本鎖在 `aiken.toml`。不要在沒討論的情況下升版——PlutusV3 的 cost model 會跨 patch 版本變動,會改變 validator hash。
+- Aiken 版本鎖在 `aiken.toml`。不要在沒討論的情況下升版;PlutusV3 的 cost model 會跨 patch 版本變動,會改變 validator hash。
 - `plutus.json` 是 gitignored(自動產生)。不要 commit。
 - `deploy/state/` 底下的部署 ceremony 狀態檔也是 gitignored(跟著 operator 走)。
 
@@ -143,7 +143,7 @@ tsx deploy/deploy.ts --network Preprod --releaseTag <your-test-tag> --dryRun
 
 V1 的內部審計採**涵蓋區方法論**(A–F 區,見 `docs/audit-scope.md`),取代早期版本使用的逐輪編號制。涵蓋區計畫就是外部審計範圍的權威來源。
 
-內部對抗性審計目前沒有任何 LOW 以上嚴重性的開放發現(見 [SECURITY.md](SECURITY.md) §「已知開放中的審計發現」)。貢獻時請留意:`vault_recall.ak` 與共用的 `valid_merge_utxo_admissibility` predicate 在捐贈導致狀態變更的源頭帶有 allocation-invariant guard——若你動到這些路徑,記得把 admissibility guard 留在任何新的 state-mutation 路徑上。
+內部對抗性審計目前沒有任何 LOW 以上嚴重性的開放發現(見 [SECURITY.md](SECURITY.md) §「已知開放中的審計發現」)。貢獻時請留意:`vault_recall.ak` 與共用的 `valid_merge_utxo_admissibility` predicate 在捐贈導致狀態變更的源頭帶有 allocation-invariant guard;若你動到這些路徑,記得把 admissibility guard 留在任何新的 state-mutation 路徑上。
 
 內部分類為 LOW 或 INFO 的發現會在內部追蹤,除非你改到受影響的 validator 區域,否則不會阻擋貢獻;LOW 以上的發現都會在 SECURITY.md 摘錄。
 
@@ -156,7 +156,7 @@ V1 的內部審計採**涵蓋區方法論**(A–F 區,見 `docs/audit-scope.md`)
 - **Email**:`optivaults@gmail.com`
 - **PGP key**:`optivaults.app/security`(加密敏感的技術細節)
 
-我們會在 72 小時內私下確認收到、7 天內完成 triage。V1 採用的是**責任揭露政策(RDP) + 酬庸式 (ex gratia) 肯定**框架,不是結構化的 bug bounty tier——完整條款見 `docs/audit-scope.md §6`。正式的 bounty 計畫是 post-external-audit + post-TVL-scale 的考量,不是 V1 啟動時的承諾。
+我們會在 72 小時內私下確認收到、7 天內完成 triage。V1 採用的是**責任揭露政策(RDP) + 酬庸式 (ex gratia) 肯定**框架,不是結構化的 bug bounty tier;完整條款見 `docs/audit-scope.md §6`。正式的 bounty 計畫是 post-external-audit + post-TVL-scale 的考量,不是 V1 啟動時的承諾。
 
 若你不確定一個發現算不算安全敏感,寧可走私下通報。我們寧願收到一筆低嚴重性、事後請你改開公開 issue,也不要透過公開 bug tracker 才知道一個 CRITICAL。
 
