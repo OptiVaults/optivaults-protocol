@@ -55,7 +55,7 @@ Count reconciliation: 9 immutable + 8 policy + 10 accounting + 2 operational = 2
 Two identity anchors that V1 deliberately does NOT store in the datum:
 
 - **Keeper authorization**: there is no `keeper_pkh` field. Keeper authorization is delegated to the `keeper_stake_script` staking validator; the stake-script hash is a compile-time parameter of `vault_user`, `vault_keeper_hot`, `vault_protocol`, `vault_recall`, and `vault_liqwid` (plus indirectly via `vault_proxy`'s Withdraw-Zero route table). Changing the set of authorized keepers happens inside the stake script's own datum, with no change to VaultDatum.
-- **Fee collector**: there is no `fee_collector` field. Performance-fee flow is to the `treasury` script address; the treasury-script hash is a compile-time parameter of `vault_keeper_hot` (post-Phase-77 home of Compound; checked in the Compound redeemer's fee-output binding).
+- **Fee collector**: there is no `fee_collector` field. Performance-fee flow is to the `treasury` script address; the treasury-script hash is a compile-time parameter of `vault_keeper_hot` (the home of Compound; checked in the Compound redeemer's fee-output binding).
 
 Moving these two anchors to compile-time parameters provides a strictly stronger trust property than keeping them as datum fields — an attacker who controls a malicious datum cannot swap the keeper or fee recipient, because the validators ignore the datum for these checks and look up the hard-coded values from their own script hashes.
 

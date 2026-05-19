@@ -380,7 +380,7 @@ let governance_authorized = is_gov_authorized(
 
 **鏈下義務**。提交 `QueueAction` 者必須**用相同的 canonical tuple 佈局**在鏈下計算**同一**個 payload hash(`scripts/governance/opti-gov.ts` 必須與 `payload_hash_*` byte-for-byte 一致),否則執行會被拒。
 
-這關閉了 V1 內部審計 H-1 發現:較早的 V1 草稿只檢查「GovNFT 在 tx.inputs 中」,這讓 m-of-n signer 可以 queue 一個良性 payload(在 timelock + 1-of-n cancel 窗口期間接受公開揭露),然後在同一 TX 執行**不同的** payload,**完全繞過公開審視防禦**。
+這關閉了一項 V1 內部審計發現:較早的 V1 草稿只檢查「GovNFT 在 tx.inputs 中」,這讓 m-of-n signer 可以 queue 一個良性 payload(在 timelock + 1-of-n cancel 窗口期間接受公開揭露),然後在同一 TX 執行**不同的** payload,**完全繞過公開審視防禦**。
 
 ---
 

@@ -99,7 +99,7 @@ Mode switching requires a governance action with the standard 7-day timelock. Sw
 
 ### 3.6 Registry UTXO
 
-A single UTXO at the `registry` script address, marked by an auth NFT. Contains the whitelist of acceptable protocol destinations (Liqwid action-validator hashes, Minswap V2 stake credentials), stable-token allowlist, Liqwid market metadata, and **asset oracles** (§5.4 P3, 2026-04-22) — a per-asset list of dual-feed oracle configurations used by `DeployToProtocol` peg-floor (P4) and `SwapAda` fair-price (P5) checks. Updated by governance with a 14-day timelock via `UpdateRegistry` and a 1-hour timelock for fast-path market updates via `FastUpdateMarkets` (Liqwid migration response). `asset_oracles` is mutable under `UpdateRegistry` only — `KeeperToggleMarket` and `FastUpdateMarkets` preserve it bit-for-bit.
+A single UTXO at the `registry` script address, marked by an auth NFT. Contains the whitelist of acceptable protocol destinations (Liqwid action-validator hashes, Minswap V2 stake credentials), stable-token allowlist, Liqwid market metadata, and **asset oracles** (§5.4 P3) — a per-asset list of dual-feed oracle configurations used by `DeployToProtocol` peg-floor (P4) and `SwapAda` fair-price (P5) checks. Updated by governance with a 14-day timelock via `UpdateRegistry` and a 1-hour timelock for fast-path market updates via `FastUpdateMarkets` (Liqwid migration response). `asset_oracles` is mutable under `UpdateRegistry` only — `KeeperToggleMarket` and `FastUpdateMarkets` preserve it bit-for-bit.
 
 The `asset_oracles` list holds `AssetOracleEntry` values pinning each priced asset to:
 
@@ -161,8 +161,6 @@ V1's 17 logic validators (+ 4 NFT mint policies + `minswap_v2_adapter` + 2 Sunda
 - **(4) Size-fix forced extraction** — when adding a required feature pushes a validator over ceiling, splits along whichever of the above three seams is cheapest. Example: `vault_recall` (RecallFromProtocol + MergeUtxo) extracted from `vault_protocol` after SwapAdapter dispatch + Tier 1 oracle wiring pushed combined size to 16,500 B.
 
 After all splits, `vault_proxy` carries **11 compile-time parameters** (10 staking validator hashes + `vault_nft_policy`) and routes **10 Withdraw-Zero paths** (`UseUser` / `UseKeeperHot` / `UseSwapAda` / `UseProtocol` / `UseRecall` / `UseLiqwid` / `UseGovPolicy` / `UseGovEmergency` / `UseAdminDeploy` / `UseBatcher`). The withdrawal-count invariant (exactly one vault staking validator per TX) scales with the number of routes. Tightest post-split headroom is `vault_liqwid` at 13,392 B (2,992 B free, 18.3% from ceiling). All 14 staking validators carry an A2 `publish` handler so each one's 2 ADA Cardano stake-deposit is reclaimable via governance after a 14d timelock — closing the V1-era "2 ADA permanent lock" trap that affected pre-split monolithic validators.
-
-Per-extraction details (mother → daughter validator mapping, exact compile-time params, internal-audit findings on each split) live in the engineering memory store (not in the public repo). External audit firm engagement may request access to that document for the full extraction template.
 
 ---
 

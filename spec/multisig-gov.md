@@ -380,7 +380,7 @@ let governance_authorized = is_gov_authorized(
 
 **Off-chain obligation.** Whoever submits `QueueAction` must precompute the SAME payload hash off-chain using the same canonical tuple layout (`scripts/governance/opti-gov.ts` must mirror `payload_hash_*` byte-for-byte), otherwise execution will reject.
 
-This closes the V1 internal audit H-1 finding: prior V1 drafts only checked "GovNFT is in tx.inputs", which allowed m-of-n signers to queue a benign payload (public disclosure during timelock + 1-of-n cancel window) and execute a different payload in the same TX — bypassing the public-scrutiny defense entirely.
+This closes a V1 internal-audit finding: prior V1 drafts only checked "GovNFT is in tx.inputs", which allowed m-of-n signers to queue a benign payload (public disclosure during timelock + 1-of-n cancel window) and execute a different payload in the same TX — bypassing the public-scrutiny defense entirely.
 
 ---
 

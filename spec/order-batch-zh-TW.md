@@ -121,7 +121,7 @@ Expire 是「keeper 停擺」的 failsafe:即使 keeper 完全離線,24 小時�
 
 ## 5. BatchProcess redeemer(vault 側)
 
-`order.Process` 的 vault 側對應物。Keeper 把一批 order 納入 TX 時,在 `vault_batcher`(Phase-77d 後 BatchProcess 的 standalone 新家)觸發 staking-validator redeemer。
+`order.Process` 的 vault 側對應物。Keeper 把一批 order 納入 TX 時,在 `vault_batcher`(BatchProcess 的 standalone 家)觸發 staking-validator redeemer。
 
 ```aiken
 BatchProcess {

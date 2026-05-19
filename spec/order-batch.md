@@ -121,7 +121,7 @@ Expire is the "keeper downtime" failsafe: even if the keeper is completely offli
 
 ## 5. BatchProcess redeemer (vault-side)
 
-The vault-side counterpart to `order.Process`. Triggered on `vault_batcher` (post-Phase-77d standalone home of BatchProcess) as a staking-validator redeemer when the keeper includes a batch of orders in a transaction.
+The vault-side counterpart to `order.Process`. Triggered on `vault_batcher` (the standalone home of BatchProcess) as a staking-validator redeemer when the keeper includes a batch of orders in a transaction.
 
 ```aiken
 BatchProcess {

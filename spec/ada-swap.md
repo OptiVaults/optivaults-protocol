@@ -40,7 +40,7 @@ The `SwapAda` redeemer lives on `vault_swap_ada` — a standalone staking valida
 SwapAda { amount_ada, keeper_output_idx } -> {
   // Identify own input + continuing output
   expect vault_input_count == 1
-  expect old_datum.frozen == 0                          // V1 internal audit L-7: freeze blocks SwapAda
+  expect old_datum.frozen == 0                          // V1 internal-audit finding: freeze blocks SwapAda
 
   let own_lovelace = lovelace_of(own_input.output.value)
   let (cont_output, new_datum) =
@@ -168,7 +168,7 @@ SwapAda { amount_ada, keeper_output_idx } -> {
 
 ## 4. Compile-time parameters
 
-Consolidated into `vault_swap_ada`'s compile-time parameter set (post-Phase-77b home of SwapAda):
+Consolidated into `vault_swap_ada`'s compile-time parameter set (the home of SwapAda):
 
 | Parameter | V1 launch value | Semantics |
 |-----------|-----------------|-----------|
@@ -209,7 +209,7 @@ PriceSample {
 
 The off-chain oracle operator is responsible for reading Charli3 + Orcfax native feeds, applying the operator's aggregation policy (typically midpoint or median), and publishing one `PriceSample` UTXO per feed slot. The operator identity + publishing policy is an external trust boundary documented in `spec/security-model.md`. Future V1.x / V2 may swap in per-protocol native parsers (Charli3 `OracleDatum` + Orcfax `FactStatement`) to remove the operator-aggregation layer.
 
-### 5.3 Consensus rule (enforced in `vault_keeper_hot.SwapAda`)
+### 5.3 Consensus rule (enforced in `vault_swap_ada`)
 
 ```aiken
 expect Some(ada_entry) = find_asset_oracle(asset_oracles, #"", #"")

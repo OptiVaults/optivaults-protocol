@@ -103,7 +103,7 @@ Native-script 模式對 mint 與 burn 使用同一份 script expression,所以 `
 V1 的 PlutusV3 設計依 redeemer 數量正負拆分 script。Burn 分支**除了所有權之外不加任何約束**(持有 NFT 的 UTxO 必須能被持有者 spend,即一般 ledger 規則),任何 slot 都有效。這保留了 vault 的 sunset 路徑:
 
 1. 所有存入者提領他們的份額(partial Withdraw)。
-2. 最後一位持有者做 full-drain Withdraw,`total_shares → 0`,同一 TX 中 burn 掉 Vault NFT(`vault_user.ak` 的 `Withdraw` redeemer full-drain 分支在 Phase-77 後從 vault_core 遷來這裡,要求 `quantity_of(tx.mint, vault_nft_policy, "OptiVault") == -1`)。
+2. 最後一位持有者做 full-drain Withdraw,`total_shares → 0`,同一 TX 中 burn 掉 Vault NFT(`vault_user.ak` 的 `Withdraw` redeemer full-drain 分支在 authorization-boundary 切分時從 vault_core 遷來這裡,要求 `quantity_of(tx.mint, vault_nft_policy, "OptiVault") == -1`)。
 3. `vault_nft` validator 的 burn 分支通過(無約束)。
 4. Vault UTxO 被銷毀;min-ADA 回到提領者。
 

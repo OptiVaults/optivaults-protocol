@@ -34,13 +34,13 @@ type VaultCoreRedeemer {
 
 ## 3. 驗證
 
-`SwapAda` redeemer 位於 `vault_swap_ada`(Phase-77b 後從 vault_keeper_hot 抽出來的 standalone staking validator,目的是把 dual-feed oracle 讀取 + 6-tuple registry 讀取的 bytecode 從 Compound 的 host 移走;透過 `vault_proxy` 的 `UseSwapAda` route 做 Withdraw-Zero forwarding)。強制的不變量如下。V1 關鍵要點:**keeper 授權走 stake-script zero-withdraw 模式**,**不是**靠 `keeper_pkh` datum 欄位(V1 VaultDatum 中不存在)。Output routing 用的 keeper PKH 是從 `tx.extra_signatories` runtime 推導、對應到 `keeper_output_idx` 的 output 地址。
+`SwapAda` redeemer 位於 `vault_swap_ada`(從 vault_keeper_hot 抽出來的 standalone staking validator,目的是把 dual-feed oracle 讀取 + 6-tuple registry 讀取的 bytecode 從 Compound 的 host 移走;透過 `vault_proxy` 的 `UseSwapAda` route 做 Withdraw-Zero forwarding)。強制的不變量如下。V1 關鍵要點:**keeper 授權走 stake-script zero-withdraw 模式**,**不是**靠 `keeper_pkh` datum 欄位(V1 VaultDatum 中不存在)。Output routing 用的 keeper PKH 是從 `tx.extra_signatories` runtime 推導、對應到 `keeper_output_idx` 的 output 地址。
 
 ```aiken
 SwapAda { amount_ada, keeper_output_idx } -> {
   // 識別自己的 input + continuing output
   expect vault_input_count == 1
-  expect old_datum.frozen == 0                          // V1 內部審計 L-7:凍結擋 SwapAda
+  expect old_datum.frozen == 0                          // V1 內部審計發現:凍結擋 SwapAda
 
   let own_lovelace = lovelace_of(own_input.output.value)
   let (cont_output, new_datum) =
@@ -162,7 +162,7 @@ SwapAda { amount_ada, keeper_output_idx } -> {
 
 ## 4. 編譯時參數
 
-整合進 `vault_swap_ada` 的編譯時參數集(Phase-77b 後 SwapAda 的新家):
+整合進 `vault_swap_ada` 的編譯時參數集(SwapAda 的家):
 
 | 參數 | V1 啟動值 | 語意 |
 |------|-----------|------|
@@ -203,7 +203,7 @@ PriceSample {
 
 鏈下 oracle operator 負責讀取 Charli3 + Orcfax native feed,套用自身聚合政策(通常是 midpoint 或 median),每個 feed slot 發布一份 `PriceSample` UTxO。Operator 身份 + 發布政策是文件化的外部信任邊界,見 `spec/security-model.md`。未來 V1.x / V2 可能換成各協議的原生解析器(Charli3 `OracleDatum` + Orcfax `FactStatement`)以移除 operator 聚合層。
 
-### 5.3 共識規則(在 `vault_keeper_hot.SwapAda` 中強制)
+### 5.3 共識規則(在 `vault_swap_ada` 中強制)
 
 ```aiken
 expect Some(ada_entry) = find_asset_oracle(asset_oracles, #"", #"")

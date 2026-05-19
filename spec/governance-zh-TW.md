@@ -255,7 +255,7 @@ type StrategyPayload {
 - `target_script == vault_gov_emergency_hash`
 - Redeemer 攜帶 `loss_amount` + `freeze_flag`(都進 payload-hash 綁定),但 `loss_amount` 在 validator 層被**強制為 0**(見下方「Layer 1 — freeze-only」)
 
-**Layer 1 — freeze-only(Phase 1 治理安全,2026-04-25)**:validator 把 `valid_deposited` 改為要求 `total_deposited` 不變 + `liqwid_positions` 不變 + `loss_amount == 0`。Redeemer **不能**降低 `total_deposited`,也不能從 datum 移除部位。所有真實損失帳務改走 `vault_liqwid.RecallFromLiqwid` 的治理 fallback 路徑:透過實體 Recall underlying USDCx 並只寫入實際實現的損失(`supplied_value − underlying_received`)。這封閉了單一簽名者治理在金鑰失陷時可以「只動 datum 把部位寫掉造成 share_price 歸零」的 grief 攻擊面(qToken-orphan 向量在 validator 層被根除)。
+**Layer 1 — freeze-only(Phase 1 治理安全)**:validator 把 `valid_deposited` 改為要求 `total_deposited` 不變 + `liqwid_positions` 不變 + `loss_amount == 0`。Redeemer **不能**降低 `total_deposited`,也不能從 datum 移除部位。所有真實損失帳務改走 `vault_liqwid.RecallFromLiqwid` 的治理 fallback 路徑:透過實體 Recall underlying USDCx 並只寫入實際實現的損失(`supplied_value − underlying_received`)。這封閉了單一簽名者治理在金鑰失陷時可以「只動 datum 把部位寫掉造成 share_price 歸零」的 grief 攻擊面(qToken-orphan 向量在 validator 層被根除)。
 
 **與 Layer 2(`vault_protocol.DeployToProtocol`)組合**:在 `frozen = 1` 下,keeper 仍可透過 SwapAdapter 驅動 swap-out(`deploy_token != deposit_token`)。讓誠實 keeper 在緊急 freeze 期間仍能把 NDV stable token(DJED / USDM)換回 USDCx,使用戶 `Withdraw` 能完整支付按比例的份額。
 
@@ -368,7 +368,7 @@ type StrategyPayload {
 
 ### 4.13 DeregisterStake(A2)
 
-**用途**:取回 V1 部署 ceremony 時,每個 staking validator 的 credential 被註冊時繳的 2 ADA Cardano stake-registration 押金。解決 `deploy/state/recovery-verification.md §2` 中文件化的 V1 design-gap:原本 staking validator 的 `else(_) { fail }` catch-all 拒絕 ledger 的 Publish purpose。
+**用途**:取回 V1 部署 ceremony 時,每個 staking validator 的 credential 被註冊時繳的 2 ADA Cardano stake-registration 押金。解決 operator 部署驗證筆記中文件化的 V1 design-gap:原本 staking validator 的 `else(_) { fail }` catch-all 拒絕 ledger 的 Publish purpose。
 
 **V1 啟動時的範圍**:
 - **V1 全部 14 個 staking credential** 都帶 gov 閘控的 `publish` handler,都可透過此 action deregister:`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`、`keeper_stake_script`、SwapAdapter `minswap_v2_adapter`,以及 SundaeSwap 這一對 `sundaeswap_adapter` + `sundaeswap_cancel_guard`。切分理由見 `spec/architecture.md §4.1`。

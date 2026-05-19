@@ -99,7 +99,7 @@ Order UTxO 由 keeper 在批次 TX 中處理,或透過 `Cancel`(owner 簽名)或
 
 ### 3.6 Registry UTxO
 
-`registry` script 地址上的單一 UTxO,以 auth NFT 標記。持有合法的協議目的地白名單(Liqwid action-validator hash、Minswap V2 stake credential)、穩定幣白名單、Liqwid 市場 metadata,以及 **asset oracles**(§5.4 P3,2026-04-22):每資產的 dual-feed oracle 設定列表,供 `DeployToProtocol` peg-floor(P4)與 `SwapAda` 公平價(P5)檢查使用。由治理透過 14 天 timelock 的 `UpdateRegistry` 更新;Liqwid 遷移響應可以透過 1 小時 timelock 的 `FastUpdateMarkets` 走快速路徑。`asset_oracles` **只能透過** `UpdateRegistry` 改,`KeeperToggleMarket` 與 `FastUpdateMarkets` 會 bit-for-bit 保留它。
+`registry` script 地址上的單一 UTxO,以 auth NFT 標記。持有合法的協議目的地白名單(Liqwid action-validator hash、Minswap V2 stake credential)、穩定幣白名單、Liqwid 市場 metadata,以及 **asset oracles**(§5.4 P3):每資產的 dual-feed oracle 設定列表,供 `DeployToProtocol` peg-floor(P4)與 `SwapAda` 公平價(P5)檢查使用。由治理透過 14 天 timelock 的 `UpdateRegistry` 更新;Liqwid 遷移響應可以透過 1 小時 timelock 的 `FastUpdateMarkets` 走快速路徑。`asset_oracles` **只能透過** `UpdateRegistry` 改,`KeeperToggleMarket` 與 `FastUpdateMarkets` 會 bit-for-bit 保留它。
 
 `asset_oracles` list 持有 `AssetOracleEntry` 值,把每個定價資產釘到:
 
@@ -161,8 +161,6 @@ V1 的 17 個 logic validator(+ 4 NFT mint policy + `minswap_v2_adapter` + 2 個
 - **(4) 強迫的 size 修正切分**:當加入必要 feature 把某 validator 推過上限時,沿上述三條軸中成本最低者切分。例子:SwapAdapter dispatch + Tier 1 oracle wiring 把 `vault_protocol` 合計大小推到 16,500 B 後,把 `vault_recall`(RecallFromProtocol + MergeUtxo)從其中抽出。
 
 所有切分之後,`vault_proxy` 帶 **11 個編譯時參數**(10 個 staking validator hash + `vault_nft_policy`),routing **10 條 Withdraw-Zero 路徑**(`UseUser` / `UseKeeperHot` / `UseSwapAda` / `UseProtocol` / `UseRecall` / `UseLiqwid` / `UseGovPolicy` / `UseGovEmergency` / `UseAdminDeploy` / `UseBatcher`)。Withdrawal-count 不變量(每 TX 恰好一個 vault staking validator)隨 route 數縮放。Post-split 最緊的 headroom 是 `vault_liqwid` 13,392 B(剩 2,992 B、距上限 18.3%)。14 個 staking validator 每個都帶 A2 `publish` handler:每個的 2 ADA Cardano stake 押金在治理通過 14 天 timelock 後都能回收,關閉了 pre-split monolithic validator 年代的「2 ADA 永久鎖死」trap。
-
-每次抽取的細節(母 validator 到女 validator 的對應、精確的編譯時參數、每次切分的內部審計發現)存在工程用 memory(不在公共 repo 中)。外部審計事務所合作時可申請存取完整抽取模板文件。
 
 ---
 

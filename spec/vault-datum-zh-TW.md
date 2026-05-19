@@ -55,7 +55,7 @@ type VaultDatum {
 V1 有**兩個**身份錨點刻意**不**放進 datum:
 
 - **Keeper 授權**:**沒有** `keeper_pkh` 欄位。Keeper 授權委派給 `keeper_stake_script` staking validator;stake-script hash 是 `vault_user`、`vault_keeper_hot`、`vault_protocol`、`vault_recall`、`vault_liqwid` 的編譯時參數(並間接透過 `vault_proxy` 的 Withdraw-Zero route table)。變更授權 keeper 集合發生在 stake script 自己的 datum 裡,不會動到 VaultDatum。
-- **Fee collector**:**沒有** `fee_collector` 欄位。績效費流向 `treasury` script 地址;treasury-script hash 是 `vault_keeper_hot`(Phase-77 後 Compound 的新家)的編譯時參數,在 Compound redeemer 的 fee-output binding 中檢查。
+- **Fee collector**:**沒有** `fee_collector` 欄位。績效費流向 `treasury` script 地址;treasury-script hash 是 `vault_keeper_hot`(Compound 的家)的編譯時參數,在 Compound redeemer 的 fee-output binding 中檢查。
 
 把這兩個錨點搬到編譯時參數,提供了**比 datum 欄位更嚴格**的信任屬性:控制了惡意 datum 的攻擊者**無法**替換 keeper 或 fee 收件方,因為 validator 會忽略 datum、直接從自己的 script hash 查死寫好的值。
 

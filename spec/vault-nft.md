@@ -105,7 +105,7 @@ The native-script pattern uses the same script expression for both mint and burn
 V1's PlutusV3 design partitions the script by redeemer quantity sign. The burn branch imposes no constraint beyond ownership (the UTXO holding the NFT must be spendable by its holder — normal ledger rules) and is valid at any slot. This preserves the vault's sunset path:
 
 1. All depositors withdraw their shares (partial Withdraw).
-2. Last holder does full-drain Withdraw with `total_shares → 0`, burning the Vault NFT in the same TX (the `vault_user.ak` `Withdraw` redeemer full-drain branch — post-Phase-77; migrated from vault_core during the authorization-boundary split — requires `quantity_of(tx.mint, vault_nft_policy, "OptiVault") == -1`).
+2. Last holder does full-drain Withdraw with `total_shares → 0`, burning the Vault NFT in the same TX (the `vault_user.ak` `Withdraw` redeemer full-drain branch — migrated from vault_core during the authorization-boundary split — requires `quantity_of(tx.mint, vault_nft_policy, "OptiVault") == -1`).
 3. The `vault_nft` validator's burn branch passes (no constraint).
 4. The vault UTXO is destroyed; min-ADA returns to the withdrawing user.
 

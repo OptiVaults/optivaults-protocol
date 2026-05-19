@@ -255,7 +255,7 @@ Governance cannot raise these caps — they are protocol constants in `lib/vault
 - `target_script == vault_gov_emergency_hash`
 - Redeemer carries `loss_amount` and `freeze_flag` in the payload-hash binding, but `loss_amount` is **constrained to 0** by the validator (see "Layer 1 — freeze-only" below)
 
-**Layer 1 — freeze-only (Phase 1 governance safety, 2026-04-25):** the validator enforces `valid_deposited` as `total_deposited` unchanged + `liqwid_positions` unchanged + `loss_amount == 0`. The redeemer **cannot** drop `total_deposited` or remove positions from datum. All real loss accounting happens in `vault_liqwid.RecallFromLiqwid`'s gov-fallback path which physically Recalls underlying USDCx and writes off only the actually-realized loss (`supplied_value − underlying_received`). This eliminates the griefing surface where a single-actor governance could drop `share_price` to zero by writing off positions from datum without the corresponding fund movement (qToken-orphan vector closed at validator level).
+**Layer 1 — freeze-only (Phase 1 governance safety):** the validator enforces `valid_deposited` as `total_deposited` unchanged + `liqwid_positions` unchanged + `loss_amount == 0`. The redeemer **cannot** drop `total_deposited` or remove positions from datum. All real loss accounting happens in `vault_liqwid.RecallFromLiqwid`'s gov-fallback path which physically Recalls underlying USDCx and writes off only the actually-realized loss (`supplied_value − underlying_received`). This eliminates the griefing surface where a single-actor governance could drop `share_price` to zero by writing off positions from datum without the corresponding fund movement (qToken-orphan vector closed at validator level).
 
 **Composes with Layer 2 (`vault_protocol.DeployToProtocol`):** under `frozen = 1`, the keeper can still drive a swap-out (`deploy_token != deposit_token`) via the registry-whitelisted SwapAdapter. This lets honest keepers convert NDV stable tokens (DJED / USDM) back to USDCx during an emergency freeze so user `Withdraw` can pay out the full proportional share.
 
@@ -368,7 +368,7 @@ After triggering, any vUSDCx holder can drive Recall → Swap → Withdraw witho
 
 ### 4.13 DeregisterStake (A2)
 
-**Purpose:** Recover the 2 ADA Cardano stake-registration deposit posted per staking validator when its credential was registered during the V1 deploy ceremony. Addresses the V1 design-gap documented in `deploy/state/recovery-verification.md` §2, where the original staking validators' `else(_) { fail }` catch-all rejected the ledger's Publish purpose.
+**Purpose:** Recover the 2 ADA Cardano stake-registration deposit posted per staking validator when its credential was registered during the V1 deploy ceremony. Addresses the V1 design-gap documented in the operator's deploy-verification notes, where the original staking validators' `else(_) { fail }` catch-all rejected the ledger's Publish purpose.
 
 **Scope at V1 launch:**
 - **All 14 V1 staking credentials** carry a gov-gated `publish` handler and are deregister-able via this action: `vault_user`, `vault_keeper_hot`, `vault_batcher`, `vault_swap_ada`, `vault_protocol`, `vault_recall`, `vault_liqwid`, `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`, `keeper_stake_script`, the SwapAdapter `minswap_v2_adapter`, and the SundaeSwap pair `sundaeswap_adapter` + `sundaeswap_cancel_guard`. Partitioning rationale documented in `spec/architecture.md §4.1`.

@@ -420,7 +420,7 @@ License NFT 層可以在 V2+ 作為 stake script 之上的補充憑證檢查加�
 
 ---
 
-## 10. Stake credential 生命週期(A2,2026-04-20)
+## 10. Stake credential 生命週期(A2)
 
 每次 `keeper_stake_script` 的 stake credential 被註冊(V1 每次部署一次,在 ceremony PHASE 4a),Cardano ledger 鎖 2 ADA 押金。將 credential 取消註冊時,2 ADA 退還給取消註冊的 TX 提交者。
 
@@ -432,4 +432,4 @@ License NFT 層可以在 V2+ 作為 stake script 之上的補充憑證檢查加�
 
 Cardano ledger 在 Deregister cert 上呼叫 `keeper_stake_script.publish`;我們的 handler 重驗證治理授權並回傳 True。Ledger 接受 cert + 退 2 ADA。
 
-Deregister 後,vault **不可運作**:任何對 `keeper_stake_script` 的 Withdraw-Zero 企圖都會失敗(credential 不再註冊)。Deregister 因此是**生命終點 / 下架**動作,不是例行運營。Post-Phase-77 + 77b/77c/77d,同樣模式套用到 V1 全部 14 個 staking credential(`vault_user` / `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada` / `vault_protocol` / `vault_recall` / `vault_liqwid` / `vault_gov_policy` / `vault_gov_emergency` / `vault_admin_deploy` / `keeper_stake_script` / `minswap_v2_adapter` SwapAdapter / `sundaeswap_adapter` / `sundaeswap_cancel_guard`)。Pre-Phase-77 的 16 KB 上限曾擋住 `vault_core` 的 `publish` handler,那個限制透過把 vault_core 切成 `vault_user` + `vault_keeper_hot` 解決,見 `spec/governance.md §4.13`。
+Deregister 後,vault **不可運作**:任何對 `keeper_stake_script` 的 Withdraw-Zero 企圖都會失敗(credential 不再註冊)。Deregister 因此是**生命終點 / 下架**動作,不是例行運營。同樣模式套用到 V1 全部 14 個 staking credential(`vault_user` / `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada` / `vault_protocol` / `vault_recall` / `vault_liqwid` / `vault_gov_policy` / `vault_gov_emergency` / `vault_admin_deploy` / `keeper_stake_script` / `minswap_v2_adapter` SwapAdapter / `sundaeswap_adapter` / `sundaeswap_cancel_guard`)。16 KB 上限曾擋住 `vault_core` 的 `publish` handler,那個限制透過把 vault_core 切成 `vault_user` + `vault_keeper_hot` 解決,見 `spec/governance.md §4.13`。
