@@ -641,7 +641,7 @@ fee_amount = 0.045 × max(0, NAV_now − NAV_last_compound − realised_rebalanc
 
 #### 為什麼 buffer 啟動時是 0%，以及未來可以如何調整
 
-Buffer 的用途是讓單筆交易就能完成直接提領（Direct Withdraw），不必再走 Liqwid Recall（那會額外多一筆 gas、也可能遇到流動性摩擦）。要穩定做到，buffer 必須保持流動——也就是不能被鎖在需要另外發一筆 Recall 才能解鎖的 Liqwid 供應部位裡。
+Buffer 的用途是讓單筆交易就能完成直接提領（Direct Withdraw），不必再走 Liqwid Recall（那會額外多一筆 gas、也可能遇到流動性摩擦）。要穩定做到，buffer 必須保持流動，也就是不能被鎖在需要另外發一筆 Recall 才能解鎖的 Liqwid 供應部位裡。
 
 內部驗證期曾經試過把 buffer 停在 Liqwid 的 USDCx 市場賺 0.5–2% APY，實驗結果顯示兩個問題：(a) Liqwid 的 USDCx 市場深度不足，只要服務到 TVL 約 5% 的提領量，解鎖 buffer 就已經產生明顯滑點；(b) 低 APY 的市場上，每個週期 Recall + Supply 的 gas 成本反而超過賺到的利息。**所以 V1 啟動時採用 buffer = 0% 收益、閒置在金庫地址。**
 
@@ -663,7 +663,7 @@ buffer_drag = buffer_ratio × Liqwid_USDCx_supply_APY
 
 啟用後 idle 比率降到 15%（buffer 一半部署到 Liqwid USDCx），同時保留足夠流動性服務正常贖回流量。
 
-**治理可以調整——Liqwid USDCx 分配保留條款。** V1 啟動時明確選擇 **0% 至 Liqwid USDCx** 的保守配置，但保留在上述條件成立時透過治理 `UpdateStrategy`（7 天 timelock）將部分 buffer 重新分配至 Liqwid USDCx 市場的權利。其他觸發條件包括：出現更適合存 buffer 的低風險去處（例如未來的 Cardano Treasury T-bill wrapper、或更深的穩定幣貨幣市場）。這些都不需合約變更——是現有 validator 邏輯內的政策調整。任何此類調整，治理會公開說明理由、預期收益提升、以及解倉計畫，存入者有 7 天 timelock 窗口內決定是否退場。
+**治理可以調整：Liqwid USDCx 分配保留條款。** V1 啟動時明確選擇 0% 至 Liqwid USDCx 的保守配置，但保留在上述條件成立時透過治理 `UpdateStrategy`（7 天 timelock）將部分 buffer 重新分配至 Liqwid USDCx 市場的權利。其他觸發條件還包括：出現更適合存 buffer 的低風險去處，例如未來的 Cardano Treasury T-bill wrapper、或更深的穩定幣貨幣市場。這些都不需合約變更，只是現有 validator 邏輯內的政策調整。任何此類調整，治理都會在執行前公開說明理由、預期收益提升、以及解倉計畫。存入者有 7 天 timelock 窗口可決定是否退場。
 
 #### 跨市場路由與再平衡
 
@@ -690,7 +690,7 @@ V1 在 USDCx、USDM、DJED 三個 Liqwid 市場間動態配置供應資金。再
 
 - **績效費：4.5%**（`performance_fee_bps = 450`）於每次 Compound 從毛收益中扣取，以 **USDCx**（不是 ADA）於已實現收益回寫到 `total_deposited` 之前先扣除。硬上限 4.5% 由 `vault_gov_policy.ak` 的 `UpdateFee` redeemer（透過共用 `validate_update_fee` helper）強制，治理在任何 redeemer 下都無法超過這個上限。
 - **早提領費：0.1%**（`early_withdraw_fee_bps = 10`）只要 keeper 還在活動，每筆直接提領都會收取（keeper 失活 7 天後自動免收）。以 **USDCx** 於提領金額中扣除，費用留在金庫，轉化為 share price 上升回饋給剩餘持有者。硬上限 1%（100 bps）。
-- **`min_hold_seconds`（直接提領的閘門，不是資金鎖定）：** 每次 Compound 之後，直接提領會被 `min_hold_seconds` 擋住一段時間才能再送；**排隊提領路徑從頭到尾不受影響**。啟動值為 60 秒；治理可透過 `UpdateFee`（14 天 timelock）調整，validator 強制的硬上限為 **6 小時**（`max_min_hold_seconds = 21_600`）。白皮書審視後從原本的 24 小時上限**收緊**為 6 小時（§2.4 與 §6.3 有完整理由）：週 Compound 週期下，即使治理拉到上限，也只有約 3.6% 的時間直接提領不可用；而排隊路徑完全不受此閘門影響——使用者的資金絕不會被鎖，只是換個路徑，~5–15 分鐘內完成。
+- **`min_hold_seconds`（直接提領的閘門，不是資金鎖定）：** 每次 Compound 之後，直接提領會被 `min_hold_seconds` 擋住一段時間才能再送；**排隊提領路徑從頭到尾不受影響**。啟動值為 60 秒；治理可透過 `UpdateFee`（14 天 timelock）調整，validator 強制的硬上限為 **6 小時**（`max_min_hold_seconds = 21_600`）。白皮書審視後從原本的 24 小時上限**收緊**為 6 小時（理由見 §6.3）。週 Compound 週期下，即使治理拉到上限，也只有約 3.6% 的時間直接提領不可用，而排隊路徑完全不受此閘門影響。使用者的資金絕不會被鎖，只是換個路徑，約 5–15 分鐘內完成。
 - **SwapAda 營運摩擦：100K TVL 下約 0.02% APY**（詳見 §4.5）。這不是協議層級的手續費——它是鏈上 `SwapAda` redeemer 以 Charli3 + Orcfax oracle 公平價為金庫補充營運 ADA 時，由存入者以 USDCx 承擔的成本。100K TVL 下一年約 10–20 USDCx，反映在 share price 的自然遞減中。雖然不是傳統意義上的「手續費」，但它確實會讓金庫資金流出，所以如實揭露。
 - **無存入費用。**
 - **無管理費**（無 AUM 費）**。**
