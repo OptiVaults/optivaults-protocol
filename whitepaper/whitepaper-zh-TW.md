@@ -124,7 +124,7 @@ Cardano 目前已經有：
 
 缺的是一個**非託管、經審計、以 USDCx 計價的多穩定幣收益金庫**，能自動跨 Liqwid 的 USDCx / DJED / USDM 三個市場複利。想賺被動穩定幣收益的使用者，今天只能自己追蹤三個 Liqwid 穩定幣市場的 APY、透過 Minswap V2 在三者之間換匯、管理 DEX LP 部位的無常損失、並在收益率改變時重新進場。V1 由 keeper 在治理設定的配置範圍內自動為金庫再平衡穩定幣組合；使用者拿到的份額以 USDCx 計價（即 vUSDCx），但經濟上等同對金庫當下所持 USDCx + DJED + USDM 混合資產的比例請求權。
 
-**V1 不是多協議 收益聚合器。** 全部收益來自 Liqwid 一個借貸協議——Minswap V2 只做穩定幣間的 swap router（換手工具），不產生收益。V1 的價值主張是**「Cardano 穩定幣 supply-side 收益的便利層」**：一筆存入同時取得三個 Liqwid 市場的曝險 + 自動再平衡 + 脫鉤監控 + 自助退場保證。若你要的是真正跨協議分散的 收益聚合器，V1 還不是那個產品——**V1 未來演進會在 Cardano 上出現其他成熟穩定的供應端協議時評估納入，但 V1 目前只做 Liqwid**。
+**V1 不是多協議收益聚合器。** 全部收益來自 Liqwid 一個借貸協議。Minswap V2 只做穩定幣間的 swap router（換手工具），不產生收益。V1 的價值主張是「Cardano 穩定幣 supply-side 收益的便利層」：一筆存入同時取得三個 Liqwid 市場的曝險 + 自動再平衡 + 脫鉤監控 + 自助退場保證。若你要的是真正跨協議分散的收益聚合器，V1 還不是那個產品。未來若 Cardano 上出現其他成熟穩定的供應端協議，V1 會評估納入，但**目前只做 Liqwid**。
 
 ### 1.2 為什麼選 USDCx
 
@@ -162,9 +162,9 @@ V1 不取代存入者對 USDCx 本身的盡調。若不信任 Circle 的 USDC �
 
 ### 1.3 目標使用者
 
-**OptiVaults V1 主要服務手中有小到中額 USDCx（約 $100–$10,000）的持有者**——想在 Cardano 上賺被動穩定幣收益、但不想親手經營 DeFi 的使用者。V1 的經濟模型、使用介面、安全設計都是為這群人量身打造。**時程提醒**:$100-$10,000 這個目標規模指的是 **post-audit 階段**(目前目標 **2027 Q2-Q3+**,外部審計通過、TVL 上限解除之後;funding stack 不確定性見 §8.1)。Pre-audit 期間受 operator-enforced 100K USDCx TVL cap 限制，建議首次部位明顯低於此目標範圍下限（例如 $200-$2K 試水）——完整 pre-audit context 見 §8.2。
+**OptiVaults V1 主要服務手中有小到中額 USDCx（約 $100–$10,000）的持有者**，也就是想在 Cardano 上賺被動穩定幣收益、但不想親手經營 DeFi 的使用者。V1 的經濟模型、使用介面、安全設計都是為這群人量身打造。**時程提醒**:$100-$10,000 這個目標規模指的是 **post-audit 階段**(目前目標 **2027 Q2-Q3+**,外部審計通過、TVL 上限解除之後;funding stack 不確定性見 §8.1)。Pre-audit 期間受 operator-enforced 100K USDCx TVL cap 限制。建議首次部位明顯低於此目標範圍下限（例如 $200-$2K 試水）。完整 pre-audit context 見 §8.2。
 
-- **小額部位最容易被「進場 + 離場 gas」吃光。** 若一位只有 $200 USDCx 的使用者自己直接上 Liqwid：進場一次要做 swap USDCx → DJED + supply（約 2 筆 TX；若要同時分散到 DJED + USDM 則約 4 筆），將來離場還要再走一次 recall qToken + swap back。以目前 Cardano 網路費 + Minswap batcher 費估算，單方向大約 3–5 ADA，來回約 $2–4 USD——對 $200 部位就是本金的 1–2% 一次性摩擦，還沒開始賺收益。V1 把多市場配置集中在金庫層（一筆 Compound 就服務整個 TVL），每位存入者的進場只要一筆 CIP-30 交易、離場只要 burn 一次 vUSDCx，不必走 recall + swap back 的多步驟路徑。
+- **小額部位最容易被「進場 + 離場 gas」吃光。** 若一位只有 $200 USDCx 的使用者自己直接上 Liqwid：進場一次要做 swap USDCx → DJED + supply（約 2 筆 TX；若要同時分散到 DJED + USDM 則約 4 筆），將來離場還要再走一次 recall qToken + swap back。以目前 Cardano 網路費 + Minswap batcher 費估算，單方向大約 3–5 ADA，來回約 $2–4 USD，對 $200 部位就是本金的 1–2% 一次性摩擦，還沒開始賺收益。V1 把多市場配置集中在金庫層，一筆 Compound 就服務整個 TVL。因此每位存入者的進場只要一筆 CIP-30 交易、離場只要 burn 一次 vUSDCx，不必走 recall + swap back 的多步驟路徑。
 - **不必每天看盤。** V1 的 keeper 會監控 Liqwid 的 APY 變動，並在治理設定的範圍內自動進行再平衡。小額持有者不需要追蹤 DJED、USDM、USDCx 三個市場的即時供應利率。
 - **自助退場對小額同樣有效。** `withdraw-cli` 與 `emergency-withdraw` 工具讓任何存入者都能不靠營運方協助自行解倉，不論部位大小。
 - **接受智能合約風險與穩定幣發行方風險**——任何 Cardano DeFi 產品都必須先建立這個基本信任邊界。
@@ -403,7 +403,7 @@ OptiVaults 的創辦人本身是 Cardano 的自我託管使用者，正好是 V1
 
 - **(a) 送到 CEX 換 earn 產品**——因自我託管原則拒絕。
 - **(b) 直接在 Liqwid 的 USDCx 市場 supply**——利率大約 0.5-2%，扣掉通膨實際報酬常常是負的，不值得花時間。
-- **(c) 把 USDCx 換成 DJED，再 supply 到 Liqwid 的 DJED 市場**——年化可以到 ~11.8%。進場是 2 筆 TX（swap + Liqwid supply），離場或每次部分提領是反向的 recall + swap back 一組往返；若要同時分散到 DJED + USDM 就是大約 4 筆進場、兩個部位並行管。進場之後 qToken 放在你自己錢包裡、兌換率自動累積，中間沒有每週期再平衡或定期 compound 的家庭作業。對 $200 部位而言，一次進場 + 一次離場來回 gas 大約是本金的 1-2%，持有越長攤得越薄；短期持有或頻繁部分提領才會感受明顯。
+- **(c) 把 USDCx 換成 DJED，再 supply 到 Liqwid 的 DJED 市場**——年化可以到 ~11.8%。進場是 2 筆 TX（swap + Liqwid supply）。離場或每次部分提領是反向的 recall + swap back 一組往返。若要同時分散到 DJED + USDM 就是大約 4 筆進場、兩個部位並行管。進場之後 qToken 放在你自己錢包裡、兌換率自動累積，中間沒有每週期再平衡或定期 compound 的家庭作業。對 $200 部位而言，一次進場 + 一次離場來回 gas 大約是本金的 1-2%，持有越長攤得越薄；短期持有或頻繁部分提領才會感受明顯。
 - **(d) 就讓 USDCx 躺在錢包裡**——0% 收益，而且 USDCx 發行者風險一樣要承擔。
 
 這四條都不是創辦人真正想要的。真正想要的很簡單：**「把 USDCx 存進去、讓它自動在 Liqwid 上複利，之後需要動用小額 USDCx 時能直接提出來，不用每次都走 recall qToken + swap back 的多步驟往返」**——這個對小額提領很關鍵，因為 $50-100 的提領若要自己跑完整流程，光 gas + batcher 費加起來很可能就吃掉被提領金額的 5-10%。而 Cardano 上當時沒有這種經審計的非託管自動複利 vault——所以 V1 就是專門為了補上這個產品做的，從創辦人自己的存入需求出發，不是從市場規模反推。
@@ -419,11 +419,23 @@ OptiVaults 的創辦人本身是 Cardano 的自我託管使用者，正好是 V1
 
 V1 的使用者保護分兩層，存入者應該清楚知道自己正在依賴哪一層。
 
-> **核心使用者保護是合約不變量，不是營運承諾。** V1 的承諾為什麼可信？因為**我們在程式碼層就根本做不到違反這些承諾**——有幾項承諾在程式碼層就被排除了背棄的可能。沒有任何 redeemer 能把 `idle_buffer` 送到存款人以外的地址；`performance_fee_bps` 由 `vault_gov_policy.ak` 的 `UpdateFee` redeemer 透過共用的 `validate_update_fee` helper 硬鎖在 450（4.5%）上限，任何治理動作都無法把它推高；不存在「暫停提款」的 admin 開關。這些都是已部署 validator hash 的客觀屬性，任何人都可以自己驗證。
+> **核心使用者保護是合約不變量，不是營運承諾。** V1 的承諾為什麼可信？因為**我們在程式碼層就根本做不到違反這些承諾。** 有幾項承諾在 validator-hash 層就被排除了背棄的可能：
+>
+> - 沒有任何 redeemer 能把 `idle_buffer` 送到存款人以外的地址。
+> - `performance_fee_bps` 由 `vault_gov_policy.ak` 的 `UpdateFee` redeemer 透過共用的 `validate_update_fee` helper 硬鎖在 450（4.5%）上限，任何治理動作都無法把它推高。
+> - 不存在「暫停提款」的 admin 開關。
+>
+> 這些都是已部署 validator hash 的客觀屬性，任何人都可以自己驗證。
 
 > **不是每一項保護都是純合約不變量。** 有三項在合約內、無條件成立：(a) 沒有 admin-drain redeemer、(b) 4.5% 費用上限不可變、(c) keeper 離線 7 天後早提款費自動免除（§5.4）。其他項目仰賴外部基礎設施的可用性：提領成功要 Cardano 鏈 + Liqwid（若有部位在那邊）+ Minswap V2（若需 routing）+ USDCx 流動性（最終產出）都正常。任何一環 out，存款者鏈上的請求權仍然可強制執行，但結算可能是 vault 當下持有的資產，不一定是 1:1 USDCx。自助 `emergency-withdraw` 工具仍然能用，但產出品質會跟外部協議狀態連動。這才是誠實的姿態，不是「在任何情況下提領永遠可行」。
 
-V1 的定位是**彈性 + 收益的操作體驗，搭配鏈上強制的使用者保護**：不收 AUM 費、不收管理費（只對實際產生的收益收 4.5% 績效費）；自助退場路徑（`withdraw-cli` / `emergency-withdraw`）跟主產品一起發布，不是緊急備案而是首要功能；發布節奏是**在 100K USDCx 硬上限下、帶顯眼風險揭露的 pre-audit mainnet 啟動 + 多輪內部審計 + 外部審計通過後解鎖 cap 推進至 Stage 2 / Stage 3**（見 §0.2 + §8.1 解釋為何審計是 cap-lift gate 而非 launch gate 的 volunteer-builder framing）。Pre-audit 階段存入者是在 §8.2 sub-scenario 框架下、配合完整風險透明度下決定進場，**不是**走加密圈「先上線再說、出事再處理」的姿態——合約層的安全設計（§5.5.1 三層治理保護 + §6.3 硬上限 + 自助緊急退場）提供與審計狀態無關的存入者恢復下限。V1 不規避 DeFi 固有的信任邊界（錢包私鑰即本金控制、已確認 TX 不可逆、合約與外部依賴都可能失效）——這些在 §5.1 + §9.1 + §12 都有詳細揭露。
+V1 的定位是彈性與收益的操作體驗，搭配鏈上強制的使用者保護。這個定位由三件事構成：
+
+- **費用**：不收 AUM 費、不收管理費。唯一一筆費用，是對已實現收益收取的 4.5% 績效費。
+- **退場路徑**：自助 `withdraw-cli` / `emergency-withdraw` 跟主產品一起發布，是首要功能而非緊急備案。
+- **發布節奏**：在 100K USDCx 硬上限下、帶顯眼風險揭露的 pre-audit mainnet 啟動 + 多輪內部審計，之後再經外部審計通過解鎖 cap，推進至 Stage 2 / Stage 3。§8.1 解釋為何審計是 cap-lift gate 而非 launch gate。
+
+Pre-audit 階段存入者是在 §8.2 sub-scenario 框架、完整風險透明度下決定進場，**不是**走加密圈「先上線再說、出事再處理」的姿態。合約層的安全設計（§5.5.1 三層治理保護、§6.3 硬上限、自助緊急退場）提供與審計狀態無關的存入者恢復下限。V1 不規避 DeFi 固有的信任邊界：錢包私鑰即本金控制、已確認 TX 不可逆、合約與外部依賴都可能失效。這些在 §5.1、§9.1、§12 都有詳細揭露。
 
 ### 1.6.2 為什麼選 Cardano、為什麼是現在這個時點
 
