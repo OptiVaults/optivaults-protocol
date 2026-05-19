@@ -42,7 +42,8 @@ queue A2 deregister for `vaultUser` failed with:
 ```
 
 24 ADA in stake deposits locked permanently on that release.
-Lesson captured in `memory/feedback_ceremony_reclaim_order.md`.
+The fixed reclaim order documented in this runbook is the durable
+response to that incident.
 
 ---
 
@@ -179,4 +180,3 @@ Before starting any sunset:
 - `deploy/tools/reclaim-refs.ts` — bulk ref-script reclaim
 - `deploy/tools/sunset-ceremony.ts` — orchestrator (this document's subject)
 - `contracts/lib/vault/constants.ak::timelock_deregister_stake_ms` — on-chain timelock
-- `memory/feedback_ceremony_reclaim_order.md` — the lesson that produced this runbook
