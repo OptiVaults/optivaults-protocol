@@ -85,28 +85,28 @@ V1 由單一創辦人以志工身份建構，加上小額 seed（~$2K USDCx 作�
 
 ## 摘要
 
-OptiVaults V1 是 Cardano 上的非託管**多穩定幣收益金庫,以 USDCx 計價**。存入者把 USDCx 送進由智能合約管控的金庫地址,換取 vUSDCx 份額代幣;份額的 share price 反映金庫當下在 USDCx、DJED、USDM 三種穩定幣之間、透過 Liqwid Finance 所持的混合部位。Keeper 程式負責自動複利收益,並在治理設定的範圍內於這三種穩定幣之間再平衡;手續費在 keeper 營運方與鏈上公開治理金庫之間分配。
+OptiVaults V1 是 Cardano 上的非託管、以 USDCx 計價的多穩定幣收益金庫。存入者把 USDCx 送進由智能合約管控的金庫,換取 vUSDCx 份額代幣。Keeper 在治理設定的範圍內,於 Liqwid Finance 的 USDCx、DJED、USDM 之間自動複利收益並再平衡;手續費在 keeper 營運方與一個公開透明的 treasury 之間分配。
 
-**啟動時的治理會是兩種配置之一**，兩者在相同的合約保證下運作：
+**啟動時的治理。** 金庫以兩種簽名配置之一運作,兩者都受相同的合約保證約束:
 
-- **(a) 3-of-3 多簽** — 創辦人 + 2 位獨立的 Cardano SPO，全員同意。目標配置；前提是 SPO 招募在 mainnet ceremony 前完成。
-- **(b) 創辦人控制 + HD-key separation** — Phase 1 小 TVL 階段的 fallback（見 §7.4），仰賴 §5.5.1 三層結構性安全設計（freeze-only `EmergencyWithdraw`、freeze 下的 swap-out、90 天無許可 `CommunitySunset`）。
+- **(a) 3-of-3 多簽** — 創辦人 + 2 位獨立 Cardano SPO,全員同意。這是目標配置,前提是 SPO 招募在 mainnet ceremony 前完成。
+- **(b) 創辦人控制 + HD-key separation** — Phase 1 的 fallback(§7.4)。
 
-考慮到 §8.2 對 Phase 1 TVL 範圍的預估（**$500–$25K**），存入者應該預設啟動配置會落在 **(b)** — SPO 招募成功是 stretch goal，不是 base case。重要的是：**存入者的恢復能力不取決於哪種配置在運作**，取決於 §5.5.1 的合約層安全機制，這些機制在任一簽名配置下表現相同。Timelock 7 至 21 天，1-of-n 取消否決；存入者隨時可以提領，即使 keeper 停擺也可以使用自助緊急提領機制自行退出。
+考慮到 §8.2 預估的 Phase 1 TVL 為 $500–$25K,**存入者應預設啟動時為配置 (b)** — 招募是 stretch goal,不是 base case。存入者的恢復能力不取決於哪一種配置在運作,而取決於 §5.5.1 的三層合約層安全機制,這些機制在兩種配置下表現相同。Timelock 為 7 至 21 天,並有 1-of-n 取消否決;存入者隨時可提領 — 即使 keeper 停擺 — 透過自助緊急提領路徑退出。
 
-**給存入者的重要揭露**：share price 反映的是金庫當下的多穩定幣混合曝險，**並不是純 USDCx 的請求權**。啟動時的目標配置為 45% DJED + 25% USDM + 30% USDCx 閒置緩衝（見 §5.2）；金庫當下持有哪一種穩定幣，存入者就承擔哪一種的脫鉤風險。
+**存入者持有什麼。** Share price 反映的是金庫當下的多穩定幣混合曝險,不是純 USDCx 的請求權。啟動目標配置為 45% DJED + 25% USDM + 30% USDCx 緩衝(§5.2)。金庫當下持有哪一種穩定幣,存入者就承擔哪一種的脫鉤風險。
 
-V1 在 Cardano mainnet 啟動時設有 **100,000 USDCx pre-audit 硬上限**（依 §1.5 為 Stage 2；若 axis state 尚未達 Two-Green，則套用較低 Stage 1 / 1.5 cap）。Cap **會在第三方外部審計完成時解鎖到 Stage 3（$500K → $2M）**（目標 **2027 Q2-Q3**，前提是 §8.1 資金堆疊到位；若未到位，V1 在 100K cap 無限期維持，依 §8.1 Option D — 見 §0.2 + §8.1 解釋為何審計是 cap-lift gate 而非 launch gate 的 volunteer-builder framing）。100K TVL 下協議每年的收入只有約 $270——遠不足以覆蓋營運成本。V1 此時處於**啟動期（bootstrapping phase）**：營運缺口由創辦人的 §4.3.1 minimal-operations 個人收入補貼吸收（年化 ~$80–$200，不動用大額啟動資本儲備），預期要等到 TVL 達到自給規模（三情境分布 **$135K–$1.8M**、baseline 約 $500K，見 §4.1）後才會自給。
+**100K cap 與啟動期。** V1 在 Cardano mainnet 啟動時設有 100,000 USDCx 的 pre-audit 硬上限。在該 TVL 下,協議年收入約 $270,不足以覆蓋營運成本。V1 因此處於啟動期(bootstrapping phase):營運缺口由創辦人的 minimal-operations 個人收入補貼吸收(年化約 $80–$200,依 §4.3.1 — 是持續性補貼,不是大額預備金)。協議要等 TVL 成長到 $135K–$1.8M 區間(baseline 約 $500K;見 §4.1)後才會自給。
 
-**審計是 cap-lift gate、不是 launch gate；創辦人不是審計 underwriter。** 創辦人以 volunteer 身份建構 V1，承諾小額 seed（~$2K USDCx Phase 1 working capital + 採 §2.6.1 / §4.3.1 最小化配置下年化 $80–$200 營運補貼 + $15K 審計 gap-fill 上限），但**不承諾獨力支付 $50–$150K 外部審計**。**V1 在啟動日上 Cardano mainnet 採 pre-audit 100K USDCx hard cap 加上顯眼的風險揭露 framing，不論 §8.1 審計資金堆疊是否已到位**。外部審計到位時，**把 cap 解鎖**到 §1.5 Stage 2 / Stage 3（post-audit $500K → $2M ramp）。若審計資金始終未到位（§8.1 Option D），V1 在 mainnet 維持 100K cap 無限期運作；存入者保有 permissionless access 在小規模下、協議保持 live 狀態，只是 cap 沒透過 audit 路徑解鎖。存入者應將「Stage 2+ cap lift」視為 community-funding-conditional，但 **mainnet 啟動本身不受審計資金 gating**。
+**審計是 cap-lift gate,不是 launch gate。** 不論 §8.1 審計資金堆疊是否到位,V1 都會在 mainnet 以 100K cap 加上顯眼的風險揭露啟動。當第三方外部審計完成時,它會把 cap **解鎖**到 Stage 3($500K → $2M;目標 2027 Q2–Q3)。若審計資金始終未到位,V1 在 mainnet 以 100K cap 無限期運作(§8.1 Option D)——協議保持 live,只是 audit 路徑的 cap 解鎖不會發生。創辦人是 volunteer builder,不是審計 underwriter:承諾的是小額 seed(~$2K Phase 1 working capital + 年化約 $80–$200 營運補貼 + $15K 審計 gap-fill 上限),**不**包含獨力支付 $50–$150K 的外部審計。存入者應將任何 Stage 2+ 的 cap lift 視為 community-funding-conditional。
 
-**營運面結構性可永續、與審計脫鉤。** Post-launch keeper 在 §4.3.1 minimal-operations 政策下運作 — 單一自架伺服器 + 免費 tier providers + 低 TVL 時採 §2.6.1 cadence — 依 TVL band 年化約 **$80–$200**。創辦人從個人收入持續吸收這部分；不會動用大筆啟動資本儲備，§4.1 的營運 runway sunset 觸發條件在此模型下實際上不可達。V1 真實的失敗模式是 §1.5 Class A overrides（USDCx 事件、Liqwid 事件、Cardano chain halt、oracle 異常）或創辦人明確 sunset 決定 — **不是**營運 runway 耗盡、**也不是**審計資金失敗（後者只是把 cap 維持在 100K，不影響協議 live 狀態）。
+**營運的可持續性。** Post-launch 的 keeper 在 §4.3.1 minimal-operations 政策下運作 — 單一自架伺服器、免費 tier 供應商、低 TVL cadence — 年化約 $80–$200,由創辦人個人收入吸收。這不動用預備金,因此營運 runway 的 sunset 觸發條件實際上不可達。V1 真正的失敗模式是 §1.5 Class A overrides(USDCx、Liqwid、Cardano 鏈或 oracle 事件)或創辦人明確的 sunset 決定 — 不是 runway 耗盡,也不是審計資金失敗(後者只把 cap 維持在 100K,不會結束協議)。
 
-**V1 的定位:Cardano DeFi 的公共財參考實作(reference implementation)。** V1 是**非商業的公共財專案**,不是為了追求成長或股權式回報的商業產品。4.5% 績效費用於覆蓋協議運營 + 審計儲備 + 長期 runway,**沒有股權、沒有代幣、沒有對投資人的分配**;Apache 2.0 授權讓其他 Cardano DeFi 團隊可以 fork 並特化(不同穩定幣組合 / 風險姿態 / 區域變體)。V1 可能是終點狀態,也可能成為其他團隊基於此改造的基礎——兩者都是可接受的結局。存入者應以「**貢獻公共財 + 當早期驗證者**」的心態參與,不是購買商業服務(完整含意與存入者 framing 見 §12 免責聲明)。
+**定位:公共財參考實作。** V1 是非商業的公共財專案,不是為成長或股權式回報而最佳化的產品。4.5% 績效費用於覆蓋協議營運、審計儲備與長期 runway。沒有股權、沒有代幣、沒有對投資人的分配;Apache 2.0 授權讓其他 Cardano 團隊可以 fork 並特化(不同穩定幣組合、風險姿態、區域變體)。V1 可能是終點狀態,也可能成為其他團隊改造的基礎 — 兩者都是可接受的結局。存入者應以「貢獻公共財、當早期驗證者」的心態參與,而非購買商業服務(§12)。
 
-**Keeper share 的揭露。** 4.5% 績效費在 V1 啟動時拆為 40% 給 keeper、60% 給 treasury(見 §2.4)。由於 V1 啟動時由創辦人運作 keeper(§7.4),這 40% keeper share(約佔收益的 1.8%)會流到**創辦人的 keeper 錢包**,作為 keeper 基礎設施、監控、on-call 責任的營運補償。v1.3 把這件事明說出來,目的是避免先前「不是創辦人收益」這個措辭被誤讀為「完全沒有任何 USDCx 流向創辦人」——**確實有 USDCx 流入創辦人 keeper 錢包**;但同時也是事實的另一面:**這個 keeper 位子對任何運作者(包含創辦人)在 Phase 1 都是 net cost-centre**:100K cap 下 keeper share 年化 ~$108,在較完整基礎設施配置下基礎設施 + monitoring 一年要 $400–1000;**但 V1 是以 §4.3.1 minimal-operations 政策啟動,年化只 ~$80**(單一伺服器、Blockfrost 免費 tier、自架監控),這個 footprint 下實際 Phase 1 sub-scenarios 每年淨缺口約 **$30–$75**(§4.3.1 cost-scaling 表),由創辦人從個人收入持續吸收,並非從一筆大額預先儲備的啟動資本中扣除。所以誠實的解讀是:**沒有股權式利潤分配、沒有代幣**,但**有一條給創辦人的小額 USDCx 收入線、且這條線不足以覆蓋它自身的營運成本**——完整 keeper 經濟見 §4.3。
+**揭露:keeper share。** 4.5% 績效費拆為 40% 給 keeper、60% 給 treasury(§2.4)。由於啟動時由創辦人運作 keeper,這 40% keeper share — 約佔收益的 1.8% — 會流入創辦人的 keeper 錢包,作為基礎設施、監控與 on-call 責任的補償。所以 USDCx **確實**會流向創辦人;「沒有收益流向創辦人」是錯誤的解讀。誠實的解讀正好與利潤相反:100K cap 下 keeper share 年化約 $108,而 keeper 營運在 §4.3.1 最小化 footprint 下年化約 $80(較完整配置則 $400–$1,000)。Phase 1 的淨結果是創辦人從個人收入吸收的、年化約 $30–$75 的缺口。沒有股權式分配、沒有代幣 — 只有一條給創辦人的小額 USDCx 收入線,而它不足以覆蓋自身成本(§4.3)。
 
-**這個產品怎麼來的。** OptiVaults 的創辦人本身就是 Cardano 的自我託管使用者：原生質押 ADA、持有小額 BTC、參與過 Midnight 的 NIGHT redeem、在 Minswap V2 提供 ADA/NIGHT 流動性、目前也持有 USDCx（Circle 於 2026 年 2 月透過 xReserve 在 Cardano 發行）。V1 不是從「發現一個市場機會」開始的，而是創辦人自己想要一個非託管、自動複利、小額提領時能直接拿回 USDCx 的 vault，Cardano 上當時沒有這種產品，所以乾脆自己蓋。所有**核心**使用者保護都寫進合約不變量、不靠我們的營運承諾。完整的起源故事、為什麼是 Cardano 與為什麼是現在、創辦人考慮過的四條 USDCx 處置選項及其摩擦分析、「提領永遠可行」所依賴的外部協議條件說明（§1.6.1），以及 V2 的設計方向，請見 §1.6。
+**這個產品怎麼來的。** 創辦人是 Cardano 的自我託管使用者 — 原生質押 ADA、持有小額 BTC、參與過 Midnight 的 NIGHT redeem、在 Minswap V2 提供流動性、目前持有 USDCx。V1 不是從發現市場機會開始的。創辦人想要一個非託管、自動複利、且小額提領時能直接拿回 USDCx 的金庫 — 而不是每次退出都跑一遍 recall 與 swap-back — Cardano 上沒有,所以自己蓋了一個。核心的使用者保護是合約不變量,不是營運承諾(§1.6)。
 
 本白皮書說明 V1 做什麼、怎麼運作、存入者要接受哪些信任假設，以及啟動階段設計上的誠實侷限。
 
