@@ -9,8 +9,7 @@
  *
  * Reverse the order and the target/multisig_gov ref scripts are
  * destroyed by step 4 before step 3 can use them — 24 ADA in stake
- * deposits become permanently unrecoverable (see SUNSET_RUNBOOK.md +
- * memory/feedback_ceremony_reclaim_order.md).
+ * deposits become permanently unrecoverable (see SUNSET_RUNBOOK.md).
  *
  * Usage:
  *   npx tsx deploy/tools/sunset-ceremony.ts \
