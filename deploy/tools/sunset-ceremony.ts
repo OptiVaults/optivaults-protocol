@@ -36,7 +36,7 @@ import { spawn } from "child_process";
 type Net = "Preprod" | "Mainnet";
 type Phase = "all" | "queue" | "execute" | "reclaim";
 
-// All 12 A2-capable staking credentials (post Phase 77b/77c/77d).
+// All 12 A2-capable staking credentials.
 const A2_TARGETS = [
   "vaultUser",
   "vaultKeeperHot",

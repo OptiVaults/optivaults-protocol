@@ -371,7 +371,7 @@ When a second keeper is added via governance (Phase 2, expected after TVL ≥ 50
 
 ---
 
-## 5. Mode-switching flow (what the "run now, open later" design enables)
+## 6. Mode-switching flow (what the "run now, open later" design enables)
 
 When TVL and ecosystem maturity justify permissionless keeper registration, the transition is a **single on-chain event** with no vault redeploy:
 
@@ -387,7 +387,7 @@ This is the **primary architectural benefit** of the stake-validator approach ov
 
 ---
 
-## 6. Why not use a License NFT minting policy instead?
+## 7. Why not use a License NFT minting policy instead?
 
 A License NFT approach (mint one NFT per authorized keeper; vault contracts check for NFT presence in keeper inputs) was considered and rejected in favor of the stake-validator approach for V1:
 
@@ -400,7 +400,7 @@ A License NFT layer could be added as a supplementary credential check on top of
 
 ---
 
-## 7. Depositor-facing guarantees
+## 8. Depositor-facing guarantees
 
 A depositor reading this specification can rely on the following properties being contract-enforced:
 
@@ -412,7 +412,7 @@ A depositor reading this specification can rely on the following properties bein
 
 ---
 
-## 8. Reference to companion documents
+## 9. Reference to companion documents
 
 - `spec/architecture.md` §3.5 — summary of stake-validator role in protocol architecture
 - `spec/governance.md` — `UpdateKeeperAuth` / `SlashKeeper` governance actions in full catalog
@@ -421,7 +421,7 @@ A depositor reading this specification can rely on the following properties bein
 
 ---
 
-## 9. Stake credential lifecycle (A2)
+## 10. Stake credential lifecycle (A2)
 
 Cardano ledger locks 2 ADA in a deposit every time `keeper_stake_script`'s stake credential is registered (once per V1 deploy, during ceremony PHASE 4a). Deregistering the credential refunds the 2 ADA to the deregister TX submitter.
 
