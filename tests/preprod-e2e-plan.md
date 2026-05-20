@@ -45,7 +45,7 @@ Each E2E run requires:
    - Pre-seeded liquidity for at least one underlying token
 4. **Environment**:
    - Blockfrost Preprod API key (`BLOCKFROST_API_KEY_PREPROD`)
-   - Optional Ogmios + Kupo for Lucid Evolution path (Phase 41 patterns)
+   - Optional Ogmios + Kupo for Lucid Evolution path
 
 ---
 
@@ -332,11 +332,11 @@ Before tagging V1 mainnet candidate:
 - [ ] aiken unit-test suite (`contracts/lib/vault/tests/`) passes `aiken check` with 0 failures.
 - [ ] Deploy ceremony (NFT-1 through KAS-1) re-run cleanly on a fresh Preprod address.
 - [ ] Resource budget checks: every TX exec mem < 14 M, exec steps < 10 G (Conway era ceiling).
-- [ ] CBOR-tag-258 / Conway ref-script fee workarounds verified (per `optivaults/contracts/SECURITY.md` §External Trust Boundaries).
+- [ ] CBOR-tag-258 / Conway ref-script fee workarounds verified.
 
-## 6.1 Phase 1 governance safety — three-layer test cases (2026-04-25)
+## 6.1 Phase 1 governance safety — three-layer test cases
 
-Added with the Phase 1 governance safety design (validator commit `9626e8e` + docs commit `257c04e`). These verify the validator-level recovery primitives that make founder-only Phase 1 governance an acceptable launch fallback. See `docs/security-model.md` §5.4 for the threat model + scenario walkthroughs.
+Added with the Phase 1 governance safety design. These verify the validator-level recovery primitives that make founder-only Phase 1 governance an acceptable launch fallback. See `docs/security-model.md` §5.4 for the threat model + scenario walkthroughs.
 
 **Per-layer scenario matrix** — 19 test cases across 3 layers. Numbered file naming convention: `40-l1-*.ts` for Layer 1, `50-l2-*.ts` for Layer 2, `60-l3-*.ts` for Layer 3. (Yes, `60-minswap-decoder-verify.ts` already exists at that prefix; if a number conflict surfaces, renumber to `70-l3-*.ts` etc.)
 
