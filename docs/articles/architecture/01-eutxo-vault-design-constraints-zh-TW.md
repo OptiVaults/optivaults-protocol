@@ -4,7 +4,7 @@
 
 ---
 
-OptiVaults V1 是 Cardano 上第一個非託管穩定幣自動收益金庫。使用者存入 USDCx，取得 vUSDCx 份額代幣；金庫把資金部署到 Liqwid 的 DJED / USDM 借貸市場賺取利息，定期複利回寫進份額價格。所有與本金有關的操作都由 Aiken PlutusV3 合約強制——協議營運方在任何 redeemer 路徑下都無法挪動使用者本金。
+OptiVaults V1 是 Cardano 上第一個非託管穩定幣自動收益金庫。使用者存入 USDCx，取得 vUSDCx 份額代幣；金庫把資金部署到 Liqwid 的 DJED / USDM 借貸市場賺取利息，定期複利回寫進份額價格。所有與本金有關的操作都由 Aiken PlutusV3 合約強制，協議營運方在任何 redeemer 路徑下都無法挪動使用者本金。
 
 如果你只熟悉 Ethereum / Solidity 上的 ERC-4626 vault，Cardano eUTXO 上的等效實作會看起來不太自然。**重點是底層模型不同**。本系列會解釋 V1 的合約架構：為什麼是 17 個 logic validator + 4 個 NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact（共 24 個編譯產物），為什麼採用 Withdraw-Zero Forwarding Pattern，狀態為什麼集中在單一 UTXO，以及 Vault NFT 的編譯期錨點解決了什麼問題。
 
@@ -38,7 +38,7 @@ Cardano 的 spending validator 在被花費時會被執行，validator 邏輯是
 
 如果你的 vault 是「持有 vault state UTXO」+「spending validator 驗證所有規則」，那每一筆涉及 vault 的 TX 都會把 spending validator 整段跑一次。
 
-問題是 **Plutus V3 的 reference script 上限是 16 KB**——超過就無法部署。一個有完整 deposit / withdraw / compound / batch / liqwid supply / liqwid recall / governance / emergency 邏輯的 vault validator，輕易就會撞到上限。
+問題是 **Plutus V3 的 reference script 上限是 16 KB**，超過就無法部署。一個有完整 deposit / withdraw / compound / batch / liqwid supply / liqwid recall / governance / emergency 邏輯的 vault validator，輕易就會撞到上限。
 
 實際上 V1 的核心業務邏輯加起來會是這樣（按邏輯模組分組的大致規模）：
 
@@ -62,7 +62,7 @@ Conway 紀元起，Cardano 對 reference script 加了新的計費規則：每�
 
 對 vault 設計的影響：**validator 越大，使用者每次互動的 fee 越高**。一個 16 KB 的單一 vault validator，每筆 deposit / withdraw / compound 都要把 16 KB 算進 fee 計算。
 
-V1 採用的拆分策略下，一筆 deposit TX 只需要參考 `vault_proxy`（~4.9 KB）+ `vault_user`（~12.5 KB），總共 ~17 KB；一筆 compound TX 參考 `vault_proxy` + `vault_keeper_hot`（~10.5 KB）+ `keeper_stake_script`（~8.8 KB），總共 ~24 KB。看起來各別 TX 都還大，但**沒有任何一筆 TX 需要載入 V1 的全部邏輯**——你 deposit 的時候不會載入 emergency 路徑，你 compound 的時候不會載入 BatchProcess 邏輯。
+V1 採用的拆分策略下，一筆 deposit TX 只需要參考 `vault_proxy`（~4.9 KB）+ `vault_user`（~12.5 KB），總共 ~17 KB；一筆 compound TX 參考 `vault_proxy` + `vault_keeper_hot`（~10.5 KB）+ `keeper_stake_script`（~8.8 KB），總共 ~24 KB。看起來各別 TX 都還大，但**沒有任何一筆 TX 需要載入 V1 的全部邏輯**，你 deposit 的時候不會載入 emergency 路徑，你 compound 的時候不會載入 BatchProcess 邏輯。
 
 如果不拆，每筆 TX 都得載入完整 vault 邏輯付 ref-script fee；拆分之後，每筆 TX 只付它真的用到的那部分。長期下來，這對小額存入者的成本敏感度差異很大。
 
@@ -72,16 +72,16 @@ V1 採用的拆分策略下，一筆 deposit TX 只需要參考 `vault_proxy`（
 
 最後一個約束最微妙。
 
-你的 vault state UTXO 跟其他人在同個 script 地址產生的 UTXO，**從 ledger 角度看沒有差別**。Cardano 沒有「這個 UTXO 是 vault 的真實 state」這種原生概念——任何人都可以把一個 UTXO 送到 `vault_proxy` 地址。
+你的 vault state UTXO 跟其他人在同個 script 地址產生的 UTXO，**從 ledger 角度看沒有差別**。Cardano 沒有「這個 UTXO 是 vault 的真實 state」這種原生概念，任何人都可以把一個 UTXO 送到 `vault_proxy` 地址。
 
 這帶來的攻擊面：
 
 - **Phantom UTXO 攻擊**：攻擊者在 `vault_proxy` 地址產生一個 phantom UTXO，攜帶他自己編造的 datum。如果你的 indexer / frontend / 其他 validator 用 script address 作為「這是 vault」的判準，就會把 phantom UTXO 當真。
 - **跨合約信任失效**：如果 `vusdcx` 鑄造政策的規則是「在 spending vault UTXO 的 TX 中可以鑄造份額」，但「vault UTXO」的定義只是「在 vault_proxy 地址的某個 UTXO」，那攻擊者可以建一個假 vault UTXO，配上自己的假 datum，誘騙 vusdcx 鑄造任意多的份額代幣。
 
-EVM 上這個問題不存在，因為合約地址本身就有 identity——但 Cardano 上你必須額外加入「這真的是我的 vault」的檢查機制。
+EVM 上這個問題不存在，因為合約地址本身就有 identity，但 Cardano 上你必須額外加入「這真的是我的 vault」的檢查機制。
 
-V1 的解法是 **Vault Identity NFT + 編譯期錨點**：用一個 PlutusV3 UTXO-ref one-shot policy 鑄造一個全鏈唯一的 NFT，把 NFT 的 minting policy 烘進 `vault_proxy` / `vusdcx` / `order` validator 的編譯期參數，讓「真實 vault」的定義變成「持有那個特定 NFT 的 UTXO，在那個特定的 vault_proxy 地址」——而那個 vault_proxy 地址本身的存在前提就是它的 script hash 內含了正確的 NFT policy。第 4 篇會細講這個三層 anchoring 的結構。
+V1 的解法是 **Vault Identity NFT + 編譯期錨點**：用一個 PlutusV3 UTXO-ref one-shot policy 鑄造一個全鏈唯一的 NFT，把 NFT 的 minting policy 烘進 `vault_proxy` / `vusdcx` / `order` validator 的編譯期參數，讓「真實 vault」的定義變成「持有那個特定 NFT 的 UTXO，在那個特定的 vault_proxy 地址」，而那個 vault_proxy 地址本身的存在前提就是它的 script hash 內含了正確的 NFT policy。第 4 篇會細講這個三層 anchoring 的結構。
 
 ---
 
@@ -94,7 +94,7 @@ V1 的解法是 **Vault Identity NFT + 編譯期錨點**：用一個 PlutusV3 UT
 - **約束 3** 推 V1 走向「按 redeemer 用途分組拆分，讓每筆 TX 只付實際用到的 ref-script fee」
 - **約束 4** 推 V1 走向「Vault NFT + 編譯期 anchoring」
 
-V1 對前三個約束的綜合答案是 **Withdraw-Zero Forwarding Pattern**——把業務邏輯從 spending validator 搬到多個 staking validator，spending validator 退化成一層薄薄的轉發器，由 redeemer 決定路由到哪個 staking validator。
+V1 對前三個約束的綜合答案是 **Withdraw-Zero Forwarding Pattern**，把業務邏輯從 spending validator 搬到多個 staking validator，spending validator 退化成一層薄薄的轉發器，由 redeemer 決定路由到哪個 staking validator。
 
 對第四個約束的答案是把 Vault NFT 的 minting policy 變成 spending validator 的編譯期參數，讓 phantom UTXO 從架構層級就無法被合法視為 vault。
 

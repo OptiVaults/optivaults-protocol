@@ -4,7 +4,7 @@
 
 ---
 
-[第 1 篇](./01-eutxo-vault-design-constraints-zh-TW.md) 講了在 Cardano eUTXO 上做 vault 的四個結構性約束：沒有 mutable global state、每個 input 觸發完整 validator、reference script fee 與大小成正比、UTXO identity 沒有原生概念。本篇講 OptiVaults V1 對前三個約束的綜合解法——**Withdraw-Zero Forwarding Pattern**。
+[第 1 篇](./01-eutxo-vault-design-constraints-zh-TW.md) 講了在 Cardano eUTXO 上做 vault 的四個結構性約束：沒有 mutable global state、每個 input 觸發完整 validator、reference script fee 與大小成正比、UTXO identity 沒有原生概念。本篇講 OptiVaults V1 對前三個約束的綜合解法:**Withdraw-Zero Forwarding Pattern**。
 
 這個 pattern 不是 V1 發明的，Cardano 社群在 V8 / V9 era 已經演化出這套寫法。但完整解釋這個 pattern 的中文文獻不多，加上 V1 把它推到「17 個 logic validator」的規模，剛好是個展示完整面貌的好機會。
 
@@ -22,9 +22,9 @@ V1 的核心設計選擇是把 vault 的邏輯**從 spending validator 搬到 st
 
 為什麼這樣可行？
 
-關鍵是 Cardano 的 staking validator 在被 withdraw 時會跑完整的 redeemer 邏輯，**而它看到的 TX context 跟 spending validator 看到的是同一份**。所以「驗證 TX 的合法性」這個工作可以委託給 staking validator——只要 spending validator 確認「TX 中有合法的 staking validator 被觸發」，業務檢查就由那個 staking validator 負責。
+關鍵是 Cardano 的 staking validator 在被 withdraw 時會跑完整的 redeemer 邏輯，**而它看到的 TX context 跟 spending validator 看到的是同一份**。所以「驗證 TX 的合法性」這個工作可以委託給 staking validator，只要 spending validator 確認「TX 中有合法的 staking validator 被觸發」，業務檢查就由那個 staking validator 負責。
 
-「withdraw 0」這部分聽起來很奇怪。它的意思是：你建立一個 stake credential、把它登記到鏈上，然後在每筆涉及 vault 的 TX 中加入一個「從這個 stake credential 提領 0 ADA」的條目。提領 0 ADA 這個動作沒有任何經濟意義，但它**強制觸發 staking validator 的執行**。這就是 pattern 名稱的由來——你「withdraw 0」是為了讓 staking validator 跑起來。
+「withdraw 0」這部分聽起來很奇怪。它的意思是：你建立一個 stake credential、把它登記到鏈上，然後在每筆涉及 vault 的 TX 中加入一個「從這個 stake credential 提領 0 ADA」的條目。提領 0 ADA 這個動作沒有任何經濟意義，但它**強制觸發 staking validator 的執行**。這就是 pattern 名稱的由來，你「withdraw 0」是為了讓 staking validator 跑起來。
 
 ---
 
@@ -70,7 +70,7 @@ validator vault_proxy(
 
 11 個編譯期參數（10 個 staking hash + vault_nft_policy）在 ceremony 部署時固定下來，從此 spending validator 內含的「合法路由清單」永遠不可變更。`vault_proxy` 大約 **4.9 KB**，是整個 V1 中最小的 logic validator 之一。
 
-注意 `vault_proxy` **沒有任何業務邏輯**——它不檢查 deposit 金額、不驗證 share price、不管 fee。它只關心「這筆 TX 是不是合法路由到一個 V1 認可的 staking validator」。所有實際業務檢查在被觸發的那個 staking validator 裡完成。
+注意 `vault_proxy` **沒有任何業務邏輯**，它不檢查 deposit 金額、不驗證 share price、不管 fee。它只關心「這筆 TX 是不是合法路由到一個 V1 認可的 staking validator」。所有實際業務檢查在被觸發的那個 staking validator 裡完成。
 
 ---
 
@@ -80,7 +80,7 @@ validator vault_proxy(
 
 ### 效益 1：多個邏輯模組共享同一個 vault UTXO
 
-`vault_proxy` 不在乎是哪個 staking validator 被觸發——它只看到「至少有一個合法的 zero-withdraw 條目」。所以你可以把 deposit 邏輯放在 `vault_user`、把 compound 邏輯放在 `vault_keeper_hot`、把 governance 邏輯放在 `vault_gov_policy`，**它們都能花費同一個 vault UTXO**，只要 TX 把對應的 zero-withdraw 條目放進來。
+`vault_proxy` 不在乎是哪個 staking validator 被觸發，它只看到「至少有一個合法的 zero-withdraw 條目」。所以你可以把 deposit 邏輯放在 `vault_user`、把 compound 邏輯放在 `vault_keeper_hot`、把 governance 邏輯放在 `vault_gov_policy`，**它們都能花費同一個 vault UTXO**，只要 TX 把對應的 zero-withdraw 條目放進來。
 
 這是回應[第 1 篇](./01-eutxo-vault-design-constraints-zh-TW.md)約束 1 的關鍵：vault state UTXO 仍然是單一 UTXO（並行模型乾淨），但邏輯不再受限於單一 validator。
 
@@ -100,9 +100,9 @@ V1 中最緊的 staking validator 是 `vault_liqwid`（13.4 KB / 約 3 KB headro
 
 不同 staking validator 可以有完全不同的授權規則：
 
-- `vault_user` 的 Deposit / Withdraw / CommunitySunset 是**純無許可**——任何 CIP-30 錢包都能觸發。
-- `vault_keeper_hot` 的 Compound / RebalanceBuffer 必須有 **keeper 簽名**——透過另一個 stake script（`keeper_stake_script`）的 zero-withdraw 來驗證。
-- `vault_gov_policy` 的 UpdateStrategy 必須有**治理多簽**——透過 spending MultisigGov UTXO 來驗證。
+- `vault_user` 的 Deposit / Withdraw / CommunitySunset 是**純無許可**，任何 CIP-30 錢包都能觸發。
+- `vault_keeper_hot` 的 Compound / RebalanceBuffer 必須有 **keeper 簽名**，透過另一個 stake script（`keeper_stake_script`）的 zero-withdraw 來驗證。
+- `vault_gov_policy` 的 UpdateStrategy 必須有**治理多簽**，透過 spending MultisigGov UTXO 來驗證。
 - `vault_gov_emergency` 的 EmergencyWithdraw 也是治理多簽，但 timelock 是 0 天（緊急路徑）。
 
 這些授權規則彼此完全隔離。要修改 keeper 授權模式（GovernanceOnly → PermissionlessWithBond），只動 `keeper_stake_script`，vault 邏輯零改動、不用重新部署。要新增一個 redeemer 也只動對應的 staking validator，其他 16 個全部不變。
@@ -163,7 +163,7 @@ Withdraw-Zero Forwarding Pattern 的核心洞察是：**Cardano 的 staking vali
 
 效益是：邏輯模組化、突破 16 KB 上限、ref-script fee 跟實際用到的功能成正比、授權邊界天然分離。
 
-下一篇會回答：**如果業務邏輯散在多個 staking validator，V1 是怎麼決定切成幾個、沿哪條線切？** 答案是四條正交切割線，把 V1 切成 17 個 logic validator——這對 Cardano vault 而言是個相當激進的拆法，每條切割線背後都有具體理由。
+下一篇會回答：**如果業務邏輯散在多個 staking validator，V1 是怎麼決定切成幾個、沿哪條線切？** 答案是四條正交切割線，把 V1 切成 17 個 logic validator，這對 Cardano vault 而言是個相當激進的拆法，每條切割線背後都有具體理由。
 
 ---
 

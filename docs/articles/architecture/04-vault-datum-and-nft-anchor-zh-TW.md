@@ -26,7 +26,7 @@ eUTXO 的並行模型是「同一個 UTXO 在同一個 block 只能被花費一�
 
 單 UTXO 是 Cardano DeFi 上 vault 設計的標準做法。
 
-**並行存取的問題另外處理**：使用者透過 Order UTXO（多個獨立 UTXO，使用者各自 Queue）排隊存提款，由 keeper 在 BatchProcess TX 中一次彙整若干 Order 寫回單一 vault UTXO。這把使用者層的並行從 vault state UTXO 解耦——使用者下單不需要互相競爭 vault UTXO，只競爭自己的 wallet UTXO。
+**並行存取的問題另外處理**：使用者透過 Order UTXO（多個獨立 UTXO，使用者各自 Queue）排隊存提款，由 keeper 在 BatchProcess TX 中一次彙整若干 Order 寫回單一 vault UTXO。這把使用者層的並行從 vault state UTXO 解耦，使用者下單不需要互相競爭 vault UTXO，只競爭自己的 wallet UTXO。
 
 ---
 
@@ -66,7 +66,7 @@ VaultDatum 29 個欄位分兩類：14 個可變、15 個不可變。
 
 `check_immutable_fields` 是 V1 安全模型的一個基石：**任何改動以上 15 個欄位的 TX，所有 vault staking validator 都會 reject**。
 
-也就是說，已部署 vault 的這 15 個欄位是**已部署 validator hash 的客觀屬性**，不是「我們承諾不改」，是「合約結構上根本不允許改」。績效費永遠不可能被治理調到 4.5% 以上、min_hold_seconds 永遠不可能拉超過 6 小時、Vault NFT identity 永遠不可能被替換——這些都是任何人可以拿 ledger 資料自己驗證的客觀事實，不需要相信營運方任何承諾。
+也就是說，已部署 vault 的這 15 個欄位是**已部署 validator hash 的客觀屬性**，不是「我們承諾不改」，是「合約結構上根本不允許改」。績效費永遠不可能被治理調到 4.5% 以上、min_hold_seconds 永遠不可能拉超過 6 小時、Vault NFT identity 永遠不可能被替換，這些都是任何人可以拿 ledger 資料自己驗證的客觀事實，不需要相信營運方任何承諾。
 
 ---
 
@@ -82,7 +82,7 @@ fn is_real_vault(utxo: Output, expected_policy: PolicyId) -> Bool {
 }
 ```
 
-問題是 `expected_policy` 是 runtime 參數。攻擊者只需要說服 indexer / frontend / 其他 validator 「這個 phantom UTXO 對應到一個假的 expected_policy」，整個 identity check 就會被繞過——因為 validator 只檢查「這個 UTXO 持有 NFT 等於我傳進去的 policy」，但**「我傳進去的 policy」本身可能是假的**。
+問題是 `expected_policy` 是 runtime 參數。攻擊者只需要說服 indexer / frontend / 其他 validator 「這個 phantom UTXO 對應到一個假的 expected_policy」，整個 identity check 就會被繞過，因為 validator 只檢查「這個 UTXO 持有 NFT 等於我傳進去的 policy」，但**「我傳進去的 policy」本身可能是假的**。
 
 實際的攻擊向量大概是這樣：
 
@@ -116,11 +116,11 @@ validator order(
 ) { ... }
 ```
 
-部署時 ceremony 跑 `aiken build` 會把這個 `vault_nft_policy` 烘進 validator bytecode。**已部署的 `vault_proxy` script hash 唯一對應到一個 `vault_nft_policy`**——你無法用同一個 `vault_proxy` 來持有不同 policy 的 NFT，因為 `vault_proxy` 的 script hash 本身就是「baked-in 那個 NFT policy 之後的 hash」。
+部署時 ceremony 跑 `aiken build` 會把這個 `vault_nft_policy` 烘進 validator bytecode。**已部署的 `vault_proxy` script hash 唯一對應到一個 `vault_nft_policy`**，你無法用同一個 `vault_proxy` 來持有不同 policy 的 NFT，因為 `vault_proxy` 的 script hash 本身就是「baked-in 那個 NFT policy 之後的 hash」。
 
 更進一步，`vusdcx`、`order` validator 也以**同一個編譯期參數**烘進去。三個獨立 script 的 hash **都被同一個 vault_nft_policy 鎖死**。
 
-**攻擊者要繞過這個 anchor，不只要建假 vault UTXO，還要產生一組能對應到那個假 policy 的 `vault_proxy` + `vusdcx` + `order` script hash**——而這些 hash 會跟 V1 已經部署在鏈上的 hash 不同。整個體系從 frontend / indexer / 其他 validator 都無法把它認成 V1 vault：
+**攻擊者要繞過這個 anchor，不只要建假 vault UTXO，還要產生一組能對應到那個假 policy 的 `vault_proxy` + `vusdcx` + `order` script hash**，而這些 hash 會跟 V1 已經部署在鏈上的 hash 不同。整個體系從 frontend / indexer / 其他 validator 都無法把它認成 V1 vault：
 
 - Frontend 只認鏈上發布的固定 `vault_proxy` 地址。
 - Indexer 只追蹤那個固定地址 + 持有特定 NFT 的 UTXO。
@@ -146,11 +146,11 @@ validator vault_nft(utxo_ref: OutputReference) {
 }
 ```
 
-`utxo_ref` 是部署 ceremony 開始時挑的某個 UTXO（通常是一個 deploy wallet 持有的普通 ADA UTXO）。鑄造 NFT 的條件是「在 mint TX 中花掉這個 UTXO」——一個 UTXO 只能被花掉一次，所以這個 NFT 一輩子只能被鑄造一次。
+`utxo_ref` 是部署 ceremony 開始時挑的某個 UTXO（通常是一個 deploy wallet 持有的普通 ADA UTXO）。鑄造 NFT 的條件是「在 mint TX 中花掉這個 UTXO」，一個 UTXO 只能被花掉一次，所以這個 NFT 一輩子只能被鑄造一次。
 
-鑄造完成後，那個 utxo_ref 已被消耗、永遠無法重現。**沒有人能再次觸發鑄造**——即使他持有 mint script 源碼、即使他擁有 deploy wallet 私鑰、即使他能 fork 整個 V1。鑄造能力是 ledger 層級永久關閉的。
+鑄造完成後，那個 utxo_ref 已被消耗、永遠無法重現。**沒有人能再次觸發鑄造**，即使他持有 mint script 源碼、即使他擁有 deploy wallet 私鑰、即使他能 fork 整個 V1。鑄造能力是 ledger 層級永久關閉的。
 
-這個 pattern 不是 V1 發明的——Cardano 社群已經用過幾年——但 V1 把它應用在**三層 anchoring** 上：
+這個 pattern 不是 V1 發明的，Cardano 社群已經用過幾年，但 V1 把它應用在**三層 anchoring** 上：
 
 | Anchor | NFT | 用途 |
 |--------|-----|------|
@@ -158,7 +158,7 @@ validator vault_nft(utxo_ref: OutputReference) {
 | Governance identity | `governance_nft` | 識別真正的 MultisigGov UTXO（鎖死治理動作必經之 UTXO） |
 | Registry authentication | `registry_auth_nft` | 識別真正的 Registry UTXO（鎖死協議白名單） |
 
-三者都用同一個 PlutusV3 UTXO-ref one-shot 模式，**比舊的 native script 加 deadline 寫法乾淨得多**——後者在 deadline 過期後會讓 NFT 無法被燒毀，把 sunset 路徑卡住。
+三者都用同一個 PlutusV3 UTXO-ref one-shot 模式，**比舊的 native script 加 deadline 寫法乾淨得多**，後者在 deadline 過期後會讓 NFT 無法被燒毀，把 sunset 路徑卡住。
 
 ---
 
@@ -188,7 +188,7 @@ V1 對 vault state 的設計是這樣串起來的：
 
 OptiVaults V1 完整原始碼以 Apache 2.0 授權公開在 [github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol)。內部審計已歷經多輪審查並修復 findings；測試套件為完整的 Aiken 單元 + 屬性式 fuzz 測試套件，每次 `aiken check` 都會跑隨機化檢查迭代；目標 2027 年 Q2-Q3 完成第三方審計。
 
-V1 在 mainnet 啟動時設定 100,000 USDCx 的營運上限，直到第三方審計完成。整個專案的定位是 Cardano DeFi 公共財參考實作——歡迎 fork、特化、商業化使用，也歡迎在 GitHub Issues 或 [Discord](https://discord.gg/HY5sy8cz8s) 提出對抗性檢視。
+V1 在 mainnet 啟動時設定 100,000 USDCx 的營運上限，直到第三方審計完成。整個專案的定位是 Cardano DeFi 公共財參考實作，歡迎 fork、特化、商業化使用，也歡迎在 GitHub Issues 或 [Discord](https://discord.gg/HY5sy8cz8s) 提出對抗性檢視。
 
 ---
 

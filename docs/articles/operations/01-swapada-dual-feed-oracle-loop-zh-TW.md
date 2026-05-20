@@ -6,9 +6,9 @@
 
 每筆 `DeployToProtocol` TX 會讓金庫淨付大約 2 ADA 給 Minswap V2 批處理者。100K TVL 下一年大約跑 20-50 次 DeployToProtocol，淨流出 40-100 ADA。
 
-沒有補充機制，金庫的 ADA 最終會掉到 `min_vault_ada` 底限——validator 會拒絕後續所有 DeployToProtocol，整個 keeper 自動化機制卡住。
+沒有補充機制，金庫的 ADA 最終會掉到 `min_vault_ada` 底限，validator 會拒絕後續所有 DeployToProtocol，整個 keeper 自動化機制卡住。
 
-很多 vault 用 off-chain manual top-up 處理這個問題：營運者定期手動送 ADA 進 vault。這個方案有個結構性缺陷——它讓 vault 的營運可用性綁定到 operator 的個人錢包狀態與 manual ops 流程。任何時候 operator 失能或忘記補 ADA，vault 就掛掉。
+很多 vault 用 off-chain manual top-up 處理這個問題：營運者定期手動送 ADA 進 vault。這個方案有個結構性缺陷，它讓 vault 的營運可用性綁定到 operator 的個人錢包狀態與 manual ops 流程。任何時候 operator 失能或忘記補 ADA，vault 就掛掉。
 
 V1 把這個機制移到鏈上：**`SwapAda` redeemer 在合約層自動補 ADA，由 dual-feed oracle 提供公平價，validator 強制所有經濟參數**。本篇拆解這個閉環的運作、為什麼選 dual-feed 而非 single-source、以及它對存入者的成本影響。
 
@@ -20,7 +20,7 @@ V1 把這個機制移到鏈上：**`SwapAda` redeemer 在合約層自動補 ADA�
 
 Cardano 的每筆 TX 都要付 ADA 網路費，這跟 EVM 的 gas 邏輯類似但有兩個關鍵差異：
 
-**(1) 每個 UTXO 都要有 min-UTXO 量的 ADA**。Cardano ledger 規定每個 UTXO 的 ADA 量必須足夠支付該 UTXO 自身的儲存成本（依 datum 大小、附帶 token 數量計算）。vault state UTXO 含有 29 欄位的 VaultDatum 加上 idle USDCx 與多種 stablecoin / qToken——min-UTXO 約 15-20 ADA。
+**(1) 每個 UTXO 都要有 min-UTXO 量的 ADA**。Cardano ledger 規定每個 UTXO 的 ADA 量必須足夠支付該 UTXO 自身的儲存成本（依 datum 大小、附帶 token 數量計算）。vault state UTXO 含有 29 欄位的 VaultDatum 加上 idle USDCx 與多種 stablecoin / qToken，min-UTXO 約 15-20 ADA。
 
 **(2) Minswap V2 批處理費由發起 TX 的人付 ADA**。每次 DeployToProtocol 透過 Minswap V2 做 USDCx ↔ DJED / USDM swap，vault 需要在 Minswap order UTXO 中放入 batcher fee（約 2 ADA）。這筆 ADA 跟 Minswap orderbook 一起走，最終由 batcher 收走，**vault 自己拿不回來**。
 
@@ -80,17 +80,17 @@ V1 拒絕這個方案，把 ADA 補充機制完整搬到鏈上。
 
 幾個關鍵屬性：
 
-**鏈上原子交換**。Vault 收 ADA、keeper 收 USDCx 是同一筆 TX 的兩個 output——validator 強制兩者按 oracle 公平價匹配。Keeper 無法說「我給 vault 10 ADA，但 vault 給我 1000 USDCx」——validator 拒絕。
+**鏈上原子交換**。Vault 收 ADA、keeper 收 USDCx 是同一筆 TX 的兩個 output，validator 強制兩者按 oracle 公平價匹配。Keeper 無法說「我給 vault 10 ADA，但 vault 給我 1000 USDCx」，validator 拒絕。
 
 **Oracle 公平價驗證**。Validator 從 Cardano 鏈上的 oracle 資料（Charli3 + Orcfax）讀取當下 ADA/USD 公平價，重算 expected USDCx amount，必須與 redeemer 提交的金額精確匹配。
 
-**Amount-in-range 邊界**。每筆 swap 限制在 10-50 ADA——擋下「一次補 1000 ADA」這種規模異常的操作。
+**Amount-in-range 邊界**。每筆 swap 限制在 10-50 ADA，擋下「一次補 1000 ADA」這種規模異常的操作。
 
-**1 小時冷卻**。同一個 vault 上的 SwapAda 之間至少間隔 1 小時——擋下「短時間連續觸發多筆 SwapAda」吸走 vault USDCx 的情境。
+**1 小時冷卻**。同一個 vault 上的 SwapAda 之間至少間隔 1 小時，擋下「短時間連續觸發多筆 SwapAda」吸走 vault USDCx 的情境。
 
-**Validity-range cap**。每筆 SwapAda 的時間視窗上限 1 小時——擋下「聲稱 upper = now + 100 days」這種試圖在 oracle 公平價變動後仍能成交舊 TX 的攻擊。
+**Validity-range cap**。每筆 SwapAda 的時間視窗上限 1 小時，擋下「聲稱 upper = now + 100 days」這種試圖在 oracle 公平價變動後仍能成交舊 TX 的攻擊。
 
-把這幾個約束疊加起來，被入侵的 keeper 的最壞情況是「以當下公平價換 50 ADA / 小時」——對 vault 影響微不足道，且 oracle 公平價約束 USDCx 流出量精確匹配實際換到的 ADA 價值。
+把這幾個約束疊加起來，被入侵的 keeper 的最壞情況是「以當下公平價換 50 ADA / 小時」，對 vault 影響微不足道，且 oracle 公平價約束 USDCx 流出量精確匹配實際換到的 ADA 價值。
 
 ---
 
@@ -125,9 +125,9 @@ fn read_oracle_price(asset_oracles: List<AssetOracle>, asset: AssetClass) -> Opt
 
 幾個關鍵屬性：
 
-**Dual-source 才接受**。Single-source 在這條 helper 直接 fail。`Charli3` 與 `Orcfax` 是 Cardano 上獨立運作的兩個 oracle 協議——它們各自有自己的資料源、aggregation 機制、發布時程。要同時操控兩者需要兩套獨立攻擊。
+**Dual-source 才接受**。Single-source 在這條 helper 直接 fail。`Charli3` 與 `Orcfax` 是 Cardano 上獨立運作的兩個 oracle 協議，它們各自有自己的資料源、aggregation 機制、發布時程。要同時操控兩者需要兩套獨立攻擊。
 
-**Disagreement window**。兩個 feed 必須在 2% 以內。如果 Charli3 報 ADA/USD = $0.50、Orcfax 報 $0.45，差距 11%——helper 拒絕回傳價格，SwapAda 整筆 TX fail。這條讓「single-feed 被攻擊但另一個 feed 正常」這個情境被自動偵測為「oracle 異常」。
+**Disagreement window**。兩個 feed 必須在 2% 以內。如果 Charli3 報 ADA/USD = $0.50、Orcfax 報 $0.45，差距 11%，helper 拒絕回傳價格，SwapAda 整筆 TX fail。這條讓「single-feed 被攻擊但另一個 feed 正常」這個情境被自動偵測為「oracle 異常」。
 
 **Freshness window**。每個 feed 必須在 10 分鐘以內。Cardano 上 oracle 的更新頻率通常是每幾個 block 一次（10-30 秒），所以 10 分鐘上限對正常運作是寬鬆的；但若某個 oracle 停止更新（譬如 oracle 自身故障），這條 freshness check 會把 SwapAda 擋下。
 
@@ -169,7 +169,7 @@ drag 換算:
   200-400 USDCx / 100,000 USDCx TVL ≈ 0.20-0.40% / year ← 沒道理，太高
 ```
 
-等等，這個算法錯了。SwapAda 換給 vault 的是 ADA——vault 拿到的 ADA 不是「漏失」，是 vault 自己需要的營運成本（給 Minswap batcher）。所以 SwapAda 流出的 USDCx 對應的是 vault 真實的營運成本，不是額外的 drag。
+等等，這個算法錯了。SwapAda 換給 vault 的是 ADA，vault 拿到的 ADA 不是「漏失」，是 vault 自己需要的營運成本（給 Minswap batcher）。所以 SwapAda 流出的 USDCx 對應的是 vault 真實的營運成本，不是額外的 drag。
 
 正確的算法：
 
@@ -181,9 +181,9 @@ drag 換算:
   drag ≈ $300 / $100,000 = 0.30% / year
 ```
 
-這個數字看起來還是高。但這是「DeFi 上跑 vault 的網路 gas 成本」的總和——任何在 Cardano 上做 swap-based rebalancing 的 vault 都會撞到類似的數字。V1 的設計把這個成本暴露出來、明確揭露，而不是藏在「總費用」裡。
+這個數字看起來還是高。但這是「DeFi 上跑 vault 的網路 gas 成本」的總和，任何在 Cardano 上做 swap-based rebalancing 的 vault 都會撞到類似的數字。V1 的設計把這個成本暴露出來、明確揭露，而不是藏在「總費用」裡。
 
-白皮書 §2.4 給的「~0.02% APY drag」是 **incremental drag from SwapAda mechanism itself**（不包含 Minswap batcher 費，那是 protocol 必要成本）。它衡量的是「跟『operator manual top-up』模型比起來，SwapAda 機制本身額外造成的摩擦」——主要來自 oracle 取中位數導致的微小匯率不公平（vault 永遠在公平價 0% 點換 ADA，不像 manual top-up 可以挑時間用較好的匯率）。這個數字大致與 dual-feed median 與 keeper 個人最佳匯率之間的 spread 同數量級——典型 0.01-0.05%。
+白皮書 §2.4 給的「~0.02% APY drag」是 **incremental drag from SwapAda mechanism itself**（不包含 Minswap batcher 費，那是 protocol 必要成本）。它衡量的是「跟『operator manual top-up』模型比起來，SwapAda 機制本身額外造成的摩擦」，主要來自 oracle 取中位數導致的微小匯率不公平（vault 永遠在公平價 0% 點換 ADA，不像 manual top-up 可以挑時間用較好的匯率）。這個數字大致與 dual-feed median 與 keeper 個人最佳匯率之間的 spread 同數量級，典型 0.01-0.05%。
 
 存入者該怎麼看這個數字：
 
@@ -197,9 +197,9 @@ drag 換算:
 
 兩個 1 小時的限制各自處理一類威脅：
 
-**Cooldown 防的是 high-frequency abuse**。若沒有冷卻，被入侵的 keeper 可以在短時間內連續觸發多筆 SwapAda——例如 1 分鐘觸發 10 次，每次 50 ADA，總計 500 ADA。Vault USDCx 流出 = 500 ADA × oracle 公平價 ≈ 250 USDCx。雖然個別 swap 都是公平價，但累積規模會超出「vault 真實需要的 ADA」很多。冷卻 1 小時讓最大流出率限制在 50 ADA / hour，被入侵的 keeper 1 天最多換 1200 ADA / 600 USDCx——相對 100K TVL 是低個位數百分比，不會把 vault 抽空。
+**Cooldown 防的是 high-frequency abuse**。若沒有冷卻，被入侵的 keeper 可以在短時間內連續觸發多筆 SwapAda，例如 1 分鐘觸發 10 次，每次 50 ADA，總計 500 ADA。Vault USDCx 流出 = 500 ADA × oracle 公平價 ≈ 250 USDCx。雖然個別 swap 都是公平價，但累積規模會超出「vault 真實需要的 ADA」很多。冷卻 1 小時讓最大流出率限制在 50 ADA / hour，被入侵的 keeper 1 天最多換 1200 ADA / 600 USDCx，相對 100K TVL 是低個位數百分比，不會把 vault 抽空。
 
-**Validity-range cap 防的是 oracle stale-price abuse**。若沒有 cap，keeper 可以構造「validity_range.upper = now + 10y」的 TX——這筆 TX 雖然在當下 oracle 公平價下成立，但若 oracle 公平價在 10 年內變動很大，攻擊者可以在某個時點重新提交這筆已簽名的 TX，利用 stale 公平價賺差價。1 小時的 width cap 把這個攻擊面壓到「TX 必須在 1 小時內 settle，否則作廢」——oracle 公平價在 1 小時內變動有限，攻擊收益不足以正當化攻擊成本。
+**Validity-range cap 防的是 oracle stale-price abuse**。若沒有 cap，keeper 可以構造「validity_range.upper = now + 10y」的 TX，這筆 TX 雖然在當下 oracle 公平價下成立，但若 oracle 公平價在 10 年內變動很大，攻擊者可以在某個時點重新提交這筆已簽名的 TX，利用 stale 公平價賺差價。1 小時的 width cap 把這個攻擊面壓到「TX 必須在 1 小時內 settle，否則作廢」，oracle 公平價在 1 小時內變動有限，攻擊收益不足以正當化攻擊成本。
 
 這兩個 cap 都不依賴 oracle 本身，是 validator 對 TX 結構的純粹邏輯約束。即使 oracle 短暫被攻擊，這兩條 cap 仍然有效。
 
@@ -207,20 +207,20 @@ drag 換算:
 
 ## 與 §5.4 keeper risk 的關係
 
-SwapAda 機制是 V1 keeper 風險管理的具體案例。白皮書 §5.4 列出 keeper 風險：「keeper 對某些操作的 slippage / pricing 政策由 keeper 軟體決定，不一定由合約強制」。SwapAda 把這條 keeper risk 反向處理——**把 SwapAda 的 pricing 強制從 keeper 軟體轉到合約層**。
+SwapAda 機制是 V1 keeper 風險管理的具體案例。白皮書 §5.4 列出 keeper 風險：「keeper 對某些操作的 slippage / pricing 政策由 keeper 軟體決定，不一定由合約強制」。SwapAda 把這條 keeper risk 反向處理:**把 SwapAda 的 pricing 強制從 keeper 軟體轉到合約層**。
 
 這條設計給 V1 提供一個範本：
 
 - **可以由 keeper 軟體政策處理的（譬如 Minswap V2 slippage tolerance 1.5%）**：暴露 risk 但用 destination whitelist + 公開觀察減輕。
 - **必須由合約強制的（譬如 SwapAda 的 oracle 公平價）**：直接用 validator 強制，把 keeper 從信任路徑移除。
 
-V1 在 P3-P5 滑點工作中（白皮書 §5.4 + spec/ada-swap.md）持續把這條設計線往前推——把更多 keeper-side 政策搬到合約層強制。這是「結構性安全 vs 信任性安全」分水嶺在營運機制上的具體實踐。
+V1 在 P3-P5 滑點工作中（白皮書 §5.4 + spec/ada-swap.md）持續把這條設計線往前推，把更多 keeper-side 政策搬到合約層強制。這是「結構性安全 vs 信任性安全」分水嶺在營運機制上的具體實踐。
 
 ---
 
 ## 下一篇
 
-第 2 篇處理另一條與 keeper liveness 直接相關的合約機制：**7 天 keeper-inactivity dead-man-switch**。當 keeper 連續 7 天沒送 productive Compound，合約自動觸發三件事——Direct Withdraw 早提領費自動免收、治理 fallback 路徑打開、emergency-withdraw 變得經濟合理。下一篇講這個機制怎麼運作、為什麼是 7 天、以及它為什麼不能被 TX 提交者用偽造 validity range 騙過去。
+第 2 篇處理另一條與 keeper liveness 直接相關的合約機制：**7 天 keeper-inactivity dead-man-switch**。當 keeper 連續 7 天沒送 productive Compound，合約自動觸發三件事:Direct Withdraw 早提領費自動免收、治理 fallback 路徑打開、emergency-withdraw 變得經濟合理。下一篇講這個機制怎麼運作、為什麼是 7 天、以及它為什麼不能被 TX 提交者用偽造 validity range 騙過去。
 
 ---
 

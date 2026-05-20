@@ -6,11 +6,11 @@
 
 [第 1 篇](./01-three-layer-governance-safety-zh-TW.md)講三層治理安全為什麼能讓單一簽名者治理變成可接受的 fallback。整篇的論述依賴一件事：合約層的不變式真的會被 validator 執行。
 
-這個前提聽起來理所當然——但對讀者而言，它需要證據。
+這個前提聽起來理所當然，但對讀者而言，它需要證據。
 
 V1 的單元測試與 property 測試會在 `aiken check` 跑過，這是必要的開發紀律。問題是這類測試**信任的是測試框架的觀察**：testbench 模擬一個 TX context，假設合約跑出來的結果可以代表 production ledger 的判斷。當合約程式碼改了一行、測試 fixture 也改了一行，紅燈瞬間變綠燈，沒有外部約束阻止「測試與被測物一起漂移」。
 
-V1 補上的安全層是**鏈上對抗性重放**：手工構造攻擊 TX、送到 Preprod ceremony 部署的活合約上、把合約的拒絕（或更糟，意外的接受）紀錄成 TX hash 或 Ogmios evaluate trace。本篇講這套方法論——它做什麼、不做什麼、為什麼補在哪。
+V1 補上的安全層是**鏈上對抗性重放**：手工構造攻擊 TX、送到 Preprod ceremony 部署的活合約上、把合約的拒絕（或更糟，意外的接受）紀錄成 TX hash 或 Ogmios evaluate trace。本篇講這套方法論:它做什麼、不做什麼、為什麼補在哪。
 
 整套合約以 Apache 2.0 授權開源在 [github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol)，提到的 redeemer 與 validator 都可以對照閱讀。
 
@@ -20,7 +20,7 @@ V1 補上的安全層是**鏈上對抗性重放**：手工構造攻擊 TX、送�
 
 幾個結構性差距：
 
-**(a) Testbench 模擬的 TX context 不是 ledger 規則**。Aiken 的測試框架以一個簡化的 `ScriptContext` 給 validator 執行。它涵蓋 validator 內部邏輯，但不保證 ledger 對 TX 整體結構（CBOR 序列化、reference script 載入、collateral 規則、CIP-69 purpose dispatch）的接受度與測試 fixture 一致。一個 validator 在 testbench 拒掉的 TX，活合約有可能在更早的階段（例如 ledger 直接 reject CBOR 結構）就被擋下——這時測試覆蓋的不是真正的防禦點。
+**(a) Testbench 模擬的 TX context 不是 ledger 規則**。Aiken 的測試框架以一個簡化的 `ScriptContext` 給 validator 執行。它涵蓋 validator 內部邏輯，但不保證 ledger 對 TX 整體結構（CBOR 序列化、reference script 載入、collateral 規則、CIP-69 purpose dispatch）的接受度與測試 fixture 一致。一個 validator 在 testbench 拒掉的 TX，活合約有可能在更早的階段（例如 ledger 直接 reject CBOR 結構）就被擋下，這時測試覆蓋的不是真正的防禦點。
 
 **(b) 測試共演化**。同一個 commit 改一條 validator 邏輯、同時改一條測試 expectation，CI 一樣綠燈。Git history 看起來像「合約強化了」，實際上「不變式」與「對不變式的觀察」一起搬家了。沒有外部錨點挑戰這個共演化。
 
@@ -41,7 +41,7 @@ V1 補上的安全層是**鏈上對抗性重放**：手工構造攻擊 TX、送�
     ├─ 從合約規格或 audit finding 起頭，找出一條「validator 應該拒絕」的攻擊向量
     ├─ 在 redteam-*.ts 腳本裡建一筆 TX，刻意違反該不變式
     └─ 使用真實的 Preprod ceremony 部署、真實的 vault state、真實的 ref scripts
-       —— 不是模擬，是要直接送到 ledger 的 TX 結構
+       (不是模擬，是要直接送到 ledger 的 TX 結構)
 
 [2] 送上鏈
     ├─ 先走 Ogmios evaluate 看 script execution 是否拒絕（不消耗實際 TX）
@@ -59,7 +59,7 @@ V1 補上的安全層是**鏈上對抗性重放**：手工構造攻擊 TX、送�
 
 ## V1 已驗證的防禦層分類
 
-以下列舉的是「實際在 Preprod 上構造攻擊 TX 並觀察到 ledger 拒絕」的防禦層，不是「所有可能的攻擊都已測過」的量化承諾。外部審計仍然是主要安全訊號——鏈上重放只是補上一條端到端的佐證，與單元測試、property 測試互相驗證。
+以下列舉的是「實際在 Preprod 上構造攻擊 TX 並觀察到 ledger 拒絕」的防禦層，不是「所有可能的攻擊都已測過」的量化承諾。外部審計仍然是主要安全訊號，鏈上重放只是補上一條端到端的佐證，與單元測試、property 測試互相驗證。
 
 ### 金庫主 UTXO spend（`vault_proxy.ak`）
 
@@ -130,7 +130,7 @@ V1 補上的安全層是**鏈上對抗性重放**：手工構造攻擊 TX、送�
 
 PlutusV3 每個 validator 明確宣告處理的 purpose（例如 staking validator 只宣告 `withdraw` + `publish`）；其餘 purpose 一律由 `else(_) { fail "<validator>: unsupported purpose" }` 捕捉並 fail。
 
-把 UTXO 故意送到 `payment_credential = <staking script hash>` 的位址上會被永久鎖死——因為對應腳本根本沒有 Spend handler。重放確認：這類「故意走錯 purpose」的 TX 在 evaluate 階段就被拒。
+把 UTXO 故意送到 `payment_credential = <staking script hash>` 的位址上會被永久鎖死，因為對應腳本根本沒有 Spend handler。重放確認：這類「故意走錯 purpose」的 TX 在 evaluate 階段就被拒。
 
 ### 份額價格不變式（`total_deposited` / `total_shares`）
 
@@ -141,13 +141,13 @@ PlutusV3 每個 validator 明確宣告處理的 purpose（例如 staking validat
 - BatchProcess 走 per-order 公平 share 計算。
 - 其他不該動帳本欄位的 redeemer 一律強制 `total_deposited == old.total_deposited && total_shares == old.total_shares`，由 `verify_protocol_fields_preserved` / `verify_liqwid_invariants` / `verify_emergency_freeze_only` / `verify_datum_unchanged` 等 helper 把關。
 
-這條不變式特別重要——它涵蓋整個份額代幣的經濟保證。原碼審查 + 鏈上重放共同確認：比例不變式不會在設計意圖之外被人為破壞。
+這條不變式特別重要，它涵蓋整個份額代幣的經濟保證。原碼審查 + 鏈上重放共同確認：比例不變式不會在設計意圖之外被人為破壞。
 
 ---
 
 ## 一個刻意延後的對抗向量
 
-由治理 `UpdateRegistry` 注入假的 Liqwid `action_addr_hash`，再讓 Supply 路由到假位址。對應的防禦是 `vault_liqwid.SupplyToLiqwid` 的 `qtoken_delta > 0` 不變式——假的 action validator 在每市場固定的 qToken policy 下根本 mint 不出真的 qToken，這條防禦由 Aiken 單元測試涵蓋。鏈上重放暫時不做：儀式步驟（queue UpdateRegistry → 等 timelock → 跑 Supply）的成本，相對於單元測試之外能多帶來的審計敘述價值偏低。
+由治理 `UpdateRegistry` 注入假的 Liqwid `action_addr_hash`，再讓 Supply 路由到假位址。對應的防禦是 `vault_liqwid.SupplyToLiqwid` 的 `qtoken_delta > 0` 不變式，假的 action validator 在每市場固定的 qToken policy 下根本 mint 不出真的 qToken，這條防禦由 Aiken 單元測試涵蓋。鏈上重放暫時不做：儀式步驟（queue UpdateRegistry → 等 timelock → 跑 Supply）的成本，相對於單元測試之外能多帶來的審計敘述價值偏低。
 
 這個刻意延後的揭露反過來說明方法論的紀律：不是「所有 finding 都要鏈上重放」，而是「對成本效益合理的 finding 鏈上重放」。
 
@@ -177,13 +177,13 @@ PlutusV3 每個 validator 明確宣告處理的 purpose（例如 staking validat
 
 這條「外部可重現」的屬性是 V1 安全模型的一個核心：信任不依賴創辦人或營運方的承諾，依賴的是 ledger 上可被任何人觀察的事實。
 
-整套做法（構造攻擊 TX → 上鏈 → 把合約拒絕紀錄成 TX hash 或 eval trace）也是未來 V1.x 與 V2 審計輪次可以直接沿用的模板——它不是一次性的儀式，是審計流程裡可重用的工具層。
+整套做法（構造攻擊 TX → 上鏈 → 把合約拒絕紀錄成 TX hash 或 eval trace）也是未來 V1.x 與 V2 審計輪次可以直接沿用的模板，它不是一次性的儀式，是審計流程裡可重用的工具層。
 
 ---
 
 ## 下一篇
 
-第 3 篇處理另一個面向的對抗性思考：**V1 同時持有 USDCx + DJED + USDM——這算分散嗎？** 答案不是直觀的「是」。多穩定幣配置可以擋掉發行者特定失敗，但擋不掉 ADA 閃崩這類相關性壓力。第 3 篇拆解「雙發行者配置」與「真分散」之間的差距。
+第 3 篇處理另一個面向的對抗性思考：**V1 同時持有 USDCx + DJED + USDM，這算分散嗎？** 答案不是直觀的「是」。多穩定幣配置可以擋掉發行者特定失敗，但擋不掉 ADA 閃崩這類相關性壓力。第 3 篇拆解「雙發行者配置」與「真分散」之間的差距。
 
 第 4 篇深入 phantom-vault 攻擊向量，補足 Architecture 系列 Article 4 對編譯期 NFT anchor 的處理。
 

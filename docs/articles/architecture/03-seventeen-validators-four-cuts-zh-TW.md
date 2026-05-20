@@ -6,7 +6,7 @@
 
 [第 2 篇](./02-withdraw-zero-forwarding-pattern-zh-TW.md)介紹了 Withdraw-Zero Forwarding Pattern：把 vault 業務邏輯從 spending validator 搬到多個 staking validator。但「拆成多個」沒有講清楚拆成幾個、沿哪條線切。本篇回答這個問題。
 
-OptiVaults V1 把 vault 邏輯切成 **17 個 logic validator + 4 個 NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact = 24 個編譯產物**。對 Cardano vault 而言這算相當激進的拆法——很多現有 vault 設計只有 5–8 個 validator。V1 為什麼這麼多？
+OptiVaults V1 把 vault 邏輯切成 **17 個 logic validator + 4 個 NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact = 24 個編譯產物**。對 Cardano vault 而言這算相當激進的拆法，很多現有 vault 設計只有 5–8 個 validator。V1 為什麼這麼多？
 
 **因為拆分沿著四條正交切割線**，每一條都對應一個明確的設計約束。本篇逐條解釋。
 
@@ -28,13 +28,13 @@ V1 沿授權邊界拆出：
 | `vault_gov_emergency` | 治理多簽 | EmergencyWithdraw |
 | `vault_admin_deploy` | 治理多簽 | AdminDeployNonDeposit |
 
-`vault_user` 只裝純無許可路徑這點很關鍵——它讓 deposit / withdraw 這兩個最高頻的使用者操作，不用為了 keeper-auth 或治理 multisig 邏輯付 ref-script fee。BatchProcess 雖然也是使用者面對的路徑，但它需要 keeper 授權（由 keeper 把若干筆排隊訂單彙整寫回 vault），所以拆到獨立的 `vault_batcher`，讓 `vault_user` 完全擺脫 keeper 授權編譯期參數，純化成「permissionless 三 redeemer」結構。
+`vault_user` 只裝純無許可路徑這點很關鍵，它讓 deposit / withdraw 這兩個最高頻的使用者操作，不用為了 keeper-auth 或治理 multisig 邏輯付 ref-script fee。BatchProcess 雖然也是使用者面對的路徑，但它需要 keeper 授權（由 keeper 把若干筆排隊訂單彙整寫回 vault），所以拆到獨立的 `vault_batcher`，讓 `vault_user` 完全擺脫 keeper 授權編譯期參數，純化成「permissionless 三 redeemer」結構。
 
 ---
 
 ## 切割線 2：治理回應延遲
 
-治理動作的 timelock 差異很大——從 emergency 的 0 天到 UpdateFeeSplit 的 21 天。把它們分開，等於把不同回應節奏的邏輯隔離：
+治理動作的 timelock 差異很大，從 emergency 的 0 天到 UpdateFeeSplit 的 21 天。把它們分開，等於把不同回應節奏的邏輯隔離：
 
 | Validator | Timelock | Redeemer |
 |-----------|----------|----------|
@@ -45,7 +45,7 @@ V1 沿授權邊界拆出：
 | `vault_gov_policy` UpdateFeeSplit | **21 天**（最長） | 三方分潤比例 |
 | `vault_admin_deploy` | 7 天 keeper-inactive + 21 天 registry-stable | 非存入代幣回收路徑 |
 
-**為什麼把 EmergencyWithdraw 獨立切出來？** 因為它是 0 day timelock 的特殊路徑——其他治理動作都要等 timelock，只有它可以即時生效（用來在被攻擊時凍結 vault）。把這條快速反應路徑保持在自己的 validator 上，**未來 SwapAdapter 擴充或其他治理邏輯增加時不會擴大緊急路徑的攻擊面**——`vault_gov_emergency` 永遠是「能在零時間內做這件事的最小邏輯集合」。
+**為什麼把 EmergencyWithdraw 獨立切出來？** 因為它是 0 day timelock 的特殊路徑，其他治理動作都要等 timelock，只有它可以即時生效（用來在被攻擊時凍結 vault）。把這條快速反應路徑保持在自己的 validator 上，**未來 SwapAdapter 擴充或其他治理邏輯增加時不會擴大緊急路徑的攻擊面**，`vault_gov_emergency` 永遠是「能在零時間內做這件事的最小邏輯集合」。
 
 UpdateFeeSplit 的 21 天 timelock（V1 中所有治理動作裡最長）也有具體理由：這是治理調整自身報酬的動作（gov 簽名者本身可能拿到分潤）。把它放最長 timelock，等於給存入者最長的觀察窗口決定要不要在生效前退場。
 
@@ -61,13 +61,13 @@ UpdateFeeSplit 的 21 天 timelock（V1 中所有治理動作裡最長）也有�
 
 **`vault_admin_deploy` 從 `vault_gov_emergency` 拆出**：AdminDeployNonDeposit 包含 SwapAdapter 分派 + destination-whitelist 檢查 + 6-tuple registry 讀取，是治理路徑中最重的 redeemer。拆掉之後 `vault_gov_emergency` 縮到 ~12.6 KB，把 EmergencyWithdraw 保持在精簡的 validator 內。
 
-**`vault_batcher` 從 `vault_user` 拆出**：BatchProcess 有四個獨立的 fold 迴圈（驗證每筆訂單的 owner / sums / vUSDCx 不外洩 / payout 唯一性）+ anti-leak 不變量，bytecode 規模 11.5 KB。它把 vault_user 從 keeper 授權編譯期參數中解放——deposit / withdraw 完全不需要關心 keeper 授權邏輯。
+**`vault_batcher` 從 `vault_user` 拆出**：BatchProcess 有四個獨立的 fold 迴圈（驗證每筆訂單的 owner / sums / vUSDCx 不外洩 / payout 唯一性）+ anti-leak 不變量，bytecode 規模 11.5 KB。它把 vault_user 從 keeper 授權編譯期參數中解放，deposit / withdraw 完全不需要關心 keeper 授權邏輯。
 
 ---
 
 ## 切割線 4：純粹的 size 上限
 
-最後一條最不浪漫——「擠不進去」。
+最後一條最不浪漫,「擠不進去」。
 
 V1 引入 oracle / asset_oracles / Minswap V2 SwapAdapter dispatch 之後，原本的 `vault_protocol`（包含 DeployToProtocol + Recall + MergeUtxo）膨脹到 16.5 KB，**超出 16 KB 上限 116 B**。
 
@@ -76,7 +76,7 @@ V1 引入 oracle / asset_oracles / Minswap V2 SwapAdapter dispatch 之後，原�
 - **`vault_protocol`**：DeployToProtocol（透過 SwapAdapter 分派到 Minswap V2）。13.1 KB / 約 3.3 KB headroom。
 - **`vault_recall`**：RecallFromProtocol、MergeUtxo。13.3 KB / 約 3.0 KB headroom。
 
-兩個合計 26.4 KB，跟拆分前的 16.5 KB 比起來增加 10 KB——其中大部分是分拆後兩邊共享的 helper（`get_continuing_datum` / `read_registry_datum` 等）。但每筆 TX 只用其中一個，所以 ref-script fee 沒有惡化。
+兩個合計 26.4 KB，跟拆分前的 16.5 KB 比起來增加 10 KB，其中大部分是分拆後兩邊共享的 helper（`get_continuing_datum` / `read_registry_datum` 等）。但每筆 TX 只用其中一個，所以 ref-script fee 沒有惡化。
 
 ---
 
@@ -108,7 +108,7 @@ V1 引入 oracle / asset_oracles / Minswap V2 SwapAdapter dispatch 之後，原�
 
 最緊的目前是 `vault_liqwid` 還剩約 3 KB headroom。所有 24 個編譯產物都安全落在 16 KB 之內。
 
-> **註——第二個 DEX adapter。** V1 的 24 個 artefact 裡有兩個是 SundaeSwap SwapAdapter（`sundaeswap_adapter` 加上配套的 `sundaeswap_cancel_guard`）。它們在部署儀式中綁定——是每一次 V1 launch 部署的一部分——但它們屬於 DEX adapter 的擴充,與本文討論的、由 size 推動的核心拆分是不同的兩件事。見 `spec/swap-adapter.md §8`。
+> **註:第二個 DEX adapter。** V1 的 24 個 artefact 裡有兩個是 SundaeSwap SwapAdapter（`sundaeswap_adapter` 加上配套的 `sundaeswap_cancel_guard`）。它們在部署儀式中綁定，是每一次 V1 launch 部署的一部分，但它們屬於 DEX adapter 的擴充,與本文討論的、由 size 推動的核心拆分是不同的兩件事。見 `spec/swap-adapter.md §8`。
 
 ---
 
@@ -122,7 +122,7 @@ V1 引入 oracle / asset_oracles / Minswap V2 SwapAdapter dispatch 之後，原�
 
 **(c) 部署時序更脆弱**：20 個 ref script 部署的順序與依賴鏈（vault_proxy 的編譯期參數需要 10 個 stake hash 都已決定）讓 ceremony 很容易踩到 TX 排序與 wallet UTXO 競爭問題。V1 的 `deploy.ts` 整套有 checkpoint 機制 + 自動 resume，這在這個拆分規模下是必備的。
 
-但拆分的好處——能突破 16 KB、能讓使用者只付實際 ref-script fee、能讓授權邊界天然分離——對使用者體驗與安全模型的價值比這些代價大很多。所以 V1 選擇了這個方向。
+但拆分的好處，能突破 16 KB、能讓使用者只付實際 ref-script fee、能讓授權邊界天然分離，對使用者體驗與安全模型的價值比這些代價大很多。所以 V1 選擇了這個方向。
 
 ---
 
@@ -132,7 +132,7 @@ V1 的 17 個 logic validator 不是隨意切的。沿著**授權邊界**、**�
 
 代價是 ceremony 變複雜、審計表面變大、部署時序更脆弱；好處是突破 16 KB、ref-script fee 按實際使用付費、授權邊界天然分離。
 
-下一篇會講最後一塊：**vault state 怎麼存、29 欄位 VaultDatum 的可變/不可變分割、以及編譯期 Vault NFT Anchor 怎麼防 phantom-vault 攻擊**——這是 V1 對[第 1 篇](./01-eutxo-vault-design-constraints-zh-TW.md)約束 4「UTXO identity 沒有原生概念」的答案。
+下一篇會講最後一塊：**vault state 怎麼存、29 欄位 VaultDatum 的可變/不可變分割、以及編譯期 Vault NFT Anchor 怎麼防 phantom-vault 攻擊**，這是 V1 對[第 1 篇](./01-eutxo-vault-design-constraints-zh-TW.md)約束 4「UTXO identity 沒有原生概念」的答案。
 
 ---
 

@@ -8,7 +8,7 @@
 
 V1 把績效費拆成三流：**keeper（運作 keeper bot 的營運者）/ gov pool（治理簽名者的補償池）/ treasury（協議自己的金庫）**。啟動時的分配比例是 40 / 0 / 60，未來 phase 依 TVL 與簽名者組成演進為 40 / 5 / 55 → 40 / 10 / 50。
 
-每個比例不是隨便挑的——它對應 V1 對「協議自主性」與「營運者經濟可行性」之間的具體權衡。本篇拆開這些權衡，並解釋為什麼有些上限是治理可調的、有些是 validator 寫死的。
+每個比例不是隨便挑的，它對應 V1 對「協議自主性」與「營運者經濟可行性」之間的具體權衡。本篇拆開這些權衡，並解釋為什麼有些上限是治理可調的、有些是 validator 寫死的。
 
 整套合約以 Apache 2.0 授權開源在 [github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol)。
 
@@ -31,11 +31,11 @@ Compound TX outputs:
 
 三個 destination 各自有獨立的：
 
-- **鏈上地址**——keeper 的個人地址、MultisigGov UTXO、treasury 合約地址。
-- **Redeemer 授權路徑**——keeper 的 share 直接落到他的錢包，gov pool 由 `DistributeSignerCompensation`（季度結算）分配，treasury 由 `TreasurySpend`（治理 7 天 timelock）支用。
-- **Timelock 設定**——`keeper_fee_bps` / `gov_fee_bps` 的調整走 `UpdateFeeSplit` 動作，timelock **21 天**（V1 所有治理動作中最長——理由稍後解釋）。
+- **鏈上地址**:keeper 的個人地址、MultisigGov UTXO、treasury 合約地址。
+- **Redeemer 授權路徑**:keeper 的 share 直接落到他的錢包，gov pool 由 `DistributeSignerCompensation`（季度結算）分配，treasury 由 `TreasurySpend`（治理 7 天 timelock）支用。
+- **Timelock 設定**:`keeper_fee_bps` / `gov_fee_bps` 的調整走 `UpdateFeeSplit` 動作，timelock **21 天**（V1 所有治理動作中最長，理由稍後解釋）。
 
-這個三流結構是 V1 鏈上分權的具體體現——三個口袋、三套規則、三層 timelock。
+這個三流結構是 V1 鏈上分權的具體體現:三個口袋、三套規則、三層 timelock。
 
 ---
 
@@ -51,11 +51,11 @@ V1 啟動時的分配：
 
 幾個關鍵點：
 
-**Keeper 40% 看起來高，但實際上是 net cost-centre**。100K TVL × 6% 毛收益 × 4.5% × 40% ≈ $108/年 — 在 Phase 1 baseline 配置下完全不足以覆蓋一個獨立營運者的基礎設施 + 監控成本（典型約 $400–$1,000/年）。Keeper 40% 上限刻意推高，是為了讓未來開放 keeper 註冊時（白皮書 §7.2 PermissionlessWithBond）非創辦人 keeper 的損益平衡 TVL 降到約 $1M——舊的 25% 上限對應 ~$1.5M，40% 上限降到 ~$1M。這是 V1 為「Phase 3+ 真正開放 keeper」鋪的結構性路。
+**Keeper 40% 看起來高，但實際上是 net cost-centre**。100K TVL × 6% 毛收益 × 4.5% × 40% ≈ $108/年 — 在 Phase 1 baseline 配置下完全不足以覆蓋一個獨立營運者的基礎設施 + 監控成本（典型約 $400–$1,000/年）。Keeper 40% 上限刻意推高，是為了讓未來開放 keeper 註冊時（白皮書 §7.2 PermissionlessWithBond）非創辦人 keeper 的損益平衡 TVL 降到約 $1M，舊的 25% 上限對應 ~$1.5M，40% 上限降到 ~$1M。這是 V1 為「Phase 3+ 真正開放 keeper」鋪的結構性路。
 
-**Gov pool 啟動時為 0**。Phase 1 由 3-of-3 簽名者治理（或於 SPO 招募延後時退到單一簽名者 fallback），治理活動稀疏，gov pool 在這個階段沒有經濟必要。把 `gov_fee_bps` 設為 0 等同於「停用 gov pool」——不會有 USDCx 累積在 MultisigGov UTXO，治理動作的 timelock 與 cancel 機制照常運作。
+**Gov pool 啟動時為 0**。Phase 1 由 3-of-3 簽名者治理（或於 SPO 招募延後時退到單一簽名者 fallback），治理活動稀疏，gov pool 在這個階段沒有經濟必要。把 `gov_fee_bps` 設為 0 等同於「停用 gov pool」，不會有 USDCx 累積在 MultisigGov UTXO，治理動作的 timelock 與 cancel 機制照常運作。
 
-**Treasury 60% 是 protocol 自身**。這 60% 進到 treasury 合約地址，由 `TreasurySpend` 治理動作支用。Treasury 把累積的資金按 4 類別分配（審計儲備 40% / 營運 25% / 研發 25% / 緩衝 10%）；每一筆支出都要走 7 天 timelock。Treasury 不是任何個人的口袋——它是合約管控的資金池，所有支出在 cardanoscan 上可被任何人觀察。
+**Treasury 60% 是 protocol 自身**。這 60% 進到 treasury 合約地址，由 `TreasurySpend` 治理動作支用。Treasury 把累積的資金按 4 類別分配（審計儲備 40% / 營運 25% / 研發 25% / 緩衝 10%）；每一筆支出都要走 7 天 timelock。Treasury 不是任何個人的口袋，它是合約管控的資金池，所有支出在 cardanoscan 上可被任何人觀察。
 
 ---
 
@@ -74,11 +74,11 @@ Phase 2 啟用 gov pool 的觸發條件是 TVL ≥ $500K + 加入外部簽名者
 為什麼 Phase 2 才啟用 gov pool？因為 Phase 1 階段：
 
 - 治理活動稀疏（偶爾的 UpdateStrategy、可能的緊急回應），不足以正當化常態 compensation。
-- 創辦人的單一簽名者 fallback 情境下，gov pool 等同於「創辦人付給創辦人」——沒有意義。
+- 創辦人的單一簽名者 fallback 情境下，gov pool 等同於「創辦人付給創辦人」，沒有意義。
 
 Phase 2 後簽名者集合擴充到 5 位（包含至少一位社群徵選），治理活動量隨 TVL 提升、結構性異議否決也開始有實際工作量。這個時候啟用 5% gov pool 才能讓非創辦人簽名者有微小但非零的補償，把「Cardano 社群服務」維持為可永續的角色。
 
-季度分配機制（`DistributeSignerCompensation`）有一條重要的「forfeit 條款」：如果某位簽名者在那個季度沒有透過 `Heartbeat` 維持 liveness，他在當期 pool 的份額會 forfeit——其他合格簽名者按比例多分。這條規則由 `multisig_gov.ak` 在 validator 層強制，不需要任何人線下決定誰合格。
+季度分配機制（`DistributeSignerCompensation`）有一條重要的「forfeit 條款」：如果某位簽名者在那個季度沒有透過 `Heartbeat` 維持 liveness，他在當期 pool 的份額會 forfeit，其他合格簽名者按比例多分。這條規則由 `multisig_gov.ak` 在 validator 層強制，不需要任何人線下決定誰合格。
 
 ---
 
@@ -140,7 +140,7 @@ V1 治理動作的 timelock 設定（依長短排序）：
 | `UpdateFee` / `UpdateRegistry` / `UpdateKeeperAuth` / `RotateSigners` / 其他 | 14 天 |
 | **`UpdateFeeSplit`** | **21 天** |
 
-`UpdateFeeSplit` 是 V1 所有動作中 timelock 最長的——比修改費率、調整 registry、輪替簽名者都長。理由是：
+`UpdateFeeSplit` 是 V1 所有動作中 timelock 最長的，比修改費率、調整 registry、輪替簽名者都長。理由是：
 
 **這是治理在調整自己的報酬**。當治理動作直接影響簽名者的個人收入（gov pool）或 keeper 的收入（keeper share），存入者最需要時間退場觀察。21 天的窗口讓任一存入者在生效前都有充足時間：
 
@@ -150,7 +150,7 @@ V1 治理動作的 timelock 設定（依長短排序）：
 
 21 天比較長，但在「治理調整自己報酬」這個特定情境下，把存入者保護放在第一位是合理的。其他動作（譬如 `UpdateStrategy` 調整配置）的影響是漸進的，7 天足夠反應；fee split 的影響是直接金錢，21 天的窗口更合宜。
 
-`UpdateFeeSplit` 也跟其他治理動作一樣享有 1-of-n cancel——任一簽名者可在 21 天內否決。多重保護下，存入者很難在「治理悄悄把比例改掉」這個情境下受到實質損害。
+`UpdateFeeSplit` 也跟其他治理動作一樣享有 1-of-n cancel，任一簽名者可在 21 天內否決。多重保護下，存入者很難在「治理悄悄把比例改掉」這個情境下受到實質損害。
 
 ---
 
@@ -162,9 +162,9 @@ V1 把 fee split 設計成鏈上獨立的三個 destination，這是結構準備
 - **Gov pool** 在 Phase 1 為 0%；若啟用，3-of-3 治理（含創辦人簽名）→ 含創辦人。
 - **Treasury** 的支出需治理 3-of-3 同意 → 含創辦人。
 
-三個流向的鏈上獨立性是真的——三個地址、三個 redeemer、三組 timelock。但簽名者集合在 Phase 1 重疊，所以**結構準備好了，去中心化還沒完成**。
+三個流向的鏈上獨立性是真的，三個地址、三個 redeemer、三組 timelock。但簽名者集合在 Phase 1 重疊，所以**結構準備好了，去中心化還沒完成**。
 
-這就是 V1 把「Six-identity separation」（白皮書 §6.1）放在路線圖上的原因。Phase 2 引入社群徵選簽名者、Phase 3 增加更多獨立簽名者，把人類控制者重疊度逐步拉低——目標是 Phase 4 評估 DAO 遷移。
+這就是 V1 把「Six-identity separation」（白皮書 §6.1）放在路線圖上的原因。Phase 2 引入社群徵選簽名者、Phase 3 增加更多獨立簽名者，把人類控制者重疊度逐步拉低，目標是 Phase 4 評估 DAO 遷移。
 
 V1 啟動的姿態是「在去中心化的路上、結構準備就位、誠實揭露當下狀態」，不是「我們現在已經是去中心化的」。這個區別對存入者很重要。
 
@@ -176,7 +176,7 @@ V1 啟動的姿態是「在去中心化的路上、結構準備就位、誠實�
 
 - Fee 進到單一錢包，後續分配靠 multisig 線下協調。
 - 沒有 audit reserve hard floor、沒有 treasury minimum、沒有 keeper / governance 分流。
-- 存入者要相信「multisig 會按 readme 分配」——這是 social commitment，無法用 ledger 驗證。
+- 存入者要相信「multisig 會按 readme 分配」，這是 social commitment，無法用 ledger 驗證。
 
 V1 的差異是把分配規則寫進 validator：每次 Compound TX 自動拆三流、每一流有獨立地址、每一條上限由 validator 強制。任何人可以在 cardanoscan 上對任一個 Compound TX 觀察：
 
@@ -194,13 +194,13 @@ Verify:
   C / (A+B+C) == (10000 - keeper_fee_bps - gov_fee_bps) / 10000
 ```
 
-如果 keeper 構造的 TX 不滿足這個比例，validator 拒絕；ledger 不收。這條 verification 任何人可以重做——不需要相信創辦人或 multisig。
+如果 keeper 構造的 TX 不滿足這個比例，validator 拒絕；ledger 不收。這條 verification 任何人可以重做，不需要相信創辦人或 multisig。
 
 ---
 
 ## 下一篇
 
-第 3 篇處理 V1 經濟模型的一個結構性挑戰：**100K TVL 上限下、~$270/年的協議收入不足以覆蓋營運成本**。傳統 DeFi 應對的方式是「快速成長到自給規模」——但 V1 的姿態是「在低 TVL 下也能永續運作」。下一篇講 Reference Implementation Mode：低 TVL 公共財運作模式，怎麼把營運節奏降下來，讓 V1 在 $500-$25K TVL 下不需要靠成長壓力存活。
+第 3 篇處理 V1 經濟模型的一個結構性挑戰：**100K TVL 上限下、~$270/年的協議收入不足以覆蓋營運成本**。傳統 DeFi 應對的方式是「快速成長到自給規模」，但 V1 的姿態是「在低 TVL 下也能永續運作」。下一篇講 Reference Implementation Mode：低 TVL 公共財運作模式，怎麼把營運節奏降下來，讓 V1 在 $500-$25K TVL 下不需要靠成長壓力存活。
 
 ---
 

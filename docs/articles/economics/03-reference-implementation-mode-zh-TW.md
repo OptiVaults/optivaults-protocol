@@ -4,11 +4,11 @@
 
 ---
 
-V1 啟動時設了 100K USDCx hard cap。內部估算顯示 Phase 1（pre-audit 階段）的有機 TVL 大致落在 $500-$25K 區間——遠低於 cap，也遠低於協議自給規模（baseline ~$500K）。
+V1 啟動時設了 100K USDCx hard cap。內部估算顯示 Phase 1（pre-audit 階段）的有機 TVL 大致落在 $500-$25K 區間，遠低於 cap，也遠低於協議自給規模（baseline ~$500K）。
 
 一般 DeFi vault 在這個區間有兩個選項：(a) 用「快速成長」的姿態擠出短期 TVL（行銷預算、激勵措施、補貼），快速跨過自給門檻；(b) 直接收掉產品，因為「成長太慢 = 失敗」。
 
-V1 兩個選項都不採——而且這個拒絕本身寫進營運政策。**Reference Implementation Mode** 是 V1 在低 TVL 區間的合法營運模式：把營運節奏降到符合真實收益基礎、降到「即使 TVL 永遠停在 $5K，V1 仍然可以無限期運作」的水準。
+V1 兩個選項都不採，而且這個拒絕本身寫進營運政策。**Reference Implementation Mode** 是 V1 在低 TVL 區間的合法營運模式：把營運節奏降到符合真實收益基礎、降到「即使 TVL 永遠停在 $5K，V1 仍然可以無限期運作」的水準。
 
 本篇拆解這個模式的細節：什麼時候啟用、會調整什麼、不會調整什麼、為什麼這個設計反映 V1「Cardano DeFi 公共財參考實作」的真實定位。
 
@@ -29,7 +29,7 @@ V1 的預設 Compound 排程依 TVL 分層（白皮書 §2.6）：
 
 每筆 Compound TX 在 Cardano 主網大約消耗 1.5-2.5 ADA。每筆 heartbeat 大約 0.5-1 ADA。把這些加起來，1,200+ USDCx 分層的 weekly 檔每年大約消耗 70-80 ADA（≈ $35-40，依 ADA 市價）。
 
-這個成本在 100K TVL 下是合理的——100K × 6% 毛收益 × 4.5% × 40% keeper share ≈ $108/年，剛好覆蓋一個獨立營運者的最低運作成本。
+這個成本在 100K TVL 下是合理的，100K × 6% 毛收益 × 4.5% × 40% keeper share ≈ $108/年，剛好覆蓋一個獨立營運者的最低運作成本。
 
 但在 $1-5K TVL 下，數學完全不一樣：
 
@@ -55,16 +55,16 @@ Reference Implementation Mode 就是 V1 給這個問題的合約 + 營運層回�
 
 ## 啟用條件：兩個必須同時成立
 
-Reference Implementation Mode 不是「想啟用就啟用」——它需要**兩個條件同時成立**：
+Reference Implementation Mode 不是「想啟用就啟用」，它需要**兩個條件同時成立**：
 
 1. V1 主網 TVL 在 $25K 以下持續 30 天以上。
 2. 過去 4 週、每個 Compound 區間累計的 qToken 收益的平均值，低於該次鏈上 TX 成本的 5 倍（亦即收益無法支撐預設的 Compound 頻率）。
 
-第二條的「5 倍」是經濟合理性的緩衝——如果收益剛好等於 TX 成本，Compound 是經濟「打平」；要有 5 倍以上的緩衝，default cadence 才不會變成「為了 Compound 而 Compound」。
+第二條的「5 倍」是經濟合理性的緩衝，如果收益剛好等於 TX 成本，Compound 是經濟「打平」；要有 5 倍以上的緩衝，default cadence 才不會變成「為了 Compound 而 Compound」。
 
 停用條件：TVL 跨過 $25K 並維持 30 天以上，即切回 Default Mode；若 TVL 再次回落，再進入 Reference Implementation Mode。模式切換可以雙向發生。
 
-**這個模式屬於 keeper 在白皮書 §4.5 經濟合理性裁量下行使的營運政策——不需要走 `UpdateStrategy` 治理動作**。它是 keeper 的營運自主權，不是合約強制條件。但 keeper 必須在儀表板上公開揭露當前的活動模式（後面詳述）。
+**這個模式屬於 keeper 在白皮書 §4.5 經濟合理性裁量下行使的營運政策，不需要走 `UpdateStrategy` 治理動作**。它是 keeper 的營運自主權，不是合約強制條件。但 keeper 必須在儀表板上公開揭露當前的活動模式（後面詳述）。
 
 ---
 
@@ -80,11 +80,11 @@ Reference Implementation Mode 不是「想啟用就啟用」——它需要**兩
 
 幾個微妙的設計選擇：
 
-**Heartbeat 不能完全停——必須維持在 90 天 sunset 門檻之下**。Heartbeat 的目的是更新 `last_realloc_time`，避免觸發 [Security 系列 Article 1](../security/01-three-layer-governance-safety-zh-TW.md) 講的 Layer 3 CommunitySunset。把 heartbeat 拉到 80 天就剛好低於 90 天 sunset 門檻——既最大化 gas 節省，又確保 vault liveness。
+**Heartbeat 不能完全停，必須維持在 90 天 sunset 門檻之下**。Heartbeat 的目的是更新 `last_realloc_time`，避免觸發 [Security 系列 Article 1](../security/01-three-layer-governance-safety-zh-TW.md) 講的 Layer 3 CommunitySunset。把 heartbeat 拉到 80 天就剛好低於 90 天 sunset 門檻，既最大化 gas 節省，又確保 vault liveness。
 
-**SwapAda 觸發條件不變——只是把預留 ADA 拉高**。SwapAda 由 `vault.lovelace < 15 ADA` 觸發；模式不改這個合約條件，但部署 ceremony 多預留 5-10 ADA 給 vault，讓 SwapAda 首次呼叫推遲到後面。
+**SwapAda 觸發條件不變，只是把預留 ADA 拉高**。SwapAda 由 `vault.lovelace < 15 ADA` 觸發；模式不改這個合約條件，但部署 ceremony 多預留 5-10 ADA 給 vault，讓 SwapAda 首次呼叫推遲到後面。
 
-**Discord 通知頻率降低**。週報對 $5K TVL 沒人在意——一年 $13.5 績效費，誰想看 52 份「本週 vault 收益 $0.26」？季度 + 年度總結反而對「公共財參考實作」這個定位更貼切。
+**Discord 通知頻率降低**。週報對 $5K TVL 沒人在意，一年 $13.5 績效費，誰想看 52 份「本週 vault 收益 $0.26」？季度 + 年度總結反而對「公共財參考實作」這個定位更貼切。
 
 ---
 
@@ -92,13 +92,13 @@ Reference Implementation Mode 不是「想啟用就啟用」——它需要**兩
 
 這是重要的揭露：**Reference Implementation Mode 是 keeper cadence 政策，不是合約層的鬆綁**。下列保護一律不受影響：
 
-- **全部合約不變式**——不動費率、不繞治理捷徑、不繞 validator。
-- **全部存入者保護**——`emergency-withdraw`、4.5% / 1% / 6h 硬上限、`withdraw-cli`。
-- **三層治理安全**（Security 系列第 1 篇）——Layer 1 freeze-only、Layer 2 swap-out、Layer 3 CommunitySunset 全部正常。
-- **Share price NAV 準確性**——qToken 價值仍按需即時讀取；`total_*` datum 欄位仍在 Compound 時更新如設計。
-- **7 天 keeper-inactivity gate**——這條讀的是 `last_compound_time`，不受 heartbeat 節奏放慢影響。
+- **全部合約不變式**:不動費率、不繞治理捷徑、不繞 validator。
+- **全部存入者保護**:`emergency-withdraw`、4.5% / 1% / 6h 硬上限、`withdraw-cli`。
+- **三層治理安全**（Security 系列第 1 篇）:Layer 1 freeze-only、Layer 2 swap-out、Layer 3 CommunitySunset 全部正常。
+- **Share price NAV 準確性**:qToken 價值仍按需即時讀取；`total_*` datum 欄位仍在 Compound 時更新如設計。
+- **7 天 keeper-inactivity gate**:這條讀的是 `last_compound_time`，不受 heartbeat 節奏放慢影響。
 
-7 天 gate 這條特別重要。它表示即使 keeper 在 Reference Implementation Mode 下幾個月不送 productive Compound，**只要實際收益 < heartbeat threshold，這個情境就不啟動 7 天 fallback**。但若 keeper 完全停止運作（包括 heartbeat 都不送），7 天 gate 仍會以 `last_compound_time` 為基準觸發——Direct Withdraw 早提領費自動免收、emergency-withdraw 變得經濟合理。
+7 天 gate 這條特別重要。它表示即使 keeper 在 Reference Implementation Mode 下幾個月不送 productive Compound，**只要實際收益 < heartbeat threshold，這個情境就不啟動 7 天 fallback**。但若 keeper 完全停止運作（包括 heartbeat 都不送），7 天 gate 仍會以 `last_compound_time` 為基準觸發，Direct Withdraw 早提領費自動免收、emergency-withdraw 變得經濟合理。
 
 這個分離讓 Reference Implementation Mode 在「合法低 TVL 模式」與「keeper 異常停擺」之間有清楚邊界：前者繼續維持 vault 服務、不觸發 fallback；後者立即觸發 fallback、給存入者退場路徑。
 
@@ -108,9 +108,9 @@ Reference Implementation Mode 不是「想啟用就啟用」——它需要**兩
 
 - **鏈下 indexer 看到的 staleness**：`last_realloc_time` 更新頻率變低，前端儀表板要能容忍這件事。在 Reference Implementation Mode 下，stale 是正常狀態，不是故障訊號。
 - **績效費 crystallization 時機**：延後到 withdraw 事件或稀疏的 Compound；累計績效費**金額不變**，只是入帳時機推遲。
-- **Treasury 累積速率**：對收益的抽取比例不變，只是轉帳次數變少——Compound 一旦觸發，Treasury 還是會準確累積。
+- **Treasury 累積速率**：對收益的抽取比例不變，只是轉帳次數變少，Compound 一旦觸發，Treasury 還是會準確累積。
 
-存入者該注意的：**share price 在 Reference Implementation Mode 下會「跳階段」**——不是每週小幅漲，而是每幾個月跳一次。長期持有的存入者最終拿到的 NAV 是一樣的（甚至更多，因為省下 gas）；短期持有的存入者觀察到的「累積收益」會看起來不平滑。
+存入者該注意的：**share price 在 Reference Implementation Mode 下會「跳階段」**，不是每週小幅漲，而是每幾個月跳一次。長期持有的存入者最終拿到的 NAV 是一樣的（甚至更多，因為省下 gas）；短期持有的存入者觀察到的「累積收益」會看起來不平滑。
 
 ---
 
@@ -128,9 +128,9 @@ Reference Implementation Mode 不是「想啟用就啟用」——它需要**兩
 - Heartbeat × 4-5 次 × 0.5-1 ADA ≈ 2-5 ADA
 - **總計 ≈ 4-15 ADA / 年**
 
-降幅約 85-95%。這個數字加上「不需要付雲端 keeper 高階代管方案」（Reference Implementation Mode 下單一小型 ARM 伺服器約 $50/年就足夠），讓 V1 在低 TVL 下的營運成本壓到約 **$80/年**——這個數字寫在白皮書 §4.3.1 cost-scaling 表的最低區段。
+降幅約 85-95%。這個數字加上「不需要付雲端 keeper 高階代管方案」（Reference Implementation Mode 下單一小型 ARM 伺服器約 $50/年就足夠），讓 V1 在低 TVL 下的營運成本壓到約 **$80/年**，這個數字寫在白皮書 §4.3.1 cost-scaling 表的最低區段。
 
-$80/年是個關鍵的閾值。它意味著創辦人從個人收入吸收這個成本的負擔輕到「不需要動用任何啟動資本儲備」——這就是 V1「結構性可永續」這個聲明的具體含意。
+$80/年是個關鍵的閾值。它意味著創辦人從個人收入吸收這個成本的負擔輕到「不需要動用任何啟動資本儲備」，這就是 V1「結構性可永續」這個聲明的具體含意。
 
 ---
 
@@ -144,7 +144,7 @@ Keeper 在 OptiVaults 儀表板上公開當前營運模式，包含：
 - 下次預計 Compound 的時點與預估收益。
 - 下次預計 heartbeat 的時點。
 
-存入者可自行用鏈上的 `last_compound_time`、`last_realloc_time`、`total_deposited` 對照儀表板的宣稱，獨立驗證模式是否確實如所宣告。這條揭露不依賴 trust——存入者可以拿 cardanoscan 資料對帳。
+存入者可自行用鏈上的 `last_compound_time`、`last_realloc_time`、`total_deposited` 對照儀表板的宣稱，獨立驗證模式是否確實如所宣告。這條揭露不依賴 trust，存入者可以拿 cardanoscan 資料對帳。
 
 ---
 
@@ -165,15 +165,15 @@ TVL 跨過 $25K 且停用條件成立時：
 
 最後一段把 Reference Implementation Mode 拉回 V1 的整體姿態。
 
-很多 DeFi 產品的隱含預設是「成長到自給規模 = 成功；沒成長到 = 失敗」。這個框架下，低 TVL 階段被視為「過渡期」，要用各種方式加速跨越——行銷預算、激勵措施、補貼、token 釋出。
+很多 DeFi 產品的隱含預設是「成長到自給規模 = 成功；沒成長到 = 失敗」。這個框架下，低 TVL 階段被視為「過渡期」，要用各種方式加速跨越:行銷預算、激勵措施、補貼、token 釋出。
 
-V1 不採這個框架。**V1 是 Cardano DeFi 的公共財參考實作**——它的價值主張不是「最大化 TVL」，是「以正確的方式做出第一個非託管多穩定幣自動收益 vault 在 Cardano 上的實作」。如果這個實作在 Cardano 生態的成熟度下只有 $5K 的有機需求，那 $5K TVL 在 $80/年營運模式下無限期運作就是合理的終端狀態。
+V1 不採這個框架。**V1 是 Cardano DeFi 的公共財參考實作**，它的價值主張不是「最大化 TVL」，是「以正確的方式做出第一個非託管多穩定幣自動收益 vault 在 Cardano 上的實作」。如果這個實作在 Cardano 生態的成熟度下只有 $5K 的有機需求，那 $5K TVL 在 $80/年營運模式下無限期運作就是合理的終端狀態。
 
 這個姿態對存入者有幾個實際含意：
 
-- **V1 沒有「不成長就死」的時間壓力**。Reference Implementation Mode 在結構上可永續——不會「燒完 runway 之後關門」。
+- **V1 沒有「不成長就死」的時間壓力**。Reference Implementation Mode 在結構上可永續，不會「燒完 runway 之後關門」。
 - **V1 sunset 觸發條件不是 TVL 卡在低位**。真正會結束 V1 的是白皮書 §1.5 Class A overrides（USDCx 事件、Liqwid 事件、Cardano chain halt、oracle 異常）或創辦人明確 sunset 決定。
-- **Apache 2.0 開源意味著 V1 的價值不依賴自己長大**。即使 V1 維持在 $5K TVL，原始碼仍可被其他 Cardano DeFi 團隊 fork 並特化——這對 Cardano 生態的貢獻不會因為 V1 自己 TVL 規模而改變。
+- **Apache 2.0 開源意味著 V1 的價值不依賴自己長大**。即使 V1 維持在 $5K TVL，原始碼仍可被其他 Cardano DeFi 團隊 fork 並特化，這對 Cardano 生態的貢獻不會因為 V1 自己 TVL 規模而改變。
 
 Reference Implementation Mode 就是把這個哲學翻譯成具體營運政策。**「當存入規模其實只是在『跑公共參考實作』、而不是『跑 yield 產品』時，這才是誠實的營運姿態。」**
 
