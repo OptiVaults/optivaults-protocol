@@ -8,7 +8,7 @@
 
 **貢獻者酬庸計畫在 V1 上線時尚未正式啟用。**
 
-在 pre-audit 的 100K TVL 上限下,Treasury R&D 類別每年入帳約 US$43——不足以撐起結構化 bounty 計畫。Phase 1 階段,貢獻者會得到:
+在 pre-audit 的 100K TVL 上限下,Treasury R&D 類別每年入帳約 US$43,不足以撐起結構化 bounty 計畫。Phase 1 階段,貢獻者會得到:
 
 - **公開致謝**:repo commit log、release note,以及(對實質貢獻)Discord `#contributions` 頻道的公開提及
 - **貢獻者 NFT**(Phase 2 起開放,上線時尚未啟用):見下方 §3
@@ -25,7 +25,7 @@
 ### 機制 A:任務型 bounty
 
 **流程:**
-1. 動工前,治理(透過 `QueueAction` → `TreasurySpend`)為特定任務預留一筆 bounty(例:「實作 Splash V2 整合——bounty US$500」)
+1. 動工前,治理(透過 `QueueAction` → `TreasurySpend`)為特定任務預留一筆 bounty(例:「實作 Splash V2 整合,bounty US$500」)
 2. 任務公開在 GitHub + Discord
 3. 貢獻者提交 PR
 4. Keeper operator + 至少一位額外 reviewer,以技術實質審通過該 PR
@@ -37,10 +37,10 @@
 |---------|-------------|
 | 小 bug 修正(< 4 小時) | US$25–75 |
 | 小功能(4–20 小時) | US$100–500 |
-| 整合——A 類 Liqwid 市場 | US$300–750 |
-| 整合——B 類 DEX 路由 | US$1,000–3,000 |
+| 整合:A 類 Liqwid 市場 | US$300–750 |
+| 整合:B 類 DEX 路由 | US$1,000–3,000 |
 | 安全揭露(協調式、HIGH 嚴重性) | US$500–5,000(見 `docs/audit-scope.md`) |
-| 整合——C 類新協議 | US$3,000–10,000 |
+| 整合:C 類新協議 | US$3,000–10,000 |
 
 **治理 timelock**:bounty 的 `QueueAction` 套 7 天 timelock(與其他 `TreasurySpend` 動作相同)。Cancel 否決適用。
 
@@ -58,7 +58,7 @@
 
 **典型回溯金額**:每項肯定 US$50–500。
 
-**用途**:承認開源貢獻有時是不可預測的——貢獻者可能寫出專案原本沒意識到自己需要的東西。純事前 bounty 計畫會錯過這一類。
+**用途**:承認開源貢獻有時是不可預測的,貢獻者可能寫出專案原本沒意識到自己需要的東西。純事前 bounty 計畫會錯過這一類。
 
 ### 機制 C:貢獻者 NFT(soul-bound)
 
@@ -103,10 +103,10 @@ tokens:
 | **整合貢獻者** | `optivaults-protocol`(新 DEX adapter / Liqwid 市場條目)+ `optivaults-reference`(keeper 支援) | 實作新 DEX 路徑、新 Liqwid 市場、其他協議整合 | 機制 A(事前 bounty) |
 | **Keeper 工程師** | `optivaults-reference` | 改善 keeper 可靠性、監控、恢復工具 | 機制 A + B |
 | **Frontend 貢獻者** | `optivaults-reference` | React UI 改善、i18n、UX 打磨 | 機制 B(回溯性) |
-| **安全研究者** | `optivaults-protocol`(validator / 部署)或 `optivaults-reference`(operator)——scope 見各 repo 的 `SECURITY.md` | 透過協調流程揭露漏洞 | 機制 A(依 `docs/audit-scope.md` 的 tier) |
+| **安全研究者** | `optivaults-protocol`(validator / 部署)或 `optivaults-reference`(operator),scope 見各 repo 的 `SECURITY.md` | 透過協調流程揭露漏洞 | 機制 A(依 `docs/audit-scope.md` 的 tier) |
 | **文件貢獻者** | `optivaults-protocol`(spec / whitepaper / docs)或 `optivaults-reference`(operator docs) | 白皮書更新、教學、翻譯 | 機制 B |
 | **審計方(正式合作)** | `optivaults-protocol`(主要、外部審計目標)+ `optivaults-reference`(另走時程) | 第三方安全審計 | 從 Treasury audit reserve 出,不走 R&D |
-| **工具開發者** | `optivaults-reference`(主要)——視工具用途而定 | CLI 改進、監控 bot、區塊瀏覽器儀表板 | 機制 A + B |
+| **工具開發者** | `optivaults-reference`(主要),視工具用途而定 | CLI 改進、監控 bot、區塊瀏覽器儀表板 | 機制 A + B |
 
 每一種角色除了現金酬庸以外,都可能額外拿到貢獻者 NFT(機制 C)。
 
@@ -119,7 +119,7 @@ tokens:
 - 合併進任一官方 OptiVaults GitHub repo 的 PR
 - 被接受的 issue / writeup / 揭露
 - 完成的 bounty 任務
-- 實質的 Discord / 社群支援(例如幫助使用者、撰寫 guide——治理裁量)
+- 實質的 Discord / 社群支援(例如幫助使用者、撰寫 guide,治理裁量)
 
 ### 4.2 什麼不算貢獻
 
@@ -142,7 +142,7 @@ tokens:
 
 | TVL | R&D 類別年入帳 | 實務酬庸容量 |
 |-----|--------------|-------------|
-| 100K(上線) | ~$43/年 | 沒有結構化計畫——僅公開致謝 |
+| 100K(上線) | ~$43/年 | 沒有結構化計畫:僅公開致謝 |
 | 500K | ~$216/年 | 每年 1 次小型 bounty |
 | 1M | ~$432/年 | 每年 2–3 次小型 bounty |
 | 5M | ~$2,160/年 | 每年 4–6 次 bounty + 1 次大型整合 |
@@ -171,7 +171,7 @@ tokens:
 
 ## 7. 與安全揭露的關係
 
-安全揭露**不**透過本貢獻者計畫處理。V1 的責任揭露姿態是**責任揭露政策(RDP)+ 酬庸式(ex gratia)肯定**框架——描述於 `docs/audit-scope.md §6`。有效揭露的酬庸式感謝支付,由創辦人啟動資金出,不從 Treasury audit reserve 出(Phase 1 $500–$25K TVL 下的 treasury 累積速率太慢,無法提供可預測的來源)。
+安全揭露**不**透過本貢獻者計畫處理。V1 的責任揭露姿態是**責任揭露政策(RDP)+ 酬庸式(ex gratia)肯定**框架,描述於 `docs/audit-scope.md §6`。有效揭露的酬庸式感謝支付,由創辦人啟動資金出,不從 Treasury audit reserve 出(Phase 1 $500–$25K TVL 下的 treasury 累積速率太慢,無法提供可預測的來源)。
 
 本文件 §3 機制 A 表格中的「安全研究者」那一列,是對該政策的**跨引**,不是獨立的 bounty 機制。
 
@@ -185,9 +185,9 @@ tokens:
 
 ## 8. 公共財立場
 
-OptiVaults 是**公共財協議**:程式原始碼、審計報告、白皮書、營運 runbook 全部公開。對這些公開資產的貢獻,強化的不只是本協議——也強化整個 Cardano DeFi 生態。
+OptiVaults 是**公共財協議**:程式原始碼、審計報告、白皮書、營運 runbook 全部公開。對這些公開資產的貢獻,強化的不只是本協議,也強化整個 Cardano DeFi 生態。
 
-本貢獻者計畫的目的,是讓個別貢獻者的誘因與公共財產出對齊,同時避免在協議之上再長出一層金融投機。貢獻者 NFT 刻意設為**不可轉讓**,正是為了防止這件事——聲譽與肯定是長期回報;現金 bounty 只是短期動機。
+本貢獻者計畫的目的,是讓個別貢獻者的誘因與公共財產出對齊,同時避免在協議之上再長出一層金融投機。貢獻者 NFT 刻意設為**不可轉讓**,正是為了防止這件事,聲譽與肯定是長期回報;現金 bounty 只是短期動機。
 
 ---
 
@@ -212,7 +212,7 @@ OptiVaults 是**公共財協議**:程式原始碼、審計報告、白皮書、�
 2. **挑**一個 GitHub 上標 `good-first-issue` 的 issue,或自己提一個
 3. **討論**:在 Discord `#contributions` 頻道討論之後再投入顯著精力
 4. **提交** PR,依照 repo 根目錄 `CONTRIBUTING.md` 的風格準則
-5. **期待值**:merge commit + Discord 公告的致謝。現金酬庸**尚未**開放——進場前請理解這點。
+5. **期待值**:merge commit + Discord 公告的致謝。現金酬庸**尚未**開放,進場前請理解這點。
 
 **若你的貢獻屬於實質**(重大新功能、安全研究、完整的協議整合),你的名字會進入 Phase 2 啟用時的回溯性肯定清單。治理已公開表態:啟動期的貢獻者,在計畫啟用後有資格拿到回溯性 bounty。
 

@@ -2,7 +2,7 @@
 
 **範圍**:為 V1 加入新 DEX 路徑、新借貸市場、新協議整合時,在不犧牲安全的前提下該怎麼走的作業流程。
 
-這份是 canonical SOP——operator 與治理簽名者在提案 `UpdateRegistry` 或動 keeper 程式加進新的外部協議**之前**必須照這份走。之所以要寫這份:Cardano DeFi 裡可預防的資金損失,**最大原因不是智能合約 bug、不是市場事件**,而是跳過驗證步驟。
+這份是 canonical SOP,operator 與治理簽名者在提案 `UpdateRegistry` 或動 keeper 程式加進新的外部協議**之前**必須照這份走。之所以要寫這份:Cardano DeFi 裡可預防的資金損失,**最大原因不是智能合約 bug、不是市場事件**,而是跳過驗證步驟。
 
 ---
 
@@ -15,7 +15,7 @@ V1 繼承了 pre-V1 內部驗證期的整合失敗教訓。代表性的損失(�
 | 2026-03-29 | CSWAP cancel redeemer 格式沒從鏈上逆向,直接 mainnet submit | ~102 ADA |
 | 2026-03-31 | CSWAP datum 格式用假設、沒驗證 | ~9 ADA |
 | 2026-03-31 | 在 Minswap V2 batcher 停擺時送單;cancel 路徑沒測過 | ~20 USDCx + 8 ADA |
-| 2026-03-31 | `StakeCredential` 編成 `Constr(0, [])` 而不是 `Constr(1, [])`——validator crash、無法 cancel | ~11 USDCx + 12 ADA |
+| 2026-03-31 | `StakeCredential` 編成 `Constr(0, [])` 而不是 `Constr(1, [])`,validator crash、無法 cancel | ~11 USDCx + 12 ADA |
 | 2026-04-03 | 非冪等的 debug 腳本把 ADA 重送進金庫,永久鎖死 | 10 ADA |
 
 **V1 開發階段可預防的損失總額:大約 US$270。** 沒有一筆是智能合約漏洞,全是整合 SOP 問題。本 playbook 就是為了不讓 V1 存入者付出「重新學一次這些教訓」的代價而存在。
@@ -57,7 +57,7 @@ V1 繼承了 pre-V1 內部驗證期的整合失敗教訓。代表性的損失(�
 1. **該協議已經上鏈嗎?** 必須在 mainnet 上線 ≥ 90 天、無 exploit 紀錄。
 2. **是否活躍使用?** Batcher / keeper / sequencer 在過去 30 天內需要有 ≥ 50 筆成功 TX。停擺協議會以意想不到的方式卡住使用者資金。
 3. **原始碼是否公開?** Validator 原始碼若不公開,審計面會大幅擴張。V1 偏好整合開源的 Cardano 協議。
-4. **使用者送出的 order 是否有 cancel / refund 路徑?** 需由至少 3 筆真實鏈上 cancel TX 驗證。**若無 cancel 路徑,V1 拒絕整合**——使用者資金不能處於無法 cancel 的狀態。
+4. **使用者送出的 order 是否有 cancel / refund 路徑?** 需由至少 3 筆真實鏈上 cancel TX 驗證。**若無 cancel 路徑,V1 拒絕整合**,使用者資金不能處於無法 cancel 的狀態。
 5. **實際下行損失?** 若協議行為異常(例如 batcher 路由到錯地址)最壞會損失多少;以 V1 的 100K TVL 上限量化評估。
 
 **出口門檻**:五題全部有答案,且有引用來源。
@@ -67,10 +67,10 @@ V1 繼承了 pre-V1 內部驗證期的整合失敗教訓。代表性的損失(�
 **輸出**:
 
 1. 目標操作(Deposit/Swap/Supply/Withdraw/Cancel)的 5-10 筆真實 mainnet TX。每筆的 decoded CBOR 存進 `contracts/integrations/<protocol>/traces/`。
-2. Datum schema——**byte-level 精準**——從這些 trace 推導。**不准用猜的**。若 3 筆獨立 TX 對得上,schema 視為「鎖定」;若對不上,先查清楚再往下。
-3. Redeemer schema——包含 **cancel** 與 **expire** redeemer。這兩個往往與主執行 redeemer 不同、很容易漏掉。
-4. Stake credential 編碼——`Constr(0, [...])` vs `Constr(1, [...])`——從真實 TX 驗證,**不准用假設**。(這就是 2026-03-31 的教訓。)
-5. Reference-input 依賴——哪些 UTxO 必須以 reference 形式存在、他們的 datum 內容要是什麼。
+2. Datum schema:**byte-level 精準**,從這些 trace 推導。**不准用猜的**。若 3 筆獨立 TX 對得上,schema 視為「鎖定」;若對不上,先查清楚再往下。
+3. Redeemer schema:包含 **cancel** 與 **expire** redeemer。這兩個往往與主執行 redeemer 不同、很容易漏掉。
+4. Stake credential 編碼:`Constr(0, [...])` vs `Constr(1, [...])`,從真實 TX 驗證,**不准用假設**。(這就是 2026-03-31 的教訓。)
+5. Reference-input 依賴:哪些 UTxO 必須以 reference 形式存在、他們的 datum 內容要是什麼。
 
 **出口門檻**:GitHub issue 收錄 decoded CBOR、schema,以及至少一位 peer reviewer 對逆向結果的簽核。
 
@@ -145,11 +145,11 @@ Preprod cancel 成功 = 上 mainnet 的閘門。**沒有例外**。
 
 ### 規則 5:協議的 batcher / keeper / sequencer 必須活躍。
 
-在做 mainnet 煙霧測試之前,確認 batcher 在最近 10 分鐘內有運作過。**安靜的 batcher** 意味著 order 會無限期卡住。這就是 2026-03-31 送 Minswap V2 order 無法回收的原因——batcher 因無關原因當時停擺,而 V1 沒有自動偵測機制。
+在做 mainnet 煙霧測試之前,確認 batcher 在最近 10 分鐘內有運作過。**安靜的 batcher** 意味著 order 會無限期卡住。這就是 2026-03-31 送 Minswap V2 order 無法回收的原因,batcher 因無關原因當時停擺,而 V1 沒有自動偵測機制。
 
 ### 規則 6:第一次 mainnet 測試必須用最小允許金額。
 
-通常是 5 ADA 或該協議的最小 order 值。**第一次測試用更大的金額,就是在浪費錢**——萬一出問題,全是額外損失。
+通常是 5 ADA 或該協議的最小 order 值。**第一次測試用更大的金額,就是在浪費錢**,萬一出問題,全是額外損失。
 
 ---
 
@@ -163,12 +163,12 @@ Preprod cancel 成功 = 上 mainnet 的閘門。**沒有例外**。
 | `UpdateRegistry` cancel | 任一簽名者 | 鏈上 `CancelAction` | 0(立即否決) |
 | `UpdateRegistry` execute(Step 5) | 治理簽名者(達門檻) | 鏈上 `ExecuteAction` | —(timelock 過後) |
 | `FastUpdateMarkets`(Liqwid action_addr_hash 緊急輪替) | 治理簽名者(達門檻) | `registry.ak` 內的鏈上 redeemer | 只有 1 小時 cooldown(沒有 14 天等待) |
-| `KeeperToggleMarket`——緊急停用某個 Liqwid 市場 | Keeper operator(單方) | `registry.ak` 內的鏈上 redeemer;只能 `active: true → false` | 0(立即,僅 keeper) |
+| `KeeperToggleMarket`:緊急停用某個 Liqwid 市場 | Keeper operator(單方) | `registry.ak` 內的鏈上 redeemer;只能 `active: true → false` | 0(立即,僅 keeper) |
 | 重新啟用被 `KeeperToggleMarket` 停用的市場 | 治理簽名者(達門檻) | 鏈上 `UpdateRegistry` | 14 天 |
 | Mainnet 煙霧測試(Step 6) | Keeper operator | Keeper wallet | — |
 | 生產啟用(Step 7) | Keeper operator(execute 之後) | Keeper 設定 push | — |
 
-**Operator 權限上限**:keeper operator 絕不能單方把協議或市場加進白名單——registry 的**新增**都必須走治理(14 天 timelock)。Keeper **可以**:(a) 拒絕使用白名單內的某個協議(跳過風險路徑),以及 (b) 在偵測到壞帳訊號或 pool 遷移異常、否則會讓金庫資金被困住時,立即透過 `KeeperToggleMarket` **停用**某 Liqwid 市場。重新啟用 keeper 停用的市場**必須經治理**——這是**單向逃生閥模式**(keeper 打破玻璃,治理審視後重新密封)。
+**Operator 權限上限**:keeper operator 絕不能單方把協議或市場加進白名單,registry 的**新增**都必須走治理(14 天 timelock)。Keeper **可以**:(a) 拒絕使用白名單內的某個協議(跳過風險路徑),以及 (b) 在偵測到壞帳訊號或 pool 遷移異常、否則會讓金庫資金被困住時,立即透過 `KeeperToggleMarket` **停用**某 Liqwid 市場。重新啟用 keeper 停用的市場**必須經治理**,這是**單向逃生閥模式**(keeper 打破玻璃,治理審視後重新密封)。
 
 **社群權限**:任何社群成員都可以透過 Step 1 提案整合,並向治理施壓促成優先。治理不保證執行社群提案,但對重要提案需要公開回應。
 
@@ -220,7 +220,7 @@ Preprod cancel 成功 = 上 mainnet 的閘門。**沒有例外**。
 
 ## 7. 整合的資金來源
 
-整合工作由 treasury R&D 類別支應(見 `docs/economics.md §3` 與 §7C)。低 TVL 下,整合工作實質上是志工——創辦人或貢獻者自行吸收成本。TVL 成長後,treasury R&D 的資金才夠到值得給 operator 補償的程度:
+整合工作由 treasury R&D 類別支應(見 `docs/economics.md §3` 與 §7C)。低 TVL 下,整合工作實質上是志工,創辦人或貢獻者自行吸收成本。TVL 成長後,treasury R&D 的資金才夠到值得給 operator 補償的程度:
 
 | TVL | R&D 年入帳 | A 類可達頻率 | B 類頻率 | C 類 |
 |-----|-----------|--------------|----------|------|
@@ -231,7 +231,7 @@ Preprod cancel 成功 = 上 mainnet 的閘門。**沒有例外**。
 | 10M | ~$4,320 | 6 | 2 | 0 |
 | 50M+ | ~$21,600+ | 10+ | 5 | 1 |
 
-這是誠實的描述——整合量能隨 TVL 與 treasury 入帳擴張。**US$1M TVL 以下,預期每年 ≤ 2 次整合;US$10M 以上,整合節奏明顯加速。**
+這是誠實的描述,整合量能隨 TVL 與 treasury 入帳擴張。**US$1M TVL 以下,預期每年 ≤ 2 次整合;US$10M 以上,整合節奏明顯加速。**
 
 ---
 
@@ -252,7 +252,7 @@ Preprod cancel 成功 = 上 mainnet 的閘門。**沒有例外**。
 
 若生產整合發生意外問題:
 
-1. **立即**:Keeper operator 在 keeper 設定中停用該路徑(不需治理——operator 永遠可以停用白名單路徑的使用)
+1. **立即**:Keeper operator 在 keeper 設定中停用該路徑(不需治理,operator 永遠可以停用白名單路徑的使用)
 2. **短期**:治理 queue `UpdateRegistry` 移除協議 hash(14 天 timelock、1-of-n cancel 否決)
 3. **緊急**:若整合**正在**造成資金損失(不只是效率差),治理可以 `EmergencyWithdraw` 凍結金庫,等調查
 
