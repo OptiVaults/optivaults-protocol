@@ -32,6 +32,23 @@ The V1 validator set inherits the following architectural invariants from the in
 
 ---
 
+## 1.5 Documents Informational, Not in Audit Scope
+
+The following documents are project-published prose, not on-chain contract logic. They are read alongside the audit but do not themselves form audit targets:
+
+- `docs/cip-readiness-posture.md` — V1's posture toward the Cardano Improvement Proposal process.
+- `spec/pattern-rationale-validator-identity-nft.md`
+- `spec/pattern-rationale-multisig-gov-timelock.md`
+- `spec/pattern-rationale-withdraw-zero-forwarding.md`
+- `spec/pattern-rationale-registry-auth-nft.md`
+- `spec/pattern-rationale-vault-datum-tiered.md`
+
+Each pattern-rationale doc describes a recurring Cardano DeFi pattern in generic terms and cites the V1 instantiation as a concrete example. The V1 instantiation itself — the actual `vault_nft.ak` mint policy, the actual `multisig_gov.ak` state machine, the actual `vault_proxy.ak` router, the actual `registry.ak` validator, the actual 29-field VaultDatum + `check_immutable_fields` helper — **is** in audit scope under the coverage areas in §4. The prose around it is not.
+
+Auditors finding a discrepancy between a pattern-rationale doc and the actual V1 contract code should flag the discrepancy as a documentation bug on the rationale doc, not an audit finding against the contract; the contract code is authoritative.
+
+---
+
 ## 2. V1-Specific New Audit Scope
 
 ### 2.1 `keeper_stake_script.ak`
@@ -344,3 +361,5 @@ Audit firms offering public-goods pricing for Cardano DeFi reference implementat
 - `spec/governance.md` — Timelock floors and action payloads
 - `spec/treasury.md` — TreasuryDatum invariants
 - `spec/keeper-auth.md` — keeper_stake_script and bond lifecycle
+- `docs/cip-readiness-posture.md` — V1's posture toward the Cardano Improvement Proposal process (informational, see §1.5)
+- `spec/pattern-rationale-*.md` — Generic pattern documentation for the five V1 patterns (informational, see §1.5)

@@ -98,6 +98,13 @@ V1's combined answer to the first three constraints is the **Withdraw-Zero Forwa
 
 The answer to the fourth constraint is to bake the Vault NFT minting policy into the spending validators' compile-time parameters, making phantom UTXOs structurally illegitimate.
 
+For readers interested in **how V1's responses generalise beyond OptiVaults**, each of the four constraints maps to a documented pattern that recurs across Cardano DeFi:
+
+- **Constraints 2 + 3** (size limit + per-TX ref-script fee) → **Withdraw-Zero Forwarding Pattern**, documented generically in [`spec/pattern-rationale-withdraw-zero-forwarding.md`](../../../spec/pattern-rationale-withdraw-zero-forwarding.md). V1's `vault_proxy` + 10 routed staking validators is one concrete instantiation.
+- **Constraint 4** (UTXOs have no native identity) → **Validator Identity NFT Pattern**, documented generically in [`spec/pattern-rationale-validator-identity-nft.md`](../../../spec/pattern-rationale-validator-identity-nft.md). V1's Vault NFT + compile-time anchor in `vault_proxy` / `vusdcx` / `order` is one concrete instantiation.
+
+See [`docs/cip-readiness-posture.md`](../../cip-readiness-posture.md) for V1's broader stance on these patterns and the Cardano Improvement Proposal process. The posture document is **informational** — V1 publishes pattern rationale but does not submit a CIP at the V1 release stage.
+
 The next three parts each go deep:
 
 - **Part 2**: How the Withdraw-Zero Forwarding Pattern works, what benefits it gives, and what a Compound TX looks like end-to-end.

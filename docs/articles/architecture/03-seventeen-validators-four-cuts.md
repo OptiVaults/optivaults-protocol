@@ -126,6 +126,18 @@ But the upside of splitting — breaking past 16 KB, paying ref-script fee only 
 
 ---
 
+## Pattern Generalisability
+
+A final note on what carries beyond OptiVaults V1 and what does not.
+
+The underlying technique this article is built on — **Withdraw-Zero Forwarding**, moving business logic from a spending validator into multiple staking validators routed by a thin proxy — is a **generic Cardano DeFi pattern**, applicable to any protocol that runs into the 16 KB Plutus V3 ceiling or wants per-TX ref-script fee proportional to actual redeemer use. It is documented generically (independent of OptiVaults specifics) in [`spec/pattern-rationale-withdraw-zero-forwarding.md`](../../../spec/pattern-rationale-withdraw-zero-forwarding.md).
+
+The **specific 17-validator catalog** in the table above — the exact set `vault_user` / `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada` / `vault_protocol` / `vault_recall` / `vault_liqwid` / `vault_gov_policy` / `vault_gov_emergency` / `vault_admin_deploy` / `keeper_stake_script` / `treasury` / `multisig_gov` / `registry` / `order` / `vusdcx` / `vault_proxy`, partitioned along the four cuts above — is **OptiVaults-V1-specific**. The cuts shown here are driven by V1's particular logic mix (the eight redeemers in `vault_gov_policy`, the dual-feed oracle in `vault_swap_ada`, the SwapAdapter dispatch in `vault_protocol`, the per-market position tracking in `vault_liqwid`). Another protocol applying Withdraw-Zero would partition along its own redeemer surface — different cuts, different validator count.
+
+In short: the **pattern** is general; the **catalog** is specific. See [`docs/cip-readiness-posture.md`](../../cip-readiness-posture.md) §2 for the five V1 patterns documented for future CIP consideration, and §6 for the components V1 explicitly marks as project-specific rather than CIP candidates.
+
+---
+
 ## Summary
 
 V1's 17 logic validators aren't carved arbitrarily. Along **authorization boundary**, **governance response latency**, **bytecode cost center**, and **pure size limit** — four orthogonal cuts — every split corresponds to a concrete design constraint.

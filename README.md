@@ -58,6 +58,8 @@ The [`docs/articles/`](docs/articles/) directory contains long-form narrative ex
 
 Articles are mirrored on Medium with canonical URLs pointing back to this repository.
 
+V1 also publishes **pattern-rationale notes** for five recurring Cardano DeFi patterns it implements: Validator Identity NFT, MultiSig Governance + Timelock, Withdraw-Zero Forwarding, Registry + Auth NFT Whitelist, and VaultDatum Tiered Immutability. Each note describes the pattern in generic terms and cites the V1 instantiation as a concrete example. See [`docs/cip-readiness-posture.md`](docs/cip-readiness-posture.md) for the project's posture toward the Cardano Improvement Proposal process — V1 prepares pattern documentation but does not submit a CIP at the V1 release stage — and [`spec/pattern-rationale-*.md`](spec/) for the five per-pattern notes.
+
 ---
 
 ## Directory layout
@@ -76,7 +78,12 @@ Articles are mirrored on Medium with canonical URLs pointing back to this reposi
 │   ├── gov-nft.md              Governance signer soul-bound NFT
 │   ├── ada-swap.md             SwapAda redeemer + dual-feed oracle reader
 │   ├── vault-nft.md            Vault Identity NFT one-shot mint pattern
-│   └── swap-adapter.md         SwapAdapter interface + B@launch=1 post-launch DEX addition lifecycle
+│   ├── swap-adapter.md         SwapAdapter interface + B@launch=1 post-launch DEX addition lifecycle
+│   ├── pattern-rationale-validator-identity-nft.md     Generic Validator Identity NFT pattern (V1 case study)
+│   ├── pattern-rationale-multisig-gov-timelock.md      Generic m-of-n + timelock + cancel veto pattern
+│   ├── pattern-rationale-withdraw-zero-forwarding.md   Generic Withdraw-Zero Forwarding pattern (size + per-TX-fee split)
+│   ├── pattern-rationale-registry-auth-nft.md          Generic governance-mutable whitelist + auth NFT pattern
+│   └── pattern-rationale-vault-datum-tiered.md         Generic tiered-immutability datum pattern
 ├── contracts/                  V1 Aiken PlutusV3 source — 17 logic validators + 4 NFT mint policies + `minswap_v2_adapter` + 2 SundaeSwap artefacts; `aiken check` passing (run against the deployed commit for the current test summary)
 ├── deploy/                     Deploy pipeline
 │   ├── README.md               Deploy pipeline overview + checklist
@@ -110,6 +117,7 @@ Articles are mirrored on Medium with canonical URLs pointing back to this reposi
 │   ├── audit-scope.md          Pre-audit internal round plan + external audit scope
 │   ├── integration-playbook.md Operator SOP for adding new DEX routes / Liqwid markets
 │   ├── contributor-program.md  Open-source contributor rewards (Phase 2+ activation)
+│   ├── cip-readiness-posture.md   V1's posture toward the Cardano Improvement Proposal process (informational)
 │   └── articles/               Long-form narrative architecture walkthrough (4-part series, bilingual)
 ├── tests/
 │   └── preprod-e2e-plan.md     Specification-level scenario catalog (100+); executable TS scripts live in `optivaults-reference` (operator repo)
