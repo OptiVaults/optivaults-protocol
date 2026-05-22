@@ -1,23 +1,23 @@
-/// vault_user — permissionless user path (Deposit + Withdraw only, post Phase 77d)
+/// vault_user — permissionless user path (Deposit + Withdraw only, post batcher extraction)
 ///
 /// Staking validator invoked via Withdraw-Zero from vault_proxy. Handles:
 ///   Deposit, Withdraw
 ///
 /// Split history:
-///   (1) 2026-04-22 Phase 77 — vault_core split into vault_user +
-///       vault_keeper_hot along an authorization boundary. Each half
+///   (1) 2026-04-22 authorization-boundary split — vault_core separated
+///       into vault_user + vault_keeper_hot along an authorization boundary. Each half
 ///       carries its own A2 `publish` handler so the Cardano stake
 ///       registration deposit (2 ADA) is reclaimable via governance
 ///       deregister at sunset.
-///   (2) 2026-04-22 Phase 77d — BatchProcess extracted into standalone
+///   (2) 2026-04-22 batcher extraction — BatchProcess extracted into standalone
 ///       `vault_batcher.ak` to hoist its ~9-11 KB bytecode footprint
 ///       (4 fold loops + OrderDatum/OrderRedeemer decode + list.unique
-///       + 15+ datum equality checks + R51/R52 anti-leak invariants)
+///       + 15+ datum equality checks + vUSDCx no-leak + payout-output uniqueness invariants)
 ///       out of vault_user. The split also cleanly separates permission
 ///       domains: vault_user is now purely permissionless (no keeper
 ///       authorization), vault_batcher is keeper-authorized.
 ///
-/// Authorization boundary (post Phase 77d):
+/// Authorization boundary (post batcher extraction):
 ///   Both remaining redeemers are permissionless — any wallet may sign
 ///   and submit. No `keeper_stake_hash` compile-time parameter is
 ///   required. BatchProcess (which IS keeper-authorized) lives in
@@ -57,7 +57,7 @@ use vault/validation.{
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// vault_user compile-time anchors (post Phase 77d)
+// vault_user compile-time anchors (post batcher extraction)
 //
 //   governance_nft_policy  — A2 publish gate.
 //   governance_nft_name    — A2 publish gate.
@@ -145,8 +145,8 @@ validator vault_user(
       //   - Full drain: burn ALL shares, destroy vault (no continuing
       //     output, must burn Vault NFT in same TX).
       //   - Partial: burn some shares, continuing output reduced by
-      //     withdraw_amount (base_withdraw minus early_fee; R49 M-4
-      //     deferred-yield — early_fee stays physically in vault).
+      //     withdraw_amount (base_withdraw minus early_fee; the
+      //     deferred-yield withdraw rule — early_fee stays physically in vault).
       // ══════════════════════════════════════════════════════
       Withdraw { shares, receiver, receiver_output_idx } -> {
         expect vault_input_count == 1
@@ -294,7 +294,7 @@ validator vault_user(
               #"",
             )
 
-          // Deferred-yield rule (R49 M-4): idle_buffer + total_deposited
+          // Deferred-yield withdraw rule: idle_buffer + total_deposited
           // reduce by `withdraw_amount` (NOT base_withdraw). The early
           // fee remains physically in the vault and surfaces as share-
           // price appreciation at the next Compound.
@@ -381,17 +381,17 @@ validator vault_user(
         // would need to acquire vUSDCx first (which costs them money) and
         // can only fire once anyway.
         //
-        // R75 C-1 fix (audit-0426 critical): the asset-name argument
+        // vUSDCx caller-holder canonical-name fix: the asset-name argument
         // MUST be `vusdcx_token_name` (= #"765553444378", hex of "vUSDCx")
         // not `""`. With the empty asset name, `quantity_of` returns 0
         // for every input on Cardano, making this check unsatisfiable
         // and bricking the dead-man-switch entirely. Coverage gap:
-        // pre-R75, layer3_test.ak only exercised the helper functions
+        // before this fix, layer3_test.ak only exercised the helper functions
         // (validate_community_sunset_trigger_time +
         // validate_community_sunset_transition) and never invoked the
         // vault_user.ak redeemer path that contained this line — so
         // unit tests passed while the on-chain CommunitySunset was
-        // permanently un-invokable. R75 added a regression test in
+        // permanently un-invokable. The fix added a regression test in
         // layer3_test.ak that exercises this `quantity_of` lookup
         // directly with the canonical token name.
         let caller_has_vusdcx =
@@ -405,7 +405,7 @@ validator vault_user(
         // 90-day inactivity threshold — see
         // validate_community_sunset_trigger_time docs.
         //
-        // R75 L-1 fix (audit-0426): pre-fix this passed
+        // Sunset-helper heartbeat-spam fix: pre-fix this passed
         // `last_realloc_time` as a co-anchor with `last_compound_time`,
         // letting a compromised keeper spam zero-yield heartbeats every
         // 10min (`zero_yield_cooldown_ms`) to keep `last_realloc_time`
@@ -457,7 +457,7 @@ validator vault_user(
         }
       }
 
-      // BatchProcess moved to vault_batcher.ak (Phase 77d split,
+      // BatchProcess moved to vault_batcher.ak (batcher extraction,
       // 2026-04-22). Other redeemers handled by vault_keeper_hot /
       // vault_swap_ada / vault_protocol / vault_recall / vault_liqwid /
       // vault_gov_policy / vault_gov_emergency / vault_admin_deploy.

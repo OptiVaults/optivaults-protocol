@@ -34,8 +34,9 @@
 ///     while preserving semantic separation between slow deliberate
 ///     policy changes (14-21d timelock) and emergency/recovery paths.
 ///   - vault_core was split into vault_user + vault_keeper_hot
-///     (2026-04-22 Phase 77, whitepaper §9.4) to free headroom for A2
-///     `publish` handlers (ActDeregisterStake) on both halves so the
+///     (2026-04-22 authorization-boundary split, whitepaper §9.4) to
+///     free headroom for A2 `publish` handlers (ActDeregisterStake) on
+///     both halves so the
 ///     2 ADA Cardano stake-registration deposit becomes reclaimable.
 ///     Authorization boundary: vault_user holds Deposit / Withdraw /
 ///     BatchProcess (user path + mint/burn orchestration); vault_
@@ -43,25 +44,25 @@
 ///     hot path). All vUSDCx mint/burn remain on vault_user so the
 ///     vusdcx.ak minting policy binds to a single spend-authority.
 ///   - vault_protocol was split into vault_protocol + vault_recall
-///     (2026-04-22 Phase 77) to reclaim bytecode headroom after the
-///     SwapAdapter dispatch + Tier 1 oracle wire-up.
+///     (2026-04-22 authorization-boundary split) to reclaim bytecode
+///     headroom after the SwapAdapter dispatch + Tier 1 oracle wire-up.
 ///   - SwapAda was extracted from vault_keeper_hot into a standalone
-///     `vault_swap_ada` staking validator (2026-04-22 Phase 77b). The
+///     `vault_swap_ada` staking validator (2026-04-22 swap-ada extraction). The
 ///     §5.4 P5 dual-feed oracle reader + registry 6-tuple read were
 ///     ~4-5 KB used only by SwapAda; hoisting them out restores
 ///     headroom on Compound's host.
 ///   - AdminDeployNonDeposit was extracted from vault_gov_emergency
 ///     into a standalone `vault_admin_deploy` staking validator
-///     (2026-04-22 Phase 77c). The SwapAdapter dispatch +
+///     (2026-04-22 admin-deploy extraction). The SwapAdapter dispatch +
 ///     destination-whitelist check + 6-tuple registry read were
 ///     ~6-7 KB used only by AdminDeployNonDeposit; hoisting them out
 ///     restores headroom on EmergencyWithdraw's host and prevents
 ///     future SwapAdapter additions from growing the emergency-path
 ///     attack surface.
 ///   - BatchProcess was extracted from vault_user into a standalone
-///     `vault_batcher` staking validator (2026-04-22 Phase 77d). The
+///     `vault_batcher` staking validator (2026-04-22 batcher extraction). The
 ///     4 fold loops + OrderDatum/OrderRedeemer decode + list.unique
-///     + R51/R52 anti-leak invariants were ~9-11 KB used only by
+///     + vUSDCx no-leak + payout-output uniqueness invariants were ~9-11 KB used only by
 ///     BatchProcess; hoisting them out restores headroom on
 ///     vault_user, which also sheds its `keeper_stake_hash` compile-
 ///     time parameter (Deposit + Withdraw are permissionless).
@@ -316,7 +317,7 @@ validator vault_proxy(
             },
           )
 
-        // R75 L-4 fix (audit-0426): defense-in-depth — enforce
+        // Duplicate-check defense-in-depth: enforce
         // `withdrawal_count == 1` symmetrically with the primary
         // VaultDatum branch (see line ~140-163 + line 240). Pre-fix
         // the NoDatum branch only checked `has_authorized_withdrawal`

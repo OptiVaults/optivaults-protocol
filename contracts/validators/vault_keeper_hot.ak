@@ -1,11 +1,11 @@
-/// vault_keeper_hot — keeper hot-path redeemers (split from vault_core, SwapAda extracted Phase 77b)
+/// vault_keeper_hot — keeper hot-path redeemers (split from vault_core, SwapAda extracted via the swap-ada extraction)
 ///
 /// Staking validator invoked via Withdraw-Zero from vault_proxy. Handles:
 ///   Compound, RebalanceBuffer
 ///
 /// Rationale:
-///   (1) 2026-04-22 Phase 77 split from vault_core — authorization-boundary
-///       partition. Pre-split vault_core carried 6 redeemers and was
+///   (1) 2026-04-22 authorization-boundary split from vault_core —
+///       partition by authorization boundary. Pre-split vault_core carried 6 redeemers and was
 ///       15,462 B / 922 B headroom — no room for an `ActDeregisterStake`
 ///       (A2) publish handler. vault_core was split into vault_user
 ///       (permissionless Deposit / Withdraw / BatchProcess) + this file
@@ -13,7 +13,7 @@
 ///       carries its own A2 publish handler so the Cardano stake
 ///       registration deposit (2 ADA) is reclaimable via governance
 ///       deregister after a clean sunset.
-///   (2) 2026-04-22 Phase 77b — SwapAda extracted into standalone
+///   (2) 2026-04-22 swap-ada extraction — SwapAda extracted into standalone
 ///       `vault_swap_ada.ak`. The §5.4 P5 dual-feed oracle reader plus
 ///       the 6-tuple registry read were ~4-5 KB of bytecode used ONLY
 ///       by SwapAda; hoisting them out restores headroom on Compound's
@@ -131,7 +131,7 @@ validator vault_keeper_hot(
         let no_order_inputs =
           val_has_no_order_inputs(tx.inputs, old_datum.order_script_hash)
 
-        // Cooldown + 1h validity-range width cap (R58 F-1).
+        // Cooldown + 1h validity-range width cap.
         let valid_cooldown =
           when (
             tx.validity_range.lower_bound.bound_type,
@@ -202,7 +202,7 @@ validator vault_keeper_hot(
         // USDCx increment and writes `pool += delta`, so pool accounting
         // cannot drift from physical value.
         //
-        // R72 F-1 fix (2026-04-22): require the gov input's spend redeemer
+        // Compound cross-validator binding (2026-04-22): require the gov input's spend redeemer
         // to be ReceiveCompoundShare. Without this check, pairing Compound
         // with any other gov redeemer (Heartbeat / QueueAction / CancelAction
         // / ExecuteAction / RotateSignersRedeemer / DistributeSignerCompensation)
@@ -251,7 +251,7 @@ validator vault_keeper_hot(
                     old_datum.deposit_token_policy,
                     old_datum.deposit_token_name,
                   )
-                // R72 F-1: look up the gov UTXO's spend redeemer and
+                // Cross-validator binding: look up the gov UTXO's spend redeemer and
                 // require ReceiveCompoundShare.
                 let gov_redeemer_is_receive =
                   when pairs.get_first(tx.redeemers, Spend(gi.output_reference)) is {
@@ -320,7 +320,7 @@ validator vault_keeper_hot(
         }
       }
 
-      // SwapAda is now handled by vault_swap_ada.ak (Phase 77b split,
+      // SwapAda is now handled by vault_swap_ada.ak (swap-ada extraction,
       // 2026-04-22). Other redeemers are handled by vault_user /
       // vault_protocol / vault_recall / vault_liqwid / vault_gov_*.
       _ -> False

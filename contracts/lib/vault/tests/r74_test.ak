@@ -1,4 +1,4 @@
-//// R74 F-1: Minswap V2 adapter hop_chain commitment + LP-name re-hash.
+//// hop_chain LP-name re-hash regression — Minswap V2 adapter commitment + LP-name re-hash.
 ////
 //// Verifies:
 ////   1. `compute_lp_asset_name` formula matches Minswap V2's on-chain

@@ -1,11 +1,11 @@
 /// Split-boundary regression tests — vault_user + vault_keeper_hot.
 ///
 /// Context (2026-04-22): vault_core was split into two staking validators
-/// — vault_user (Deposit / Withdraw, post Phase 77d) + vault_keeper_hot
-/// (Compound / RebalanceBuffer, post Phase 77b) — to make headroom for
+/// — vault_user (Deposit / Withdraw, post batcher extraction) + vault_keeper_hot
+/// (Compound / RebalanceBuffer, post swap-ada extraction) — to make headroom for
 /// an A2 `publish` handler on each half. Follow-on extractions the same
-/// day: Phase 77b moved SwapAda to standalone `vault_swap_ada`; Phase
-/// 77d moved BatchProcess to standalone `vault_batcher` (and let
+/// day: the swap-ada extraction moved SwapAda to standalone `vault_swap_ada`;
+/// the batcher extraction moved BatchProcess to standalone `vault_batcher` (and let
 /// vault_user drop its keeper_stake_hash param to become purely
 /// permissionless). See validator files + whitepaper §9.4 + §3.1.
 ///
@@ -93,10 +93,10 @@ test shared_constants_stable_one_hour() {
 }
 
 test shared_constants_stable_max_validity_range() {
-  // 1h validity-range width cap (R58 F-1) — enforced in
+  // 1h validity-range width cap — enforced in
   // vault_user.Withdraw's timing check AND vault_keeper_hot.Compound
   // cooldown branches AND vault_swap_ada.SwapAda cooldown branch
-  // (post-Phase-77b extraction).
+  // (after the swap-ada extraction).
   max_validity_range_ms == 60 * 60 * 1_000
 }
 
@@ -118,8 +118,8 @@ test shared_constants_stable_zero_yield_cooldown() {
 
 test shared_constants_stable_ada_swap_bounds() {
   // vault_swap_ada.SwapAda bounds — documented here as part of the
-  // split surface. Phase 77 moved SwapAda from vault_core to
-  // vault_keeper_hot along the authorization-boundary split; Phase 77b
+  // split surface. The authorization-boundary split moved SwapAda from
+  // vault_core to vault_keeper_hot; the swap-ada extraction then
   // extracted it into standalone vault_swap_ada (dual-feed oracle
   // reader + 6-tuple registry read hoisted out of Compound's host).
   and {

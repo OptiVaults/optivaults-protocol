@@ -1,4 +1,4 @@
-/// vault_swap_ada — closed-loop ADA replenishment (2026-04-22 Phase 77b split from vault_keeper_hot)
+/// vault_swap_ada — closed-loop ADA replenishment (2026-04-22 swap-ada extraction from vault_keeper_hot)
 ///
 /// Staking validator invoked via Withdraw-Zero from vault_proxy with
 /// the `UseSwapAda` redeemer. Handles a single redeemer:
@@ -8,7 +8,7 @@
 ///             output at an oracle-derived fair rate. See
 ///             `spec/ada-swap.md` for the full specification.
 ///
-/// Split rationale (Phase 77b, 2026-04-22):
+/// Split rationale (swap-ada extraction, 2026-04-22):
 ///   Pre-split vault_keeper_hot carried Compound + RebalanceBuffer +
 ///   SwapAda and sat at 15,437 B / 947 B headroom. The §5.4 P5 dual-
 ///   feed oracle reader (`find_asset_oracle` + `read_fair_price`) plus

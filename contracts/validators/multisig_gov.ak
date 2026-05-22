@@ -614,7 +614,7 @@ validator multisig_gov(
       //
       // Authorization: this validator does NOT require signer signatures.
       // Trust is delegated to the Compound TX's vault_keeper_hot staking
-      // validator (post-Phase-77 home of Compound): vault_keeper_hot.
+      // validator (post-split home of Compound): vault_keeper_hot.
       // Compound enforces that `delta` matches the gov-share computed
       // from `harvested_amount × performance_fee_bps × gov_fee_bps`, so
       // any TX that calls ReceiveCompoundShare without a matching

@@ -1,4 +1,4 @@
-/// vault_admin_deploy — AdminDeployNonDeposit recovery path (2026-04-22 Phase 77c split from vault_gov_emergency)
+/// vault_admin_deploy — AdminDeployNonDeposit recovery path (2026-04-22 admin-deploy extraction from vault_gov_emergency)
 ///
 /// Staking validator invoked via Withdraw-Zero from vault_proxy with
 /// the `UseAdminDeploy` redeemer. Handles a single redeemer:
@@ -11,7 +11,7 @@
 ///                           dispatch when the keeper hot path is
 ///                           unavailable.
 ///
-/// Split rationale (Phase 77c, 2026-04-22):
+/// Split rationale (admin-deploy extraction, 2026-04-22):
 ///   Pre-split vault_gov_emergency carried EmergencyWithdraw + Admin-
 ///   DeployNonDeposit and sat at 15,425 B / 959 B headroom. The
 ///   SwapAdapter dispatch (`verify_swap_via_adapter`) + destination-

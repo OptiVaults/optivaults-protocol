@@ -1,9 +1,9 @@
-//// R77 F-1: SwapAdapterRedeemer `expected_recipient_addr` field
-//// closes the direct-drain vector where Minswap V2 OrderDatum
-//// `success_addr` (field[3]) and `refund_addr` (field[1]) were
-//// previously unconstrained.
+//// SwapAdapter recipient-address binding: SwapAdapterRedeemer
+//// `expected_recipient_addr` field closes the direct-drain vector
+//// where Minswap V2 OrderDatum `success_addr` (field[3]) and
+//// `refund_addr` (field[1]) were previously unconstrained.
 ////
-//// Pre-R77 attack chain:
+//// Pre-fix attack chain:
 ////   1. Compromised keeper signs DeployToProtocol(deploy_token=USDCx,
 ////      deploy_amount=X, dest_output_idx).
 ////   2. dest_output is at the Minswap V2 batcher script address (in
@@ -11,14 +11,14 @@
 ////      passes.
 ////   3. The Minswap V2 OrderDatum at dest_output has
 ////      success_addr = attacker_wallet (and/or refund_addr = attacker).
-////      Pre-R77, neither field was validated by the adapter or caller.
+////      Pre-fix, neither field was validated by the adapter or caller.
 ////   4. Minswap V2 batcher fills the order, sends target asset to
 ////      success_addr = attacker.
 ////   5. Vault loses X USDCx; attacker gains X * (1 - slippage - fee)
 ////      of target asset (≈92-95% of X). DIRECT THEFT, not bounded
 ////      slippage griefing.
 ////
-//// R77 fix (Option 1 — adapter interface extension):
+//// Recipient-address fix (Option 1 — adapter interface extension):
 ////
 //// Two enforcement layers, both must agree:
 ////   - Layer 1 (caller `vault_protocol.DeployToProtocol` /
@@ -239,8 +239,8 @@ test r77_layer1_caller_check_rejects_attacker_redeemer() {
 // Preprod E2E (`tests/preprod/`) covers Layer 2 end-to-end:
 //   - test 53 / test 66 (DeployToProtocol-via-Minswap V2 happy path)
 //     constructs an order datum with success_addr == vault_addr and
-//     verifies the swap completes. Pre-R77 these tests would also pass
-//     with success_addr = attacker (silent acceptance); post-R77 they
+//     verifies the swap completes. Pre-fix these tests would also pass
+//     with success_addr = attacker (silent acceptance); post-fix they
 //     PASS with vault_addr and FAIL with attacker_addr.
 //   - test 84 / 85 (Tier 1 oracle bound) similarly exercise the full
 //     adapter path.

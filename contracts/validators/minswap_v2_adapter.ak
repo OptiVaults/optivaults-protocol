@@ -15,7 +15,7 @@
 ///      Minswap's canonical `sha3_256(sha3_256(policy_a||name_a) ||
 ///      sha3_256(policy_b||name_b))` formula, with sorted inputs)
 ///      to match the corresponding adjacent pair in
-///      `redeemer.hop_chain` (R74 F-1 Option C). Target asset is
+///      `redeemer.hop_chain` (hop_chain LP-name re-hash). Target asset is
 ///      `hop_chain[last]`.
 ///
 /// Routing topology (hop_chain shape):
@@ -90,7 +90,7 @@ fn last_of(xs: List<Data>) -> Option<Data> {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Minswap V2 datum extraction (R74 F-1 — hop_chain LP-name re-hash)
+// Minswap V2 datum extraction (hop_chain LP-name re-hash)
 //
 // OrderDatum = Constr(0, [canceller, refund_addr, refund_datum,
 //                         success_addr, success_datum, lp_asset,
@@ -279,9 +279,10 @@ fn un_list_data_safe(d: Data) -> List<Data> {
   builtin.un_list_data(d)
 }
 
-/// R77 F-1 (2026-05-08): also verify the order datum's `refund_addr`
-/// (field[1]) and `success_addr` (field[3]) match the caller-committed
-/// `expected_recipient_addr`. Pre-R77, only field[5]+[6] (lp_asset +
+/// SwapAdapter recipient-address binding (2026-05-08): also verify the
+/// order datum's `refund_addr` (field[1]) and `success_addr` (field[3])
+/// match the caller-committed `expected_recipient_addr`. Before this
+/// fix, only field[5]+[6] (lp_asset +
 /// step) were validated, leaving the entire output-routing surface of
 /// the order datum unconstrained. A compromised keeper could set both
 /// success_addr (where fill output lands) and refund_addr (where cancel/
@@ -407,7 +408,7 @@ validator minswap_v2_adapter(
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// R74 F-1 tests — Minswap V2 LP asset-name formula
+// hop_chain LP-name tests — Minswap V2 LP asset-name formula
 // ─────────────────────────────────────────────────────────────────────
 
 /// Validated against Minswap V2's own self-test: `compute_lp_asset_name`
@@ -513,7 +514,7 @@ test r74_lp_name_same_policy_different_name_sorts_by_name() {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// R74 negative-path tests — `verify_routing_chain` + `decode_step`
+// hop_chain negative-path tests — `verify_routing_chain` + `decode_step`
 //
 // Fixture builders use `cbor.diagnostic` + manual Constr construction.
 // Since Aiken tests run the real `decode_step`, these prove the fix

@@ -226,7 +226,7 @@ pub fn validate_allocations(
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// R73 F-1 admissibility guard (vault_recall.MergeUtxo)
+// MergeUtxo donation admissibility guard (vault_recall.MergeUtxo)
 //
 // MergeUtxo accepts donations — idle_buffer and non_deposit_value can
 // both increase without changing total_deposited or liqwid_positions.
@@ -251,8 +251,8 @@ pub fn validate_allocations(
 // `<= TD + NDV + liqwid_principal`. A MergeUtxo post-state that
 // satisfies this check satisfies BOTH invariant forms downstream.
 //
-// See `SECURITY.md §"Known open findings" R73 F-1` + audit round
-// report for the full scope + economic-viability analysis.
+// See `SECURITY.md` for the MergeUtxo admissibility finding + internal
+// audit report for the full scope + economic-viability analysis.
 pub fn valid_merge_utxo_admissibility(new_datum: VaultDatum) -> Bool {
   let alloc_sum =
     list.foldl(
@@ -707,19 +707,20 @@ pub fn validate_deploy_frozen_gate(
 }
 
 /// Phase 1 governance safety — Layer 3 / Dead-man-switch (2026-04-25,
-/// hardened R75 L-1 audit-0426):
+/// hardened by the sunset-helper heartbeat-spam fix from the 2026-04
+/// internal audit):
 /// CommunitySunset trigger threshold.
 ///
 /// Returns true when the vault has not received a productive Compound
 /// in at least 90 days:
 ///   `now >= last_compound_time + 90 days`
 ///
-/// Original (pre-R75 L-1) version used `max(last_compound_time,
+/// Original (pre-fix) version used `max(last_compound_time,
 /// last_realloc_time)`, which meant a zero-yield heartbeat
 /// (`zero_yield_cooldown_ms = 600_000` = 10 minutes) could keep the
 /// `last_realloc_time` anchor fresh indefinitely and the dead-man
 /// switch would never fire even if real yield was permanently zero.
-/// audit-0426 L-1 flagged this: a compromised keeper that lost the
+/// The 2026-04 internal audit flagged this: a compromised keeper that lost the
 /// real-yield path (e.g. all Liqwid markets removed from the registry)
 /// could spam zero-yield heartbeats forever, locking out the
 /// permissionless recovery path while users earn nothing.
@@ -843,7 +844,7 @@ pub fn validate_emergency_freeze_only(
 /// prevents governance from committing an oracle config that can't
 /// function or that short-circuits security checks.
 ///
-/// R72 F-3 (2026-04-22): added upper-bound caps on
+/// Upper-bound caps on Registry-mutable fields (2026-04-22):
 /// `max_disagreement_bps` and `max_staleness_ms`. Without caps a
 /// compromised or inattentive governance could (via 14d UpdateRegistry)
 /// commit a degenerate entry — e.g. `max_disagreement_bps = 100_000`
@@ -857,7 +858,7 @@ pub fn validate_emergency_freeze_only(
 ///     is a wide safety cushion that still rejects degenerate values.
 ///   - `max_staleness_ms <= 3_600_000` (1 hour) — matches the
 ///     validity-range width cap on every time-writing redeemer (§5.4
-///     P5, internal-verification R58 F-1); an oracle sample older than
+///     P5, internal-verification 1-hour validity-range width cap); an oracle sample older than
 ///     1 hour is stale by any reasonable yardstick.
 pub fn valid_asset_oracle_entry(e: AssetOracleEntry) -> Bool {
   let feeds_ok =

@@ -1,10 +1,13 @@
-/// R72 regression tests — internal audit findings post-Phase-77d.
+/// Gov payload-hash + batcher-input-count regression tests — internal
+/// audit findings after the batcher extraction.
 ///
 /// This file documents and verifies the fixes landed for the three
-/// R72 findings (F-1 MEDIUM, F-2 LOW, F-3 LOW). F-2 turned out to be
-/// a false positive (re-verification found the check was already
-/// present in vault_batcher — see the audit report), so only F-1
-/// and F-3 have code fixes; tests below cover both.
+/// findings (MEDIUM Compound cross-validator binding, LOW BatchProcess
+/// input-count defense-in-depth, LOW Registry upper-bound caps). The
+/// input-count check turned out to be a false positive (re-verification
+/// found the check was already present in vault_batcher — see the
+/// internal audit report), so only the cross-validator binding and the
+/// upper-bound caps have code fixes; tests below cover both.
 ///
 /// F-1 fix is cross-validator — it's tested at the Transaction level
 /// in Preprod E2E (see `tests/preprod-e2e-plan.md` INT-7/8/16).
@@ -60,11 +63,11 @@ fn entry_with_bounds(dis_bps: Int, stale_ms: Int) -> AssetOracleEntry {
 // Without upper bounds on `max_disagreement_bps` and `max_staleness_ms`
 // a compromised / inattentive governance could commit a degenerate
 // entry — e.g. 1000% disagreement tolerance or 11-day staleness — that
-// makes Tier 1 oracle enforcement trivially satisfiable. R72 F-3 added
-// caps at 1000 bps (10%) and 3_600_000 ms (1 hour) respectively.
+// makes Tier 1 oracle enforcement trivially satisfiable. The upper-bound
+// caps added 1000 bps (10%) and 3_600_000 ms (1 hour) respectively.
 // ─────────────────────────────────────────────────────────────────────
 
-test r72_f3_oracle_entry_reasonable_bounds_pass() {
+test oracle_entry_reasonable_bounds_pass() {
   // Typical dual-feed operational config: 2% disagreement + 30-minute staleness.
   valid_asset_oracle_entry(entry_with_bounds(200, 1_800_000))
 }

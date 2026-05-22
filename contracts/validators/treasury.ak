@@ -1,9 +1,9 @@
 /// treasury — V1 protocol-fee treasury with 4-bucket category accounting.
 ///
 /// Receives the treasury share of the 3-way fee split on every Compound
-/// (driven by vault_keeper_hot.Compound post-Phase-77 — Compound migrated
-/// from vault_core to vault_keeper_hot during the authorization-boundary
-/// split — which pays USDCx into a treasury output and triggers Receive).
+/// (driven by vault_keeper_hot.Compound — Compound moved from vault_core
+/// to vault_keeper_hot during the authorization-boundary split — which
+/// pays USDCx into a treasury output and triggers Receive).
 /// Forfeit-to-audit-reserve is driven by multisig_gov.
 /// DistributeSignerCompensation when some signers fail to qualify for
 /// quarterly distribution.

@@ -165,8 +165,9 @@ validator vault_protocol(
         // into a single verify_swap_via_adapter call (see
         // lib/vault/swap_adapter.ak). Moves ~400-600 B of boilerplate
         // out of vault_protocol's bytecode.
-        // R77 F-1 (2026-05-08): pass own_input.output.address as the
-        // expected recipient. The adapter validates the DEX order
+        // SwapAdapter recipient-address binding (2026-05-08): pass
+        // own_input.output.address as the expected recipient. The adapter
+        // validates the DEX order
         // datum's success_addr + refund_addr equal this — closes the
         // direct-drain vector where a compromised keeper (or post-
         // sunset permissionless caller) could route the swap fill or

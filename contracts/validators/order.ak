@@ -2,7 +2,7 @@
 ///
 /// Holds individual user order UTXOs at this script's address. The
 /// keeper consumes them in batches via vault_batcher.BatchProcess
-/// (post-Phase-77d; migrated from vault_core → vault_user → vault_batcher
+/// (post-batcher-extraction; migrated from vault_core → vault_user → vault_batcher
 /// as BatchProcess was successively split out of its original host);
 /// users can Cancel any time; anyone can trigger Expire after `expires_at`.
 ///
@@ -286,7 +286,7 @@ validator order(vault_hash: ByteArray, vault_nft_policy: ByteArray) {
         // Tip cap: if keeper claims a tip, validate it against
         // `max_batcher_tip`. tip_output_idx == -1 means "no tip".
         //
-        // R75 M-2 fix (audit-0426): tip_output_idx must NOT alias
+        // tip_output_idx alias prevention: must NOT alias
         // payout_output_index. Pre-fix the keeper could point both
         // at the same output, double-counting the payout (which is
         // already required to satisfy the order's payout in vUSDCx

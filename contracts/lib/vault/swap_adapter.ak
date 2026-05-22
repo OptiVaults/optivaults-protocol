@@ -9,7 +9,7 @@
 ///   1. The dest output at `redeemer.dest_output_idx` carries a valid
 ///      order datum for THIS adapter's target DEX.
 ///   2. The `min_receive` and `hop_chain` in the redeemer match the
-///      decoded DEX datum (R74 F-1: hop_chain is a list of
+///      decoded DEX datum (hop_chain LP-name re-hash: hop_chain is a list of
 ///      `(policy, name)` pairs committing the routing topology
 ///      asset-by-asset; each on-chain routing hop's LP name must
 ///      re-hash to the canonical formula of the matching chain pair).
@@ -70,7 +70,7 @@ pub type SwapAdapterRedeemer {
   /// for an N-hop SwapMultiRouting it has N+1 entries, one per pool
   /// boundary.
   ///
-  /// **Security rationale (R74 F-1 fix)**: Minswap V2 order datum's
+  /// **Security rationale (hop_chain LP-name re-hash)**: Minswap V2 order datum's
   /// `lp_asset` field is a single LP token identifier
   /// `(LP_policy, LP_name)` — NOT a 2-asset pair. The target asset
   /// cannot be derived from the order datum alone.
@@ -86,7 +86,7 @@ pub type SwapAdapterRedeemer {
   /// `hop_chain[0]` MUST equal the swap input asset; `hop_chain[last]`
   /// is the target asset callers expose for oracle + peg-floor checks.
   hop_chain: List<(ByteArray, ByteArray)>,
-  /// **Security rationale (R77 F-1 fix)**: Minswap V2 OrderDatum carries
+  /// **Security rationale (SwapAdapter recipient-address binding)**: Minswap V2 OrderDatum carries
   /// a `success_addr` (where swap output lands on fill) and `refund_addr`
   /// (where funds return on cancel/expire) that, prior to this fix, were
   /// not constrained by V1 contracts — `verify_destination_whitelisted`
@@ -251,7 +251,7 @@ pub fn verify_swap_via_adapter(
   deploy_amount: Int,
   min_swap_peg_bps: Int,
   max_slippage_bps: Int,
-  /// R77 F-1: caller's vault address. Adapter redeemer's
+  /// Recipient-address binding: caller's vault address. Adapter redeemer's
   /// `expected_recipient_addr` MUST equal this (caller-layer check); the
   /// adapter then validates the on-chain DEX order datum's
   /// success_addr + refund_addr equal the redeemer's value (adapter-
@@ -283,7 +283,7 @@ pub fn verify_swap_via_adapter(
                     )
                   None -> True
                 }
-              // R74 F-1: hop_chain must have >= 2 entries (in + target) for
+              // hop_chain LP-name re-hash: hop_chain must have >= 2 entries (in + target) for
               // a meaningful swap. Empty / single-asset hop_chain is rejected.
               None -> False
             },

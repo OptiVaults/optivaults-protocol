@@ -261,23 +261,25 @@ pub type ActionKind {
   /// Phase 3+ only (active_bonds non-empty). Governance-driven bond
   /// slashing via keeper_stake_script.SlashBond. See spec/keeper-auth.md §3.6.
   ActSlashBond
-  /// A2 (2026-04-20, extended Phase 77/77b/77c/77d): Governance-gated stake
-  /// credential deregistration. Enables recovery of the 2 ADA Cardano
-  /// stake-registration deposit per staking validator. Post-Phase-77d
-  /// coverage (12 credentials):
-  ///   - vault_user + vault_keeper_hot (replaced vault_core via Phase 77
+  /// A2 (2026-04-20, extended through the multi-stage validator-split
+  /// refactor): Governance-gated stake credential deregistration. Enables
+  /// recovery of the 2 ADA Cardano stake-registration deposit per staking
+  /// validator. Post-batcher-extraction coverage (12 credentials):
+  ///   - vault_user + vault_keeper_hot (replaced vault_core via the
   ///     authorization-boundary split; the prior 16 KB V3 ceiling that
   ///     blocked vault_core's `publish` handler is resolved by the split).
-  ///   - vault_batcher (Phase 77d extraction from vault_user: BatchProcess
-  ///     + its 4 fold loops + OrderDatum/OrderRedeemer decode + R51/R52
-  ///     anti-leak invariants).
-  ///   - vault_swap_ada (Phase 77b extraction from vault_keeper_hot:
+  ///   - vault_batcher (batcher extraction from vault_user: BatchProcess
+  ///     + its 4 fold loops + OrderDatum/OrderRedeemer decode + the vUSDCx
+  ///     no-leak + payout-output uniqueness invariants).
+  ///   - vault_swap_ada (swap-ada extraction from vault_keeper_hot:
   ///     SwapAda + dual-feed oracle reader + 6-tuple registry read).
-  ///   - vault_protocol + vault_recall (split Phase 77 for bytecode
-  ///     headroom after §5.4 P3-P5 adapter dispatch + oracle wiring).
+  ///   - vault_protocol + vault_recall (split during the authorization-
+  ///     boundary refactor for bytecode headroom after §5.4 P3-P5 adapter
+  ///     dispatch + oracle wiring).
   ///   - vault_liqwid / vault_gov_policy / vault_gov_emergency.
-  ///   - vault_admin_deploy (Phase 77c extraction from vault_gov_emergency:
-  ///     AdminDeployNonDeposit + SwapAdapter dispatch + destination-whitelist).
+  ///   - vault_admin_deploy (admin-deploy extraction from
+  ///     vault_gov_emergency: AdminDeployNonDeposit + SwapAdapter dispatch
+  ///     + destination-whitelist).
   ///   - keeper_stake_script.
   ///   - minswap_v2_adapter (SwapAdapter A2 coverage; adapter is
   ///     parameterized on governance anchors solely to enable this path).
@@ -329,7 +331,7 @@ pub type GovRedeemer {
     triggering_signer: VerificationKeyHash,
     forfeit_output_idx: Int,
   }
-  /// Compound-time top-up: vault_keeper_hot.Compound (post-Phase-77) spends
+  /// Compound-time top-up: vault_keeper_hot.Compound (post-split) spends
   /// + reproduces the MultisigGov UTXO, and this redeemer's validator
   /// auto-derives the `delta` from the continuing-output USDCx increment
   /// (V1 internal audit fix). No signer required — authorization is the
@@ -548,7 +550,7 @@ pub type RegistryDatum {
   /// Each entry is a 28-byte Plutus V3 staking validator hash of an
   /// audited DEX adapter (see `lib/vault/swap_adapter.ak`). vault_
   /// protocol.DeployToProtocol + vault_admin_deploy.AdminDeployNonDeposit
-  /// (post-Phase-77c extraction from vault_gov_emergency) only permit
+  /// (extracted from vault_gov_emergency during the admin-deploy split) only permit
   /// DEX routing through adapters whose hash appears here. Updated via
   /// governance UpdateRegistry (14d timelock + 1-of-n cancel) — enables
   /// post-launch addition of new DEX adapters without V1 vault redeploy

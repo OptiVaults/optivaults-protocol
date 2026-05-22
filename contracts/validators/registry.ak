@@ -30,10 +30,11 @@ use vault/types.{
 use vault/validation.{valid_asset_oracle_entry}
 
 /// `valid_asset_oracle_entry` now lives in `lib/vault/validation.ak`
-/// (post-R72) so the pure predicate can be imported by both this
-/// validator and the r72 regression test. See validation.ak for the
-/// C7 structural checks + R72 F-3 upper-bound caps
-/// (max_disagreement_bps ≤ 1000, max_staleness_ms ≤ 1h).
+/// (extracted after the oracle-validation audit round) so the pure
+/// predicate can be imported by both this validator and its regression
+/// test. See validation.ak for the C7 structural checks + upper-bound
+/// caps on Registry-mutable fields (max_disagreement_bps ≤ 1000,
+/// max_staleness_ms ≤ 1h).
 
 fn find_continuing(outputs: List<Output>, own_hash: ByteArray) -> Option<Output> {
   let matching =

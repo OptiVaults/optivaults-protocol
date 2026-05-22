@@ -1,4 +1,4 @@
-/// vault_gov_emergency — V1 governance emergency path (EmergencyWithdraw only, post-Phase-77c split)
+/// vault_gov_emergency — V1 governance emergency path (EmergencyWithdraw only, after the admin-deploy extraction)
 ///
 /// Staking validator invoked via Withdraw-Zero from vault_proxy with
 /// `UseGovEmergency` redeemer. Handles the sole remaining emergency
@@ -13,7 +13,7 @@
 ///   (1) Phase 1 of §5.4 on-chain slippage enforcement (2026-04-21) —
 ///       vault_admin was split into vault_gov_policy + vault_gov_emergency
 ///       partitioned by response latency (policy vs emergency path).
-///   (2) Phase 77c (2026-04-22) — AdminDeployNonDeposit was extracted
+///   (2) admin-deploy extraction (2026-04-22) — AdminDeployNonDeposit was extracted
 ///       into standalone `vault_admin_deploy.ak`. The SwapAdapter
 ///       dispatch + destination-whitelist check + 6-tuple registry
 ///       read were ~6-7 KB of bytecode used ONLY by AdminDeployNonDeposit;
@@ -206,7 +206,7 @@ validator vault_gov_emergency(
       }
 
       // AdminDeployNonDeposit is now handled by vault_admin_deploy.ak
-      // (Phase 77c split, 2026-04-22). Other redeemers are handled by
+      // (admin-deploy extraction, 2026-04-22). Other redeemers are handled by
       // vault_gov_policy / vault_protocol / vault_recall / vault_user /
       // vault_keeper_hot / vault_swap_ada / vault_liqwid.
       _ -> False

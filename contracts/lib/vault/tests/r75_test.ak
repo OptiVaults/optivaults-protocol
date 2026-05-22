@@ -1,16 +1,19 @@
-//// R75 audit-0426 regression suite.
+//// 2026-04 internal audit regression suite.
 ////
-//// External audit `audit-0426.md` (2026-04-26) flagged 1 CRITICAL,
-//// 2 MEDIUM, and 5 LOW findings against V1 contracts. Three were
-//// addressed in code (C-1 / L-1 / M-2). This file consolidates the
-//// regression coverage for M-2; C-1 + L-1 live in `layer3_test.ak`
-//// because they are CommunitySunset-related and belong with the rest
-//// of the Layer 3 dead-man-switch tests.
+//// The 2026-04 internal audit (2026-04-26) flagged 1 CRITICAL, 2 MEDIUM,
+//// and 5 LOW findings against V1 contracts. Three were addressed in
+//// code (the vUSDCx caller-holder canonical-name fix, the sunset-helper
+//// heartbeat-spam fix, the tip_output_idx alias prevention). This file
+//// consolidates the regression coverage for the tip-alias fix; the
+//// vUSDCx canonical-name and sunset-helper tests live in
+//// `layer3_test.ak` because they are CommunitySunset-related and belong
+//// with the rest of the Layer 3 dead-man-switch tests.
 ////
 //// Cross-reference matrix:
 ////
-////   - C-1 CRITICAL — vault_user.ak::CommunitySunset vUSDCx asset-name
-////     bug (`""` → `vusdcx_token_name`). Tests in layer3_test.ak:
+////   - vUSDCx caller-holder canonical-name fix (CRITICAL) —
+////     vault_user.ak::CommunitySunset asset-name bug (`""` →
+////     `vusdcx_token_name`). Tests in layer3_test.ak:
 ////       layer3_vusdcx_constant_matches_vUSDCx_ascii
 ////       layer3_vusdcx_lookup_canonical_name_succeeds
 ////       layer3_vusdcx_lookup_empty_name_returns_zero_buggy_pattern
@@ -18,33 +21,35 @@
 ////       layer3_caller_has_vusdcx_buggy_empty_name_misses_holder
 ////       layer3_caller_has_vusdcx_rejects_no_holder
 ////
-////   - L-1 LOW — `validate_community_sunset_trigger_time` reads ONLY
+////   - Sunset-helper heartbeat-spam fix (LOW) —
+////     `validate_community_sunset_trigger_time` reads ONLY
 ////     `last_compound_time` (was `max(last_compound, last_realloc)`,
 ////     vulnerable to keeper zero-yield heartbeat spam bricking the
 ////     dead-man-switch). Tests in layer3_test.ak:
-////       r75_l1_heartbeat_spam_does_not_extend_sunset_window
-////       r75_l1_recent_real_compound_still_blocks_sunset
-////       r75_l1_aligned_with_keeper_inactive_window
+////       sunset_helper_heartbeat_spam_does_not_extend_window
+////       sunset_helper_recent_real_compound_still_blocks
+////       sunset_helper_aligned_with_keeper_inactive_window
 ////     plus the rewritten trigger-time threshold tests
 ////     (layer3_trigger_time_*) which all use the new single-arg
 ////     signature.
 ////
-////   - M-2 MEDIUM — order.ak `Process` `tip_output_idx` could alias
-////     `payout_output_index`, double-counting the user's payout
-////     output as the keeper's tip. Tested below.
+////   - tip_output_idx alias prevention (MEDIUM) — order.ak `Process`
+////     `tip_output_idx` could alias `payout_output_index`,
+////     double-counting the user's payout output as the keeper's tip.
+////     Tested below.
 ////
-////   - L-4 LOW — vault_proxy.ak NoDatum branch enforces
-////     `withdrawal_count == 1` symmetrically with the primary
-////     VaultDatum branch (defense-in-depth gap closure). Tested
+////   - Duplicate-check defense-in-depth (LOW) — vault_proxy.ak NoDatum
+////     branch enforces `withdrawal_count == 1` symmetrically with the
+////     primary VaultDatum branch (defense-in-depth gap closure). Tested
 ////     below.
 ////
-//// Other audit-0426 findings (M-3 / L-2 / L-3 / L-5 / I-1 / I-2 /
-//// I-3) were either accepted as defense-in-depth (NFT one-shot anchor
-//// is the primary defense for M-3), already-mitigated (R73 F-1
-//// admissibility guard for L-2; R72 F-1 cross-validator binding for
-//// L-3), or operational (Preprod-overrides-must-revert documentation
-//// for L-5). See `contracts/SECURITY.md` and audit-0426.md for the
-//// full disposition matrix.
+//// Other 2026-04 internal-audit findings (medium-3 / low-2 / low-3 /
+//// low-5 / info-1 / info-2 / info-3) were either accepted as
+//// defense-in-depth (the compile-time NFT anchor is the primary defense
+//// for medium-3), already-mitigated (MergeUtxo admissibility guard
+//// covers low-2; Compound cross-validator binding covers low-3), or
+//// operational (Preprod-overrides-must-revert documentation covers
+//// low-5). See `contracts/SECURITY.md` for the full disposition matrix.
 
 use aiken/collection/list
 
@@ -89,36 +94,36 @@ test r75_m2_tip_idx_negative_skips_check_payout_at_zero() {
   tip_ok(-1, 5, 999_999_999, 0)
 }
 
-test r75_m2_tip_idx_aliases_payout_idx_rejected() {
+test tip_idx_aliases_payout_idx_rejected() {
   // The exact pre-fix attack: keeper points tip and payout at the
-  // same output. Pre-R75 this passed (tip <= max_batcher_tip held
-  // because the user's payout typically had small ADA). Post-R75
+  // same output. Pre-fix this passed (tip <= max_batcher_tip held
+  // because the user's payout typically had small ADA). Post-fix
   // rejected unconditionally regardless of lovelace.
   !tip_ok(0, 0, 0, 1_000_000)
 }
 
-test r75_m2_tip_idx_aliases_payout_idx_rejected_high_index() {
+test tip_idx_aliases_payout_idx_rejected_high_index() {
   // Sanity: not just index 0 — any matching index is rejected.
   !tip_ok(7, 7, 0, 1_000_000)
 }
 
-test r75_m2_tip_idx_distinct_within_cap_accepted() {
+test tip_idx_distinct_within_cap_accepted() {
   // The normal happy path: tip and payout are different outputs,
   // tip lovelace within user's max_batcher_tip ceiling.
   tip_ok(1, 0, 500_000, 1_000_000)
 }
 
-test r75_m2_tip_idx_distinct_at_cap_accepted() {
+test tip_idx_distinct_at_cap_accepted() {
   // Inclusive boundary at max_batcher_tip.
   tip_ok(1, 0, 1_000_000, 1_000_000)
 }
 
-test r75_m2_tip_idx_distinct_over_cap_rejected() {
-  // Per-order tip ceiling still enforced post-R75.
+test tip_idx_distinct_over_cap_rejected() {
+  // Per-order tip ceiling still enforced post-fix.
   !tip_ok(1, 0, 1_000_001, 1_000_000)
 }
 
-test r75_m2_tip_idx_distinct_zero_max_rejected() {
+test tip_idx_distinct_zero_max_rejected() {
   // User set max_batcher_tip = 0 explicitly: no tip allowed at all.
   // Distinct index is fine, but lovelace > 0 fails the cap.
   !tip_ok(1, 0, 1, 0)

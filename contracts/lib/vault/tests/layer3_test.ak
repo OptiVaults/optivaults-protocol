@@ -41,9 +41,10 @@ const ref_now = 1_780_000_000_000  // 2026-05-29
 // ─────────────────────────────────────────────────────────────────────
 // Trigger-time threshold tests
 //
-// Post R75 L-1 (audit-0426): helper takes only `(last_compound_time,
-// now)`. `last_realloc_time` is no longer load-bearing — zero-yield
-// heartbeats cannot extend the 90-day sunset window. Pre-R75 tests
+// Post sunset-helper heartbeat-spam fix: helper takes only
+// `(last_compound_time, now)`. `last_realloc_time` is no longer
+// load-bearing — zero-yield heartbeats cannot extend the 90-day
+// sunset window. Pre-fix tests
 // that varied `last_realloc_time` independently of `last_compound_time`
 // have been replaced by the heartbeat-spam regression below.
 // ─────────────────────────────────────────────────────────────────────
@@ -91,10 +92,10 @@ test layer3_trigger_time_rejects_pre_2023_baseline() {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// R75 L-1 regression — heartbeat-spam cannot brick sunset
+// Sunset-helper heartbeat-spam regression — heartbeat-spam cannot brick sunset
 // ─────────────────────────────────────────────────────────────────────
 //
-// Pre-R75 L-1 the helper signature was `(last_compound, last_realloc,
+// Pre-fix the helper signature was `(last_compound, last_realloc,
 // now) -> last_activity = max(...)`. A compromised keeper that lost
 // the productive-yield path could send zero-yield Compound TXs every
 // `zero_yield_cooldown_ms` (10 min) which advance `last_realloc_time`
@@ -108,22 +109,22 @@ test layer3_trigger_time_rejects_pre_2023_baseline() {
 // `last_compound_time` is older than 90 days the dead-man-switch
 // fires and any vUSDCx holder can drive the recovery chain.
 
-test r75_l1_heartbeat_spam_does_not_extend_sunset_window() {
+test sunset_helper_heartbeat_spam_does_not_extend_window() {
   // Scenario: real productive Compound stopped 100 days ago. The
   // attacker / dead-but-running keeper has been spamming zero-yield
   // heartbeats every 10 min for the entire window, so on-chain
-  // `last_realloc_time` is "fresh" (e.g. 30 min ago). Pre-R75 this
-  // would reject; post-R75 it accepts because last_compound is the
+  // `last_realloc_time` is "fresh" (e.g. 30 min ago). Pre-fix this
+  // would reject; post-fix it accepts because last_compound is the
   // sole anchor.
   let last_compound = ref_now - 100 * day_ms
   // Note: `last_realloc_time` is no longer a parameter to the helper.
   // The fact that a fresh `last_realloc_time` would have changed the
-  // outcome pre-R75 is the whole point of this regression — the new
+  // outcome pre-fix is the whole point of this regression — the new
   // signature makes that input impossible to express.
   validate_community_sunset_trigger_time(last_compound, ref_now)
 }
 
-test r75_l1_recent_real_compound_still_blocks_sunset() {
+test sunset_helper_recent_real_compound_still_blocks() {
   // Symmetric / sanity: when `last_compound_time` is recent (real
   // productive activity), sunset must STILL be blocked. The fix only
   // removes the heartbeat-spam loophole, not the underlying liveness
@@ -132,9 +133,9 @@ test r75_l1_recent_real_compound_still_blocks_sunset() {
   !validate_community_sunset_trigger_time(last_compound, ref_now)
 }
 
-test r75_l1_aligned_with_keeper_inactive_window() {
+test sunset_helper_aligned_with_keeper_inactive_window() {
   // Cross-check: vault_user.Withdraw's `keeper_inactive_ms` (7 days)
-  // also reads ONLY `last_compound_time`. After R75 L-1 these two
+  // also reads ONLY `last_compound_time`. After the sunset-helper fix these two
   // fallback paths share the same anchor, just at different
   // thresholds (7d for early-fee waiver, 90d for permissionless
   // recovery). 30d > 7d but < 90d → Withdraw fee-waiver fires while
@@ -320,8 +321,8 @@ test layer3_attacker_cannot_use_sunset_to_extract_value() {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// R75 C-1 regression — vUSDCx caller-holder check uses canonical token
-// name (audit-0426 critical, fixed 2026-04-26)
+// vUSDCx caller-holder canonical-name regression — uses canonical token
+// name (2026-04 internal audit CRITICAL finding, fixed 2026-04-26)
 // ─────────────────────────────────────────────────────────────────────
 //
 // Pre-fix `vault_user.ak::CommunitySunset` did:
@@ -429,7 +430,7 @@ test layer3_caller_has_vusdcx_finds_holder_with_canonical_name() {
 
 test layer3_caller_has_vusdcx_buggy_empty_name_misses_holder() {
   // Same input list as above, but with the BUGGY `""` lookup; the walk
-  // finds nothing. This is the on-chain behaviour pre-R75 fix.
+  // finds nothing. This is the on-chain behaviour pre-fix.
   let inputs =
     [test_input(0, 0), test_input(1, 1), test_input(0, 2)]
   let buggy_caller_has_vusdcx =

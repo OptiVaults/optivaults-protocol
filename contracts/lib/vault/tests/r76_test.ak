@@ -1,4 +1,4 @@
-/// R76 regression — vault_swap_ada.ak SwapAda dimensional analysis.
+/// SwapAda dimensional-analysis regression — vault_swap_ada.ak.
 ///
 /// vault_swap_ada.ak:117 originally divided by 10_000_000 (10^7) which
 /// was 1000× off the correct dimensional-analysis result. This test

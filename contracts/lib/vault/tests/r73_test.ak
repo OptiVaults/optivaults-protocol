@@ -1,6 +1,6 @@
-/// R73 regression tests — MergeUtxo donation admissibility guard.
+/// MergeUtxo donation admissibility regression tests.
 ///
-/// R73 F-1 documented that `vault_recall.MergeUtxo` accepts deposit-
+/// Internal audit documented that `vault_recall.MergeUtxo` accepts deposit-
 /// token donations that can push `idle_buffer` past `total_deposited +
 /// non_deposit_value + Σ liqwid_principal`, which breaks the allocation
 /// invariant required by seven downstream redeemers (Compound /
@@ -81,7 +81,7 @@ test legitimate_donation_passes() {
 // ─────────────────────────────────────────────────────────────────────
 // Test 2 — Donation pushing idle_buffer past RHS → rejected
 //
-// This is the R73 F-1 attack scenario. Pre-donation: td=1000, idle=900,
+// This is the donation-DoS attack scenario. Pre-donation: td=1000, idle=900,
 // ndv=0. Attacker donates 200 → new_idle=1100. Check:
 // 0 + 1100 ≤ 1000 + 0 + 0 → 1100 ≤ 1000 ✗
 // ─────────────────────────────────────────────────────────────────────

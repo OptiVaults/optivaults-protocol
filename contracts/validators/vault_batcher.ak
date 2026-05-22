@@ -1,4 +1,4 @@
-/// vault_batcher — BatchProcess only (Phase 77d split from vault_user)
+/// vault_batcher — BatchProcess only (batcher extraction from vault_user)
 ///
 /// Staking validator invoked via Withdraw-Zero from vault_proxy with the
 /// `UseBatcher` redeemer. Handles a single redeemer:
@@ -10,7 +10,7 @@
 ///                  the same total_deposited / total_shares — no
 ///                  running-accumulator MEV surface.
 ///
-/// Split rationale (Phase 77d, 2026-04-22):
+/// Split rationale (batcher extraction, 2026-04-22):
 ///   Pre-split vault_user carried Deposit + Withdraw + BatchProcess
 ///   and sat at 14,528 B / 1,856 B headroom. BatchProcess alone
 ///   accounts for ~9-11 KB of that — it's the heaviest redeemer in
@@ -21,8 +21,8 @@
 ///     * OrderRedeemer decode via `pairs.get_first` + `Spend` purpose;
 ///     * `list.unique` for anti-double-satisfaction on payout indices;
 ///     * 15+ explicit datum-field equality checks;
-///     * R51 H-1 `no_vusdcx_leak` whitelist + R52 H-1
-///       `unique_payout_indices` defense.
+///     * the vUSDCx no-leak whitelist + the payout-output uniqueness
+///       defense.
 ///
 ///   Authorization boundary: Deposit + Withdraw are permissionless
 ///   (user-signed); BatchProcess is keeper-authorized (via
@@ -78,14 +78,14 @@ validator vault_batcher(
       // BatchProcess — keeper batches Order UTXOs into a single
       //   vault-state update with aggregate mint/burn of vUSDCx.
       //
-      // R72 F-2 verification note: `vault_input_count == 1` is
-      // enforced below, same as every other redeemer host in V1.
+      // BatchProcess input-count defense-in-depth: `vault_input_count == 1`
+      // is enforced below, same as every other redeemer host in V1.
       // `find_vault_utxo` returns the first matching vault input,
       // so this check prevents a malicious keeper TX from silently
       // picking one of two vault UTXOs and leaking the other. The
       // proxy's phantom-vault defense + Vault NFT anchor also cover
-      // this path; the explicit check is defense-in-depth. (R72
-      // audit initially flagged this as missing post-Phase-77d
+      // this path; the explicit check is defense-in-depth. (Internal
+      // audit initially flagged this as missing after the batcher
       // extraction from vault_user; re-verification confirmed the
       // check was carried over correctly — no fix needed.)
       // ══════════════════════════════════════════════════════
@@ -205,7 +205,7 @@ validator vault_batcher(
         let valid_realloc_time = new_datum.last_realloc_time == old_datum.last_realloc_time
         let valid_fee_time = new_datum.last_fee_update_time == old_datum.last_fee_update_time
 
-        // vUSDCx anti-leak (R51 H-1) — minted shares can only flow to
+        // vUSDCx no-leak invariant — minted shares can only flow to
         // order owners or the proxy continuing output.
         let order_owners =
           list.foldl(

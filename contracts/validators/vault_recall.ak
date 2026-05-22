@@ -264,8 +264,8 @@ validator vault_recall(
           )
         let valid_preserved = verify_protocol_fields_preserved(old_datum, new_datum)
 
-        // R73 F-1 admissibility guard — see validation.ak header for
-        // rationale + downstream-redeemer impact analysis.
+        // MergeUtxo donation admissibility guard — see validation.ak
+        // header for rationale + downstream-redeemer impact analysis.
         let valid_admissibility = valid_merge_utxo_admissibility(new_datum)
 
         and {
