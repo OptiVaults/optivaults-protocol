@@ -140,14 +140,16 @@ V1 的合約程式碼已經過多輪內部對抗性審計,以涵蓋區(A–F 區
 
 ### 涵蓋區狀態(待外部審計)
 
+區域定義對齊 `docs/audit-scope.md §4` —— V1 內部審計計畫的權威來源。每一區都有明確的出口條件(A–C 與 E 區為 0 CRIT / 0 HIGH / 0 MEDIUM;D 區為結構性通過;F 區為 0 CRIT)。
+
 | 區域 | 範圍 | 狀態 |
 |------|------|------|
-| A | Keeper 授權 + stake-script 狀態機 | 尚未開始 |
-| B | Treasury + 4-bucket 預算流 | 尚未開始 |
-| C | 治理狀態機 + m-of-n + timelocks | 尚未開始 |
-| D | Compound / 費用拆分 / keeper-gov-treasury 三向流 | 尚未開始 |
-| E | SwapAdapter dispatch + 多 DEX 生命週期 | 尚未開始 |
-| F | 跨 validator 整合 + full-drain + sunset 路徑 | 尚未開始 |
+| A | Treasury —— `treasury.ak`(透過 `multisig_gov` 的 TreasurySpend / UpdateTreasuryParams / ReceiveGovForfeit) | 尚未開始 |
+| B | Keeper Stake Script —— `keeper_stake_script.ak`(UpdateKeeperAuth / 每週輪替 / 保證金生命週期) | 尚未開始 |
+| C | V1 整合流程 —— 跨 validator(Compound 3 路費用拆分 / m-of-n 下的 TreasurySpend / DistributeSignerCompensation + ReceiveGovForfeit 的綁定 / 三層治理安全設計) | 尚未開始 |
+| D | V1 Regression —— 把 heritage regression 測試重跑一遍 V1 validators(標記新編譯時參數帶來的 cascade 影響) | 尚未開始 |
+| E | V1 鏈下程式 —— keeper / API / frontend / CLI 在 [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference);詳見該 repo 的 `SECURITY.md` | 尚未開始 |
+| F | V1 部署流程 —— 部署儀式狀態機新增的 treasury UTXO init + keeper_stake_script UTXO init | 尚未開始 |
 
 ### 外部審計
 

@@ -140,14 +140,16 @@ V1's contract code has undergone multiple rounds of internal adversarial audit, 
 
 ### Coverage-area status (pending external audit)
 
+Area definitions track `docs/audit-scope.md §4` — the source of truth for V1's internal audit plan. Each area has a defined exit criterion (0 CRIT / 0 HIGH / 0 MEDIUM for areas A–C and E; structural pass for D; 0 CRIT for F).
+
 | Area | Scope | Status |
 |------|-------|--------|
-| A | Keeper authorization + stake-script state machine | Not started |
-| B | Treasury + 4-bucket budget flows | Not started |
-| C | Governance state machine + m-of-n + timelocks | Not started |
-| D | Compound / fee split / keeper-gov-treasury triple flow | Not started |
-| E | SwapAdapter dispatch + multi-DEX lifecycle | Not started |
-| F | Cross-validator integration + full-drain + sunset paths | Not started |
+| A | Treasury — `treasury.ak` (TreasurySpend / UpdateTreasuryParams / ReceiveGovForfeit via `multisig_gov`) | Not started |
+| B | Keeper Stake Script — `keeper_stake_script.ak` (UpdateKeeperAuth / weekly rotation / bond lifecycle) | Not started |
+| C | V1 Integration Flows — cross-validator (Compound 3-way fee split / TreasurySpend under m-of-n / DistributeSignerCompensation + ReceiveGovForfeit binding / three-layer governance safety) | Not started |
+| D | V1 Regression — heritage regression tests re-run against V1 validators (cascade-impact flagging from new compile-time parameters) | Not started |
+| E | Off-chain V1 — keeper / API / frontend / CLI lives in [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference); see that repo's `SECURITY.md` | Not started |
+| F | Deploy Pipeline V1 — treasury UTXO init + keeper_stake_script UTXO init in the deploy ceremony state machine | Not started |
 
 ### External audit
 
