@@ -65,6 +65,24 @@ The Operations series leans on practical details, suitable for readers preparing
 
 ---
 
+## Companion reference documentation
+
+Alongside the four narrative series above, V1 ships a parallel set of **reference-style documents** that describe recurring Cardano DeFi patterns in generic terms, citing the V1 instantiation as a worked example:
+
+| Document | What it covers |
+|---|---|
+| [Validator Identity NFT](../../spec/pattern-rationale-validator-identity-nft.md) | UTXO-ref one-shot NFT as a compile-time identity anchor — V1 instances: Vault NFT, Governance NFT, Registry Auth NFT |
+| [MultiSig Governance + Timelock](../../spec/pattern-rationale-multisig-gov-timelock.md) | m-of-n approve + per-action timelock + 1-of-n cancel veto + nonce-bound action_id |
+| [Withdraw-Zero Forwarding](../../spec/pattern-rationale-withdraw-zero-forwarding.md) | Splitting business logic across staking validators routed by a thin spending validator — breaks the 16 KB ceiling without inflating per-TX ref-script fee |
+| [Registry + Auth NFT Whitelist](../../spec/pattern-rationale-registry-auth-nft.md) | Governance-mutable whitelist datum anchored by a one-shot Registry Auth NFT |
+| [VaultDatum Tiered Immutability](../../spec/pattern-rationale-vault-datum-tiered.md) | Datum field tiers (identity-immutable / governance-mutable / accounting / operational) enforced via `check_immutable_fields` |
+
+These pair with the architecture articles: Architecture Part 3 ("17 Validators: Four Orthogonal Cuts") is the OptiVaults-specific catalog, while the **Withdraw-Zero Forwarding** rationale doc is the generic pattern the catalog instantiates.
+
+V1's broader stance on these patterns and the Cardano Improvement Proposal process — informational; V1 prepares pattern documentation but does not submit a CIP at the V1 release stage — is in [`docs/cip-readiness-posture.md`](../cip-readiness-posture.md).
+
+---
+
 ## Medium mirrors
 
 Each article is also mirrored on Medium with the canonical URL pointing back to this repository.
