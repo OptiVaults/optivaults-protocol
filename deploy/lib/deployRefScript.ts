@@ -604,7 +604,7 @@ export async function deployRefScripts(
   const changeTokens: Record<string, bigint> = {};
 
   if (acc < targetBalance) {
-    // Fallback: try token-carrying UTxOs (preserves R64 F-2 robustness for
+    // Fallback: try token-carrying UTxOs (preserves mixed-asset bundling robustness for
     // small-script ceremonies where Phase B consolidation overhead is
     // unjustified — e.g. dev/test deployments). Bundles tokens back into
     // change, which may bust max-tx-size if scripts are large; the throw
@@ -636,7 +636,7 @@ export async function deployRefScripts(
     );
   }
 
-  /** Build CML MultiAsset from aggregated token map (R64 F-2). */
+  /** Build CML MultiAsset from aggregated token map (mixed-asset bundling). */
   function buildChangeMultiAsset(): any {
     const multiAsset = CML.MultiAsset.new();
     const policyMap = new Map<string, Map<string, bigint>>();
@@ -684,7 +684,7 @@ export async function deployRefScripts(
   }
 
   // Placeholder change output (for sizing)
-  // R64 F-2: bundle aggregated input tokens into change so mixed-asset
+  // Mixed-asset bundling: bundle aggregated input tokens into change so mixed-asset
   // inputs don't leak value (they would otherwise be burned).
   // Reserve 15 ADA in placeholder change so the draft TX size estimate
   // accounts for a token-bundled change output (matches the run-time
@@ -701,7 +701,7 @@ export async function deployRefScripts(
     for (let i = 0; i < scripts.length; i++) {
       outs.add(outputs.get(i));
     }
-    // R64 F-2: preserve input tokens in change output
+    // Mixed-asset bundling: preserve input tokens in change output
     outs.add(CML.TransactionOutput.new(addrCml, CML.Value.new(changeAmt, buildChangeMultiAsset())));
     const body = CML.TransactionBody.new(inputs, outs, fee);
     body.set_validity_interval_start(BigInt(currentSlot - 120));

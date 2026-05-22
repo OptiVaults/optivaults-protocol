@@ -484,7 +484,7 @@ async function main() {
       batcherStakeHash: compiled.batcherStakeHash,           // Phase 77d
       swapAdaStakeHash: compiled.swapAdaStakeHash,           // Phase 77b
       protocolStakeHash: compiled.protocolStakeHash,
-      recallStakeHash: compiled.recallStakeHash,             // Phase 77 split
+      recallStakeHash: compiled.recallStakeHash,             // authorization-boundary split
       liqwidStakeHash: compiled.liqwidStakeHash,
       govPolicyStakeHash: compiled.govPolicyStakeHash,
       govEmergencyStakeHash: compiled.govEmergencyStakeHash,

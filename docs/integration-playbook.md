@@ -78,7 +78,7 @@ Every integration proposal must pass **all seven steps** before going to governa
 
 **Outputs:**
 
-1. Keeper code implementing the new builder (e.g., `optivaults/optivaults-vps/keeper/src/engines/newProtocolEngine.ts`).
+1. Keeper code implementing the new builder (e.g., `optivaults-reference/keeper/src/engines/newProtocolEngine.ts`).
 2. Preprod end-to-end test on the Preprod deployment with a tiny amount (e.g., 1 test USDCx).
 3. **Cancel / refund test specifically**: submit an order, then cancel it. Verify the user's funds return cleanly. This is the single most important pre-mainnet check.
 4. Preprod TX log attached to the GitHub issue.
@@ -117,7 +117,7 @@ Every integration proposal must pass **all seven steps** before going to governa
 1. Keeper configuration updated to include the new route / market.
 2. Monitoring + Discord alerts configured for the new operation.
 3. Post-launch review scheduled 7 days later: check TVL impact, any anomalies, user feedback.
-4. Documentation updated: `optivaults/frontend/FAQ.md`, `optivaults/whitepaper.md` §3 (integrations list), `optivaults-vps/README.md` (keeper capabilities).
+4. Documentation updated: `optivaults-reference/frontend/FAQ.md`, `whitepaper/whitepaper.md` §3 (integrations list), `optivaults-reference/keeper/README.md` (keeper capabilities).
 
 **Exit gate:** production enabled, monitoring green, no anomalies after 24 hours.
 

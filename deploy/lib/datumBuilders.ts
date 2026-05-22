@@ -25,7 +25,7 @@ export interface CeremonyHashes {
   userStakeHash: string;
   keeperHotStakeHash: string;
   /// Phase 77d: BatchProcess extracted from vault_user (4 folds +
-  /// OrderDatum decode + R51/R52 anti-leak invariants moved to
+  /// OrderDatum decode + vUSDCx no-leak + payout-output uniqueness invariants moved to
   /// standalone validator; vault_user becomes purely permissionless
   /// with no keeper_stake_hash param).
   batcherStakeHash: string;
@@ -33,7 +33,7 @@ export interface CeremonyHashes {
   /// oracle + 6-tuple registry read moved to standalone validator).
   swapAdaStakeHash: string;
   protocolStakeHash: string;
-  /// Phase 77: vault_recall split from vault_protocol (headroom after
+  /// vault_recall was split from vault_protocol during the authorization-boundary refactor (headroom after
   /// SwapAdapter dispatch + Tier 1 oracle wiring).
   recallStakeHash: string;
   liqwidStakeHash: string;
@@ -68,9 +68,9 @@ export interface CeremonyHashes {
  * redeploy.
  *
  * last_update_time now at index 7; keeper_pkh at index 8. Governance
- * ceremony code MUST mirror this ordering exactly — see
- * `feedback_deploy_datum_sync.md` memory for the V10 registry-deadlock
- * lesson (missing field → reading validator can't deserialize).
+ * ceremony code MUST mirror this ordering exactly — a missing field
+ * leaves the reading validator unable to deserialize the datum, which
+ * has historically locked the Registry UTXO before mainnet redeploy.
  */
 export function buildRegistryDatum(
   cfg: DeployConfig,

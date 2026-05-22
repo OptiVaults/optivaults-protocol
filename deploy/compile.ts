@@ -116,7 +116,7 @@ interface CompiledHashes {
 
   // §5.4 P1 (2026-04-21): vault_admin split into
   //   vault_gov_policy + vault_gov_emergency
-  // Phase 77 (2026-04-22): vault_core split into vault_user + vault_keeper_hot;
+  // Authorization-boundary split (2026-04-22): vault_core split into vault_user + vault_keeper_hot;
   //   vault_protocol split into vault_protocol + vault_recall (headroom
   //   after SwapAdapter dispatch + Tier 1 oracle wiring).
   // Phase 77b (2026-04-22): SwapAda extracted from vault_keeper_hot into
@@ -129,7 +129,7 @@ interface CompiledHashes {
   //   vault_gov_emergency's bytecode budget).
   // Phase 77d (2026-04-22): BatchProcess extracted from vault_user
   //   into standalone vault_batcher (4 fold loops + OrderDatum/OrderRedeemer
-  //   decode + list.unique + R51/R52 anti-leak invariants no longer
+  //   decode + list.unique + vUSDCx no-leak + payout-output uniqueness invariants no longer
   //   pressure vault_user's bytecode budget; vault_user also drops its
   //   keeper_stake_hash compile-time param because Deposit + Withdraw
   //   are both permissionless).
@@ -150,7 +150,7 @@ interface CompiledHashes {
   multisigGovHash: string;
   registryHash: string;
 
-  // Phase 77 §B@launch=1 SwapAdapter. Parameterized on governance
+  // §B@launch=1 SwapAdapter (post-split). Parameterized on governance
   // anchors only (A2 publish handler requirement — see
   // minswap_v2_adapter.ak header). Referenced by datumBuilders.ts
   // as `minswapV2AdapterHash` for the Registry swap_adapter_hashes
@@ -289,7 +289,7 @@ export function compile(
   // vault_keeper_hot also binds treasury for Compound fee split). --
   //
   // §5.4 P1 split (2026-04-22): vault_core → vault_user + vault_keeper_hot.
-  // §5.4 Phase 73 split (2026-04-21): vault_admin → vault_gov_policy +
+  // §5.4 policy/emergency split (2026-04-21): vault_admin → vault_gov_policy +
   //   vault_gov_emergency.
   //
   // Each of the six staking validators carries its own `publish` handler
@@ -325,7 +325,7 @@ export function compile(
   // vault_batcher: (keeper_stake_hash, gov_nft_policy, gov_nft_name)
   //   Phase 77d split from vault_user. Holds BatchProcess only —
   //   the 4 fold loops + OrderDatum/OrderRedeemer decode + list.unique
-  //   + R51/R52 anti-leak invariants no longer pressure vault_user's
+  //   + vUSDCx no-leak + payout-output uniqueness invariants no longer pressure vault_user's
   //   bytecode budget.
   const vaultBatcher = applyAndHash(
     getCompiledCode(bp, "vault_batcher.vault_batcher"),
@@ -352,7 +352,7 @@ export function compile(
   );
 
   // vault_protocol: (keeper_stake_hash, gov_nft_policy, gov_nft_name)
-  //   Phase 77: slimmed to DeployToProtocol only (plus publish/A2);
+  //   Authorization-boundary split: slimmed to DeployToProtocol only (plus publish/A2);
   //   RecallFromProtocol + MergeUtxo moved to vault_recall.
   const vaultProtocol = applyAndHash(
     getCompiledCode(bp, "vault_protocol.vault_protocol"),
@@ -365,7 +365,7 @@ export function compile(
   );
 
   // vault_recall: (keeper_stake_hash, gov_nft_policy, gov_nft_name)
-  //   Phase 77 split from vault_protocol for bytecode headroom —
+  //   Split from vault_protocol during the authorization-boundary refactor for bytecode headroom —
   //   carries RecallFromProtocol + MergeUtxo + A2 publish handler.
   const vaultRecall = applyAndHash(
     getCompiledCode(bp, "vault_recall.vault_recall"),
@@ -489,7 +489,7 @@ export function compile(
   };
 
   // -- Pass 6: minswap_v2_adapter (gov_nft_policy, gov_nft_name) --
-  //   Phase 77 SwapAdapter. Parameterized on governance anchors
+  //   SwapAdapter (post-split). Parameterized on governance anchors
   //   solely to enable the A2 publish handler (stake-deposit
   //   recovery — see minswap_v2_adapter.ak header). Registry's
   //   swap_adapter_hashes whitelist pins this hash at V1 launch;

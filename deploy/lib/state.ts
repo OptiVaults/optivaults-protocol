@@ -56,7 +56,7 @@ export interface CeremonyState {
   };
 
   // Compiled blueprint hashes — populated by compile.ts before any TX.
-  // Post Phase 77/77b/77c/77d this covers 17 logic validators + 3 mint-only
+  // Post the multi-stage validator-split refactor this covers 17 logic validators + 3 mint-only
   // NFT policies + 1 DEX adapter script — 21 on-chain hashes (vaultNftPolicy
   // counts once, minswapV2AdapterHash counts as the SwapAdapter).
   hashes?: {
@@ -72,7 +72,7 @@ export interface CeremonyState {
     /// Phase 77b: SwapAda extracted from vault_keeper_hot.
     swapAdaStakeHash: string;
     protocolStakeHash: string;
-    /// Phase 77: vault_recall split from vault_protocol.
+    /// vault_recall was split from vault_protocol during the authorization-boundary refactor.
     recallStakeHash: string;
     liqwidStakeHash: string;
     govPolicyStakeHash: string;
@@ -92,7 +92,7 @@ export interface CeremonyState {
   };
 
   // Pass 1: ref script publications (one entry per validator).
-  // Post Phase 77:  +vaultRecall (split from vaultProtocol)
+  // Post the authorization-boundary split:  +vaultRecall (split from vaultProtocol)
   //                 +minswapV2Adapter (§B@launch=1 SwapAdapter)
   // Post Phase 77b: +vaultSwapAda (SwapAda extracted from vaultKeeperHot)
   // Post Phase 77c: +vaultAdminDeploy (AdminDeployNonDeposit extracted
@@ -130,7 +130,7 @@ export interface CeremonyState {
     vault?: StateUtxoRecord;
   };
 
-  // Stake credential registrations. Post Phase 77 + 77b/77c/77d there are
+  // Stake credential registrations. After the multi-stage validator-split refactor (authorization-boundary / swap-ada / admin-deploy / batcher extractions) there are
   // 12 credentials that carry A2 publish handlers and therefore need
   // register.Stake:
   //   vault_user / vault_keeper_hot / vault_batcher / vault_swap_ada /

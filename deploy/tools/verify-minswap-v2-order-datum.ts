@@ -1,5 +1,5 @@
 /**
- * verify-minswap-v2-r74.ts — byte-for-byte verifier for the R74 (post-fix)
+ * verify-minswap-v2-order-datum.ts — byte-for-byte verifier for the hop_chain (post-fix)
  * Minswap V2 adapter datum decoder + LP-name re-hash.
  *
  * Confirms (against either supplied test vectors or a real on-chain TX):
@@ -15,10 +15,10 @@
  * `spec/swap-adapter.md §9` (Pre-mainnet verification checklist).
  *
  * Usage (test vectors, no chain access):
- *   npx tsx deploy/tools/verify-minswap-v2-r74.ts
+ *   npx tsx deploy/tools/verify-minswap-v2-order-datum.ts
  *
  * Usage (live mainnet TX decode):
- *   BLOCKFROST_API_KEY=<mainnet-key> npx tsx deploy/tools/verify-minswap-v2-r74.ts \
+ *   BLOCKFROST_API_KEY=<mainnet-key> npx tsx deploy/tools/verify-minswap-v2-order-datum.ts \
  *     --txHash <hex> --outputIndex <N> [--hopChain pol1.name1,pol2.name2,...]
  */
 import * as dotenv from "dotenv";
@@ -185,7 +185,7 @@ export function computeLpAssetName(
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// OrderDatum decoder — R74 (returns hops + min_receive; no target asset)
+// OrderDatum decoder — hop_chain shape (returns hops + min_receive; no target asset)
 // ─────────────────────────────────────────────────────────────────────
 
 interface DecodedHop {
@@ -366,7 +366,7 @@ async function fetchOrderDatumFromTx(
 
 async function main() {
   const args = parseCliArgs();
-  console.log("=== verify-minswap-v2-r74 ===\n");
+  console.log("=== verify-minswap-v2-order-datum ===\n");
 
   // ─── Phase 1: compute_lp_asset_name self-test ─────────────────────
   console.log("Phase 1: compute_lp_asset_name byte-output for known test vectors");
@@ -446,7 +446,7 @@ async function main() {
     console.log(`\nPhase 2: skipped (no --txHash). Pass a real Minswap V2 mainnet TX to fully verify.`);
   }
 
-  console.log(`\n=== verify-minswap-v2-r74 PASS ===`);
+  console.log(`\n=== verify-minswap-v2-order-datum PASS ===`);
 }
 
 main().catch((e) => {

@@ -1,19 +1,19 @@
 /**
- * verify-minswap-v2-decode.ts — byte-for-byte verifier for the pre-R74
+ * verify-minswap-v2-decode.ts — byte-for-byte verifier for the pre-hop_chain-fix
  * Minswap V2 adapter's datum decoder.
  *
- * ⚠️ SUPERSEDED BY R74 F-1 FIX (2026-04-24).
+ * ⚠️ SUPERSEDED BY THE hop_chain LP-NAME RE-HASH FIX (2026-04-24).
  *
  * The adapter used to claim `lp_asset` is a 2-asset pair and derive the
  * target asset from it. This was wrong — Minswap V2's `lp_asset` is a
- * single LP-token identifier, not a pair. The R74 fix replaces target
+ * single LP-token identifier, not a pair. The hop_chain fix replaces target
  * derivation with `hop_chain` commitment + on-chain LP-name re-hash via
  * `compute_lp_asset_name` (see `contracts/validators/minswap_v2_adapter.ak`
  * and the project SECURITY.md "Known open findings" section).
  *
- * This file is retained for historical reference of the pre-R74 assumption.
+ * This file is retained for historical reference of the pre-fix assumption.
  * It will FAIL on every real Minswap V2 order because the pair-extraction
- * assumption is false on-chain — that failure is itself evidence the R74
+ * assumption is false on-chain — that failure is itself evidence the hop_chain
  * fix is needed.
  *
  * The current replacement — which verifies the NEW adapter logic against

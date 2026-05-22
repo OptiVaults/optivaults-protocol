@@ -8,7 +8,7 @@
  *
  * Phase breakdown:
  *   PHASE 2 — Mint 3 one-shot NFTs (vault / governance / registry-auth)
- *   PHASE 3 — Publish 18 reference scripts (17 logic validators + 1 SwapAdapter, post §5.4 + Phase 77 + 77b/77c/77d splits)
+ *   PHASE 3 — Publish 18 reference scripts (17 logic validators + 1 SwapAdapter, post §5.4 + the multi-stage validator-split refactor)
  *   PHASE 4a — Register 12 stake credentials (user, keeper_hot, batcher, swap_ada, protocol, recall, liqwid, gov_policy, gov_emergency, admin_deploy, keeper_stake_script, minswap_v2_adapter)
  *   PHASE 4b — Initialize 5 state UTXOs (registry, treasury, keeperAuth, governance, vault)
  */
@@ -295,8 +295,8 @@ export async function runPhase2Mints(
 
 // ---------------------------------------------------------------------
 // PHASE 3 — Publish 18 reference scripts (one per TX for safety).
-//   Post §5.4 Phase 73 splits: vault_admin → vault_gov_policy + vault_gov_emergency.
-//   Post Phase 77 splits:      vault_core → vault_user + vault_keeper_hot;
+//   Post §5.4 policy/emergency split: vault_admin → vault_gov_policy + vault_gov_emergency.
+//   Post the authorization-boundary split:      vault_core → vault_user + vault_keeper_hot;
 //                              vault_protocol → vault_protocol + vault_recall.
 //   Post §B@launch=1:          minswap_v2_adapter (SwapAdapter) added.
 //   Post Phase 77b split:      SwapAda extracted from vault_keeper_hot

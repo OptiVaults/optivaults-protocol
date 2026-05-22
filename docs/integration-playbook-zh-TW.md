@@ -78,7 +78,7 @@ V1 繼承了 pre-V1 內部驗證期的整合失敗教訓。代表性的損失(�
 
 **輸出**:
 
-1. Keeper 程式實作新 builder(例:`optivaults/optivaults-vps/keeper/src/engines/newProtocolEngine.ts`)。
+1. Keeper 程式實作新 builder(例:`optivaults-reference/keeper/src/engines/newProtocolEngine.ts`)。
 2. 在 Preprod 部署上跑 end-to-end,金額極小(例如 1 個 test USDCx)。
 3. **特別測 cancel / refund**:送一筆 order,然後 cancel 掉。驗證使用者資金乾淨退回。**這是最重要的上 mainnet 前單項檢查**。
 4. Preprod TX 紀錄附在 GitHub issue 內。
@@ -117,7 +117,7 @@ V1 繼承了 pre-V1 內部驗證期的整合失敗教訓。代表性的損失(�
 1. 更新 keeper 設定,納入新路徑 / 新市場。
 2. 為新操作設定好監控 + Discord alert。
 3. 7 天後做 post-launch review:看 TVL 影響、是否有異常、使用者回饋。
-4. 文件更新:`optivaults/frontend/FAQ.md`、`optivaults/whitepaper.md §3`(整合清單)、`optivaults-vps/README.md`(keeper 能力)。
+4. 文件更新:`optivaults-reference/frontend/FAQ.md`、`whitepaper/whitepaper.md §3`(整合清單)、`optivaults-reference/keeper/README.md`(keeper 能力)。
 
 **出口門檻**:生產啟用、監控綠燈、24 小時無異常。
 
