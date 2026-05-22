@@ -839,7 +839,9 @@ Transitions are keeper-initiated under §4.5 discretion. If a future governance 
 
 V1 deploys **17 logic validators** (one of which, `vusdcx`, is the share-token minting policy — see #17 in the list below), **4 one-shot NFT minting policies** (`vault_nft` / `governance_nft` / `registry_auth_nft` / `gov_signer_nft`), **1 DEX adapter** (`minswap_v2_adapter`), and the **2-artefact SundaeSwap adapter pair** (`sundaeswap_adapter` + `sundaeswap_cancel_guard`). Total: 17 + 4 + 1 + 2 = **24 compiled artefacts**.
 
-1. **vault_proxy** — entry point, forwards spends via Withdraw-Zero pattern (10 routes: User / KeeperHot / Batcher / SwapAda / Protocol / Recall / Liqwid / GovPolicy / GovEmergency / AdminDeploy; see §3.2).
+The architecture composes five recurring patterns documented in §3.6 — *Validator Identity NFT* (the three identity-anchor mint policies), *MultiSig Governance + Timelock* (the `multisig_gov` validator + 14-action catalogue), *Withdraw-Zero Forwarding* (the `vault_proxy` + 10-route topology covered in §3.2), *Registry + Auth NFT Whitelist* (the `registry` validator + its Auth NFT anchor), and *VaultDatum Tiered Immutability* (the 29-field VaultDatum across four tiers covered in `spec/vault-datum.md`). The pattern names appear inline below where each is first instantiated; §3.6 gives the consolidated cross-reference.
+
+1. **vault_proxy** — entry point, forwards spends via the **Withdraw-Zero Forwarding** pattern (see §3.2 + §3.6.3; 10 routes: User / KeeperHot / Batcher / SwapAda / Protocol / Recall / Liqwid / GovPolicy / GovEmergency / AdminDeploy).
 2. **vault_user** — Deposit, Withdraw only. Purely permissionless — no keeper authorization required.
 3. **vault_keeper_hot** — Compound, RebalanceBuffer. Keeper hot-path; Compound's 3-way fee split treasury output binding lives here.
 4. **vault_batcher** — BatchProcess only. Keeper-authorized staking validator that owns the 4 fold loops (order_sums / order_owners / vusdcx_leaked / payout_indices) + OrderDatum / OrderRedeemer decoding + `list.unique` + anti-leak invariants. See `spec/order-batch.md`.
@@ -852,17 +854,17 @@ V1 deploys **17 logic validators** (one of which, `vusdcx`, is the share-token m
 11. **vault_admin_deploy** — AdminDeployNonDeposit only. Governance non-deposit-token recovery path (7d keeper-inactive + 21d registry-stable gates). Owns the SwapAdapter dispatch + destination-whitelist check + 6-tuple registry read.
 12. **keeper_stake_script** — pluggable keeper authorization (GovernanceOnly at V1 launch; PermissionlessWithBond reserved for Phase 3+).
 13. **treasury** — holds non-keeper fee share, 4-category budget (audit reserve / ops / R&D / buffer).
-14. **multisig_gov** — m-of-n governance state machine with timelock + 1-of-n cancel + signer-compensation pool.
-15. **registry** — stable-token whitelist, protocol-address whitelist, Liqwid market catalog, `asset_oracles`, `swap_adapter_hashes`.
+14. **multisig_gov** — m-of-n governance state machine with timelock + 1-of-n cancel + signer-compensation pool. Instance of the **MultiSig Governance + Timelock** pattern (§3.6.2).
+15. **registry** — stable-token whitelist, protocol-address whitelist, Liqwid market catalog, `asset_oracles`, `swap_adapter_hashes`. Instance of the **Registry + Auth NFT Whitelist** pattern (§3.6.4), anchored by the `registry_auth_nft` one-shot mint.
 16. **order** — user deposit/withdraw order queue validator.
 17. **vusdcx** — share token minting policy.
 
 Plus 4 mint-only one-shot NFT policies:
 
-- `vault_nft` — one-shot Vault Identity NFT minting policy (cryptographic one-shot via consumed UTXO ref; see `spec/vault-nft.md`).
-- `governance_nft` — one-shot Governance NFT (locks the single MultisigGov UTXO).
-- `registry_auth_nft` — one-shot Registry auth NFT (locks the single Registry UTXO).
-- `gov_signer_nft` — recognition-only soul-bound NFT issued to each governance signer. Mint / burn gated on consuming the MultisigGov UTXO in the same TX. Carries no voting or financial rights. See `spec/gov-nft.md`.
+- `vault_nft` — one-shot Vault Identity NFT minting policy (cryptographic one-shot via consumed UTXO ref; see `spec/vault-nft.md`). Instance of the **Validator Identity NFT** pattern (§3.6.1).
+- `governance_nft` — one-shot Governance NFT (locks the single MultisigGov UTXO). Same pattern as `vault_nft`; second of three Validator Identity NFT instances in V1.
+- `registry_auth_nft` — one-shot Registry auth NFT (locks the single Registry UTXO). Third Validator Identity NFT instance.
+- `gov_signer_nft` — recognition-only soul-bound NFT issued to each governance signer. Mint / burn gated on consuming the MultisigGov UTXO in the same TX. Carries no voting or financial rights. See `spec/gov-nft.md`. This is the **Soul-Bound NFT** pattern (one per signer, non-transferable) — distinct from the Validator Identity NFT pattern (one per protocol singleton); the two share the word "NFT" but solve orthogonal problems. See Appendix A.2 for the disambiguation.
 
 Plus 3 swap-adapter artefacts:
 
@@ -880,6 +882,8 @@ See `spec/architecture.md` for full redeemer details and `spec/vault-datum.md` f
 
 ### 3.2 Withdraw-Zero Forwarding Pattern
 
+*This subsection summarises V1's specific instantiation. Generic pattern rationale, trade-offs against alternatives, and open CIP design questions: `spec/pattern-rationale-withdraw-zero-forwarding.md` (and §3.6.3 below for the whitepaper-level summary).*
+
 Cardano Plutus V3 has a 16 KB limit on validator reference script size. V1's vault logic exceeds this. The solution: split the vault across multiple staking validators (`vault_user`, `vault_keeper_hot`, `vault_batcher`, `vault_swap_ada`, `vault_protocol`, `vault_recall`, `vault_liqwid`, `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`) and use `vault_proxy` as a spend-path forwarder.
 
 **Flow:**
@@ -891,6 +895,8 @@ Cardano Plutus V3 has a 16 KB limit on validator reference script size. V1's vau
 This pattern means every vault spend is actually two validator invocations: proxy (cheap, ~4.9 KB) + one of ten staking validators (heavy, up to 16 KB each). A `withdrawal_count` invariant in `vault_proxy` ensures exactly one staking validator is invoked per TX, preventing double-routing.
 
 ### 3.3 Compile-time trust anchors
+
+*V1's three Validator Identity NFTs (`vault_nft` / `governance_nft` / `registry_auth_nft`) provide the compile-time identity anchors discussed here. Pattern rationale, security argument, and open CIP design questions: `spec/pattern-rationale-validator-identity-nft.md` (and §3.6.1 below for the whitepaper-level summary).*
 
 V1 extensively uses compile-time parameters to anchor trust at deploy time. Fields baked into validator hashes include:
 - **Vault NFT policy** — anchors vault identity across `vault_proxy` / `vusdcx` / `order`
@@ -912,7 +918,7 @@ Changing any anchor requires a full redeploy (new validator hashes, new vault ad
 | Liqwid Finance | Money market yield | qToken rate accuracy, bad-debt prevention | EmergencyWithdraw + KeeperToggleMarket |
 | Minswap V2 | DEX swaps | Batcher execution, fill pricing | Order Cancel/Expire refund |
 | USDCx issuer (Circle via xReserve) | 1:1 USDC backing + crosschain reserve integrity | Stable $1 peg | Depeg monitoring + manual halt |
-| Charli3 + Orcfax oracles | ADA/USD price feed for the `SwapAda` replenishment redeemer + P4 Tier 1 oracle-based fair-price bound on DEX swaps | Fair price + freshness — via the shared `lib/vault/oracle.ak` dual-feed aggregator (≥ 2 healthy samples within 2% cross-feed disagreement window, each ≤ 10-minute stale, returns midpoint). Oracle config lives in the registry's `asset_oracles`, managed via governance `UpdateRegistry` (14-day timelock). | Governance `UpdateOracleSource` (14-day timelock) can rotate feeds if one source degrades; V1 launch ships with `asset_oracles = []` — SwapAda is inactive until governance enables the ADA entry (bootstrap via `MergeUtxo` donations) |
+| Charli3 + Orcfax oracles | ADA/USD price feed for the `SwapAda` replenishment redeemer + P4 Tier 1 oracle-based fair-price bound on DEX swaps | Fair price + freshness — via the shared `lib/vault/oracle.ak` dual-feed aggregator (≥ 2 healthy samples within 2% cross-feed disagreement window, each ≤ 10-minute stale, returns midpoint). Oracle config lives in the registry's `asset_oracles`, managed via governance `UpdateRegistry` (14-day timelock). | Governance `UpdateRegistry` (14-day timelock) can rotate feeds if one source degrades by updating the relevant `asset_oracles` entry; V1 launch ships with `asset_oracles = []` — SwapAda is inactive until governance enables the ADA entry (bootstrap via `MergeUtxo` donations) |
 | Blockfrost / Ogmios | Chain indexing for keeper + API | UTXO state accuracy | Multi-source, on-chain truth |
 
 ### 3.5 Two-layer code organisation
@@ -929,6 +935,133 @@ V1's source code is split across **two separate public repositories**, each with
 **Security-disclosure routing.** Protocol-layer findings (Aiken validator bugs, datum injection, on-chain invariant violations) go to `optivaults-protocol/SECURITY.md`. Operator-layer findings (keeper runtime bugs, API authentication, frontend XSS, CLI parsing) go to `optivaults-reference/SECURITY.md`. When in doubt, protocol-layer is the default channel — triage will forward.
 
 **Audit scope parallels the layer split.** The Q2-Q3 2027 external audit targets the protocol layer specifically (see §8.1 and `docs/audit-scope.md`). Operator-layer code is audited separately on its own schedule; its trust properties are narrower because its failure modes are bounded by the on-chain protocol's invariants (a compromised keeper can cause operational DoS but cannot extract principal).
+
+### 3.6 Ecosystem Pattern Contributions
+
+V1's architecture is the composition of five recurring patterns documented separately in `spec/pattern-rationale-*.md`. Each pattern appears informally across Cardano DeFi protocols; V1 instantiates each one with a documented, audit-traced, and chain-verified implementation. None of the five is V1-novel — variants of each exist in other live protocols — but the V1 instances are concrete reference points suitable for future Cardano Improvement Proposal discussions.
+
+This section is a public-facing summary of the five patterns at the whitepaper level. The full design rationale for each pattern lives in its dedicated spec doc; the V1-specific implementation lives in the existing spec files (`spec/vault-nft.md` / `spec/multisig-gov.md` / `spec/vault-datum.md` / etc.). The CIP-readiness posture — when V1 would author a CIP, what conditions would unlock that — is documented in §3.7 and in `docs/cip-readiness-posture.md`.
+
+#### 3.6.1 Validator Identity NFT Pattern
+
+**Generic shape.** A one-shot mint policy parameterised at compile time by a specific UTXO reference. The mint branch requires the parameterised UTXO to appear as a transaction input; once consumed, the UTXO is gone from the ledger and no second mint is ever possible. The burn branch is unconditional. The resulting NFT serves as an on-chain anchor that distinguishes the canonical state UTXO from any forged UTXO at the same script address — every consumer validator bakes the NFT's policy ID as a compile-time parameter and rejects UTXOs lacking the token.
+
+**What V1 contributes.** Three concrete instances in V1's contract set: `vault_nft.ak` (anchors the singleton vault UTXO that `vault_proxy` / `vusdcx` / `order` validators recognise), `governance_nft.ak` (anchors the singleton governance UTXO that `multisig_gov` / `vault_protocol` / `treasury` / `keeper_stake_script` recognise), and `registry_auth_nft.ak` (anchors the singleton registry UTXO that the destination-whitelist read helper authenticates). The three implementations share roughly 35 of 50 lines verbatim; the differences are in compile-time-parameter signatures and which downstream validators anchor to the resulting policy ID.
+
+**What's already in the ecosystem.** Variants of this pattern have shipped in other Cardano DeFi protocols; the underlying "one-shot mint via consumed UTXO ref" idea is widely recognised. The novelty in V1's documentation is not the pattern itself but the systematic three-NFT case study and the explicit comparison against the heritage `{all: [sig, before(slot)]}` native-script alternative — which V1's internal verification phase used and which produced permanently-undrainable NFTs after deadline expiry (~15-20 ADA per vault locked, observed across heritage deployments).
+
+**Open CIP question.** Whether the `asset_name` parameter should be a compile-time constant (V1's `vault_nft` shape) or a runtime parameter (V1's `governance_nft` and `registry_auth_nft` shapes), and whether the pattern should compose with CIP-68 reference NFTs for metadata-carrying use cases. V1 admits both `asset_name` forms and does not author either decision. Full discussion: `spec/pattern-rationale-validator-identity-nft.md` §7.
+
+**What a depositor or auditor would check.** The three Validator Identity NFT minting policies are each under 60 lines of Aiken in `contracts/validators/`. A reviewer can read all three in roughly five minutes, compare the mint and burn branches to the pattern's reference shape, and confirm that the compile-time `utxo_ref` parameter is consumed in each policy's deployment transaction (the V1 deploy ceremony's transaction trail makes this verifiable on-chain). The deploy state for the V1 mainnet ceremony — including each NFT policy's parameter UTxO and the transaction that consumed it — is published in `deploy/state/` after the ceremony completes. A fork operator implementing the pattern in their own protocol would reuse the same minting-policy template with their own `utxo_ref` and asset name choices; the policy ID for their fork's NFTs would differ from V1's because the compile-time parameter differs, so cross-vault confusion is structurally impossible.
+
+#### 3.6.2 MultiSig Governance + Timelock Pattern
+
+**Generic shape.** A singleton governance state UTXO whose datum carries an m-of-n signer set, a queue of pending actions, and a strict-monotonic nonce. Six mechanisms compose: (1) m-of-n threshold signature for queue + execute, (2) per-action timelock recorded at queue with a `executable_at_ms` floor, (3) 1-of-n cancel veto during the timelock window, (4) strict-monotonic nonce that binds each queued action's identifier, (5) payload-hash binding so the execute transaction's actual effect must hash to the queued value, (6) post-timelock TTL ceiling so stale actions expire. The pattern defends against compromised-quorum / immediate-execution / payload-drift failure modes that simple multisig schemes leave open.
+
+**What V1 contributes.** A 14-ActionKind catalogue (UpdateStrategy / UpdateFee / UpdateFeeSplit / UpdateSlippagePolicy / EmergencyWithdraw / AdminDeployNonDeposit / UpdateRegistry / FastUpdateMarkets / UpdateKeeperAuth / TreasurySpend / UpdateTreasuryParams / RotateSigners / SlashBond / ActDeregisterStake) with per-action timelock floors (0 days for EmergencyWithdraw / 1 hour for FastUpdateMarkets / 14 days default / 21 days for UpdateFeeSplit / 48 hours for UpdateSlippagePolicy). Self-modification (RotateSigners) routes through the same path as any other action — no separate "owner-only" escape hatch. Concrete payload-hash discipline is enforced at every consuming validator (`vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`, `registry`, `treasury`, `keeper_stake_script` all recompute the payload hash from the actual redeemer and compare against the queued value).
+
+**What's already in the ecosystem.** Multisig-with-timelock governance is common across DeFi; payload-hash binding is the most consistently underspecified element across heritage implementations. The Cardano ecosystem has multiple multisig-governance designs in production. V1's contribution is the explicit six-mechanism decomposition and the per-action-kind timelock-floor table — which is operational policy more than protocol primitive, but worth documenting for protocols considering similar designs.
+
+**Open CIP question.** Whether the per-action-kind timelock floor table should be on-chain protocol-level (locked by a CIP) or off-chain project-policy (each deployment picks). V1 picks deployment policy. The two binding modes for the action's target (`target_tx_hash == #""` for flexible execution vs. specific 32-byte commitment for pre-signed flows) also admit both and lack a canonical default. Full discussion: `spec/pattern-rationale-multisig-gov-timelock.md` §7.
+
+**Three V1-specific elaborations on top of the pattern.** (1) Per-action-kind timelock floors and ceilings hardcoded in the validator so a queue with `timelock_ms = 0` cannot bypass protection for a sensitive action (the catalogue in §6.2 lists each action's floor — 14 days default, 21 days for UpdateFeeSplit, 0 days for EmergencyWithdraw, 1 hour for FastUpdateMarkets, 48 hours for UpdateSlippagePolicy). (2) Signer compensation pool + quarterly distribution layered into `GovDatum` to keep signers economically aligned without per-action payouts. (3) Empty-hash flexible target mode (`target_tx_hash == #""`) supporting both pre-committed and flexible execution flows under the same payload-hash discipline. The three elaborations are V1's operational choices, not part of the generic pattern; a different deployment could omit any or all of them. The boundary between pattern-core and V1-elaboration is documented explicitly in `spec/multisig-gov.md` §10.
+
+**What a depositor would observe.** A real-time view of `multisig_gov`'s `GovDatum.queued` list is available via any Cardano blockchain explorer or via V1's `vault.optivaults.app` governance dashboard. Each queued action carries an `executable_at_ms` timestamp and a `payload_hash` that anyone can verify off-chain. The window between queue and earliest possible execution gives depositors time to react to any queued action — including, in the worst case, withdrawing their share before the action takes effect. This is the **detection-time** guarantee the pattern provides, and is the structural reason V1's governance design is depositor-protective rather than merely procedurally correct.
+
+#### 3.6.3 Withdraw-Zero Forwarding Pattern
+
+**Generic shape.** A spending validator (here called the *proxy*) guards the singleton state UTXO and contains no business logic — its single job is to confirm the transaction triggers one of a fixed compile-time-known set of staking validators by means of a zero-amount withdrawal entry. N staking validators (here called *routes*) carry the actual business logic; each is compiled independently, each is bounded under 16 KB independently, and the per-transaction reference-script load is proxy + one active route. The pattern's correctness rests on the Cardano-ledger property that all validators triggered by the same transaction observe identical transaction context, so validation work can be safely delegated.
+
+**What V1 contributes.** A full-scale instantiation: 1 proxy validator + 10 routed staking validators + 4 NFT mint policies + 1 DEX adapter + supporting validators (governance, registry, treasury, keeper stake script). The largest single route (`vault_liqwid`) compiles to ~13.4 KB (about 3 KB of headroom under the 16 KB ceiling); aggregate validator bytecode across all routes is roughly 140 KB — which would be impossible as a monolith. The 10 routes split V1's vault logic along four orthogonal cuts: permissionless vs keeper-authorised vs governance-authorised, hot-path vs governance-path, in-vault math vs external-protocol interaction, synchronous vs queued. The four cuts and their motivations are documented in `docs/articles/architecture/03-seventeen-validators-four-cuts.md`.
+
+**What's already in the ecosystem.** The Withdraw-Zero substrate has shipped in multiple Cardano DeFi protocols since the V8 / V9 Plutus era; V1 did not invent it. Long-form write-ups in either English or Chinese are scarce, however — V1's `docs/articles/architecture/02-withdraw-zero-forwarding-pattern.md` is one of the more accessible introductions, and the V1 contract set is one of the largest published deployments to use the pattern at full scale.
+
+**Open CIP question.** Conway-era reference-script fee curve interaction with typical Withdraw-Zero protocols (which reference 4-6 scripts per transaction) deserves a documented analysis. Stake-credential lifecycle (the per-route 2-ADA stake-registration deposit, the deregistration path, deploy-ceremony complexity) is another candidate for standardisation. Full discussion: `spec/pattern-rationale-withdraw-zero-forwarding.md` §7.
+
+**Why the V1 split has 10 routes rather than 5 or 20.** Each route's stake-credential registration costs 2 ADA refundable on deregistration. With 10 routes plus supporting staking validators (`keeper_stake_script`, etc.), V1's deploy ceremony carries ~24-30 ADA of stake-credential float at any time — a non-trivial operational consideration but well within V1's deploy-ceremony ADA budget. The cuts (permissionless vs keeper / hot-path vs governance / in-vault vs external / synchronous vs queued) follow audit-driven authorisation boundaries rather than equal-size partitioning. Each route's compiled size is independently bounded under 16 KB; the tightest is `vault_liqwid` at ~13.4 KB with about 3 KB of headroom remaining for future per-market logic additions. A different protocol applying the same pattern would choose its cut count based on its own authorisation matrix — fewer if the protocol is simpler, more if the authorisation logic is more diverse.
+
+**Reference-script fee implications for depositors.** Because V1's transactions reference only the proxy (~4.9 KB) + the one active route (up to ~13.4 KB), each user transaction's reference-script fee is bounded — not by the total V1 bytecode (which exceeds 140 KB if you sum all routes) but by the subset the transaction actually invokes. A Deposit transaction references `vault_proxy + vault_user`; a Compound transaction references `vault_proxy + vault_keeper_hot + keeper_stake_script`. The depositor pays for what the operation uses, not for the entire protocol. This is the structural reason V1's per-transaction Cardano network fee is bounded in the same range as a single-purpose vault would carry, despite V1's much larger protocol surface area.
+
+#### 3.6.4 Registry + Auth NFT Whitelist Pattern
+
+**Generic shape.** A singleton configuration UTXO at a Registry validator address, anchored by a one-shot Identity NFT (composing Pattern #1), with per-redeemer mutation envelopes. Common datum content: protocol-destination whitelists, per-market metadata, oracle parameter tables, anchor cross-references. The Registry validator's redeemers distinguish between slow governance update (broad mutation rights, multi-day timelock), fast governance update (narrow mutation rights, short timelock for emergency migrations), and unilateral operator pause (single direction one-way, no governance required). Consumer validators read the Registry as a reference input through a centralised authenticated-read helper that verifies the Auth NFT presence.
+
+**What V1 contributes.** A 9-field RegistryDatum carrying protocol-destination whitelist (capped at 20 entries), stable-token allowlist (capped at 50), per-Liqwid-market metadata (capped at 20), dual-feed oracle references (capped at 20), audited swap-adapter hashes (capped at 10), governance anchor + cooldown timestamps + keeper identity. Three redeemers: `UpdateRegistry` (14-day timelock, broad mutation, payload-hash bound), `FastUpdateMarkets` (1-hour timelock, narrow per-market mutation), `KeeperToggleMarket` (operator-unilateral, one-way `active: True → False` only). The authenticated read is centralised in `helpers.read_registry_datum`; every consumer routes through it.
+
+**What's already in the ecosystem.** Configuration-anchor patterns with NFT authentication appear across Cardano DeFi; the specific three-redeemer split (slow / fast / unilateral pause) and the upper-bound cap discipline are V1's organisational contributions rather than novel primitives. The pattern is orthogonal to CIP-72 (dApp Registration & Discovery): CIP-72 is an outward identity claim consumed by wallets and explorers; this pattern is an inward authorisation datum consumed only by the protocol's own validators. The two share only the word "registry".
+
+**Open CIP question.** Schema versioning of the Registry datum across protocol upgrades, standardisation of the authenticated-read helper's signature, cap-discovery mechanism (caps in the datum itself or separately published). Full discussion: `spec/pattern-rationale-registry-auth-nft.md` §7.
+
+**The authenticated-read invariant.** Every V1 validator that reads the Registry as a reference input routes through a single helper function (`helpers.read_registry_datum`) that verifies the supplied UTxO carries the expected Registry Auth NFT before returning the datum. A validator that bypassed this helper and read the reference input directly would be trivially exploitable: an attacker could plant a forged UTxO with a permissive whitelist at the Registry script address, and a direct-read validator would consume it as if it were the real Registry. The single-helper discipline is the structural defence; the audit invariant is "every Registry reference-input read in V1 source goes through `helpers.read_registry_datum`". A reviewer can confirm this by grepping `lib/vault/helpers.ak` for the helper definition and grepping every consuming validator for the helper invocation — the audit's primary check is that no call site is missing.
+
+**Why three redeemers rather than one.** Some protocols use a single Registry redeemer that handles all mutations with a unified authorisation model. V1's three-redeemer split (slow governance / fast governance / unilateral pause) emerged from operational reality: Liqwid action-validator migrations need a fast-update path (1-hour timelock) because the slow path (14-day timelock) would force V1 to operate in a degraded state during a Liqwid migration window. The unilateral pause redeemer exists because circuit-breaker behaviour cannot wait for governance coordination when a downstream Liqwid market becomes problematic. Each redeemer encodes which fields it is allowed to mutate; the per-redeemer mutation envelope is auditable as a static matrix (slow / fast / pause × each field × {immutable / mutable / one-way}).
+
+#### 3.6.5 VaultDatum Tiered Immutability Pattern
+
+**Generic shape.** Organise a singleton state UTXO's inline datum into tiers — identity-immutable, governance-mutable policy, accounting working state, operational one-way flags — and enforce per-tier mutation envelopes on every redeemer via helper functions. The audit surface for a protocol with N redeemers × M datum fields collapses from O(N×M) — every redeemer enumerating every field — to O(N + tier_count) — every redeemer calling tier-helpers and enumerating only the small set of fields it actually owns. Tier 1 fields are immutable across every non-deploy redeemer; tier 2 fields mutate only via dedicated governance redeemers; tier 3 fields move under per-redeemer math invariants; tier 4 flags carry directional monotonicity rules.
+
+**What V1 contributes.** A 29-field VaultDatum (10 accounting + 8 policy + 9 identity-immutable + 2 operational) with `check_immutable_fields` and `check_policy_fields_unchanged` helper functions in `lib/vault/validation.ak`. The `check_immutable_fields` helper is called from nine call sites across `validation.ak` (seven) and `helpers.ak` (two); every redeemer that produces a continuing vault output reaches one of those call sites. The per-redeemer envelope matrix is the audit's primary review object — for each redeemer, every field is one of {immutable, mutable, one-way}, and the validator's per-redeemer branch fails any divergence.
+
+**What's already in the ecosystem.** Datum-field tiering is informally practised across Cardano DeFi but rarely documented with explicit tier names and helper-function discipline. V1's contribution is the explicit four-tier naming and the helper-call invariant. Heritage incidents where a fee-update redeemer accidentally rewrote a deposit-token policy field have appeared across the multi-chain DeFi history; V1's tier discipline closes that bug class structurally.
+
+**Open CIP question.** Whether tier identification should be encoded on chain (a leading enum field, struct-nested tier markers) or remain code-organisation convention. Whether the helper functions should be standardised as a reference Aiken library. Datum-schema versioning across protocol upgrades. Full discussion: `spec/pattern-rationale-vault-datum-tiered.md` §7.
+
+**Why two helpers rather than one.** V1 separates `check_immutable_fields` (Tier 1) from `check_policy_fields_unchanged` (Tier 2) rather than collapsing them into a single mega-helper. The reason is auditability: policy-changing redeemers (UpdateFee / UpdateFeeSplit / UpdateStrategy / UpdateSlippagePolicy) call only `check_immutable_fields` and then explicitly enumerate which Tier 2 fields they own. A merged helper would force every policy-changing redeemer to inline equality checks for the Tier 2 fields it does NOT own, doubling the audit surface and creating a new bug class (the redeemer "forgets" to assert on a Tier 2 field outside its scope). The two-helper discipline keeps each redeemer's mutation envelope visible from its structure: which helpers are called, which fields equal `old`, which fields are derived from redeemer arguments, which fields carry math invariants.
+
+**The per-redeemer envelope matrix.** Every V1 redeemer that produces a continuing vault output has a documented mutation envelope across the four tiers. `spec/vault-datum.md` §3 + §4 carries the matrix in tabular form — for each redeemer (Deposit / Withdraw / Compound / BatchProcess / DeployToProtocol / RecallFromProtocol / MergeUtxo / SwapAda / RebalanceBuffer / UpdateFee / UpdateFeeSplit / UpdateStrategy / UpdateSlippagePolicy / EmergencyWithdraw / AdminDeployNonDeposit / CommunitySunset), every field is one of {immutable, mutable, one-way}. This matrix is the audit's primary review object; any bug surface is "a cell that does not match the redeemer's documented scope". An auditor or reviewer reading V1's contracts uses this matrix to verify that each redeemer's Aiken source matches its declared envelope row.
+
+### 3.7 Standards Posture
+
+V1's relationship with the Cardano Improvement Proposal process is twofold: V1 **consumes** existing CIPs where applicable, and V1 **prepares — but does not submit — pattern documentation** that could one day support CIP proposals. V1 will not author a CIP submission at the V1 release stage.
+
+The reasoning is straightforward. A CIP author should have a working implementation that has run on mainnet under real load, independent confirmation that the design is sound through a completed external security audit, evidence that the pattern is general enough to be useful outside the originating project (ideally a second implementation by an unrelated team), and a community discussion period where rough corners are surfaced before specification. V1 currently has none of these in finished form — mainnet launch is pending, the external audit is scheduled for Q2-Q3 2027 (§8.1), no independent second implementation exists, and broader community discussion of the patterns is premature. Submitting a CIP without this groundwork would either produce a specification that needs to be retracted, or worse, anchor a sub-optimal pattern in the ecosystem before its weaknesses are visible.
+
+V1 documentation therefore takes the form of pattern-rationale notes colocated with the V1 spec (`spec/pattern-rationale-*.md`). These notes describe each pattern in generic terms, cite the concrete V1 instantiation as an example, and explicitly defer standardisation language to a future Phase 3+ effort.
+
+#### 3.7.1 CIPs V1 already consumes
+
+The following CIPs are dependencies, not candidates — V1 uses them as-is and would not propose modifications.
+
+| CIP | V1 usage | Notes |
+|---|---|---|
+| CIP-30 | Wallet ↔ dApp connection on the V1 frontend (`vault.optivaults.app`); all deposit / withdraw transactions are CIP-30 TXs signed by the user's wallet | Actively-tested wallets at launch: Eternl, Lace, Vespr, Typhon, Yoroi. Any CIP-30-compliant wallet should work |
+| CIP-25 | Reference shape only for NFT metadata; V1's Validator Identity NFTs intentionally do not carry CIP-25 metadata because their on-chain role is anchor identification, not display | The Validator Identity NFT pattern doc discusses why the no-metadata variant is appropriate |
+| CIP-68 | Not used by V1's identity NFTs (no datum-carrying NFT design); V1 keeps state in validator datums, not in reference NFT datums | Future work (Phase 3+) may revisit whether a CIP-68 reference-NFT variant would simplify cross-protocol indexing |
+| CIP-69 | Plutus V3 mint-policy redeemer shape — V1's minting policies (`vault_nft`, `governance_nft`, `registry_auth_nft`, `vusdcx`) follow CIP-69 spending-and-minting semantics by virtue of compiling against Plutus V3 | No project-specific extension |
+
+#### 3.7.2 CIPs adjacent to V1 patterns but not framed as extensions
+
+The following CIPs are adjacent to patterns V1 documents, but V1's patterns are not framed as extensions of them at the V1 stage. Any future relationship would be developed during the community discussion preceding a hypothetical submission.
+
+| CIP | V1 pattern with potential overlap | V1 stance |
+|---|---|---|
+| CIP-72 (dApp Registration & Discovery) | The Registry + Auth NFT Whitelist pattern is inward authorisation, not outward identity claim; the two solve orthogonal problems | The V1 Registry is governance-internal (destinations the keeper may route to). It is not a dApp directory |
+| CIP-95 (Web-Wallet Bridge for Conway) | V1 is not currently a delegation-aware dApp; depositors stake ADA independently of vault participation | If a future version of V1 surfaces a delegation feature, CIP-95 would be the natural integration point |
+| CIP-1694 (On-chain Governance for Cardano Voltaire) | The MultiSig Governance + Timelock pattern governs application-level protocol parameters (fee schedule, strategy allocations, registry content). CIP-1694 governs Cardano-ledger-level parameters (treasury, hard-fork-initiator) | The two compose cleanly — V1 application-governance and CIP-1694 ledger-governance address different layers of the stack |
+
+#### 3.7.3 Conditions under which V1 would author a CIP
+
+The project's commitment is that when **all** of the following hold, the OptiVaults team will publish a formal CIP authoring intent for community discussion. Until then, the pattern-rationale documents stand alone as informational.
+
+(a) The external audit (Q2-Q3 2027) has completed and findings have been published.
+
+(b) V1 has been running on mainnet for at least one full year, with TVL above the §6.3 pre-audit cap, with at least one realized depeg or external-protocol stress event survived without principal loss.
+
+(c) At least one independent team has either deployed a derivative work using one of the documented patterns, or raised concrete questions about a pattern in a public forum (Cardano forums, GitHub issue threads on the protocol repo, ecosystem working groups) demonstrating that the pattern matters beyond OptiVaults.
+
+(d) Community governance transition (§10) has progressed past the founder-controlled stage so that CIP authorship is not effectively single-actor.
+
+If conditions (a)–(d) are not all met, the documentation stays as informational pattern rationale. The patterns themselves continue to be useful to anyone reading the V1 codebase — they are just not standardised yet. Full posture statement: `docs/cip-readiness-posture.md`.
+
+#### 3.7.4 How the community can engage now
+
+While V1 is pre-mainnet, the most useful community contributions are:
+
+- **Read the pattern-rationale docs** at `spec/pattern-rationale-*.md` and file GitHub issues if a design choice is unclear, inconsistent with existing CIPs, or has a strictly better-known variant.
+- **Compare against your own protocol's design** if you build similar primitives. A second implementation is exactly what raises a "this is just an OptiVaults idiosyncrasy" pattern into "this is a recognisable Cardano-DeFi pattern".
+- **Surface adjacent CIP work** — if a CIP draft exists in the pipeline that overlaps with one of the five patterns, please link it on the relevant pattern-rationale doc's GitHub thread so V1 can either align early or document the divergence.
+
+Direct CIP discussion at this stage is welcome on the OptiVaults repo, but the project will not open a CIP repository PR until §3.7.3's gates are met.
 
 ---
 
@@ -1866,6 +1999,57 @@ Every governance QueueAction's payload hash can be reverse-engineered from CBOR 
 **Depositor due diligence.** Depositors must conduct their own due diligence on OptiVaults V1, USDCx (Circle / xReserve), Liqwid, Minswap V2, and Cardano itself. **Any expectation that "V1 manages risk for me" is a misreading of the positioning** — V1 exposes, diversifies, and architects the risks such that you can always exit (see §5 Risks for full disclosure + §6.3 governance hard caps); it does not insulate you from them. V1 is not insurance, not an advisory service, not a wealth manager.
 
 **Contact.** Security disclosures (PGP key at optivaults.app/security), migration subsidy claims, and general inquiries: `optivaults@gmail.com`. Live discussion: Discord (link at optivaults.app).
+
+---
+
+## Appendix A. Glossary of Generic Patterns
+
+V1's documentation uses both **generic pattern names** (intended to be portable across Cardano-DeFi protocols) and **OptiVaults-flavored names** (specific to V1's implementation). This appendix maps between the two vocabularies so that readers familiar with one set can locate the corresponding concept in the other. Each entry includes the pattern's V1 spec home and its dedicated pattern-rationale doc.
+
+### A.1 Pattern name mapping
+
+| Generic name | OptiVaults-flavored name (V1 specifics) | Pattern-rationale doc | V1 spec / impl |
+|---|---|---|---|
+| Validator Identity NFT (one-shot UTXO-ref mint anchor) | Vault NFT / Governance NFT / Registry Auth NFT | `spec/pattern-rationale-validator-identity-nft.md` | `spec/vault-nft.md`, `spec/gov-nft.md` §9 distinction note, `contracts/validators/vault_nft.ak` / `governance_nft.ak` / `registry_auth_nft.ak` |
+| MultiSig Governance + Timelock | MultisigGov + 14 ActionKinds + per-action timelock floors | `spec/pattern-rationale-multisig-gov-timelock.md` | `spec/governance.md`, `spec/multisig-gov.md`, `contracts/validators/multisig_gov.ak` |
+| Withdraw-Zero Forwarding | `vault_proxy` + 10 routed staking validators | `spec/pattern-rationale-withdraw-zero-forwarding.md` | `spec/architecture.md` §4 + §6, `docs/articles/architecture/02-withdraw-zero-forwarding-pattern.md`, `contracts/validators/vault_proxy.ak` |
+| Registry + Auth NFT Whitelist | Registry V2 (9-field RegistryDatum + 3 redeemers + authenticated-read helper) | `spec/pattern-rationale-registry-auth-nft.md` | `contracts/validators/registry.ak`, `contracts/lib/vault/helpers.ak` `read_registry_datum` |
+| VaultDatum Tiered Immutability | 29-field VaultDatum × 4 tiers + `check_immutable_fields` / `check_policy_fields_unchanged` helpers | `spec/pattern-rationale-vault-datum-tiered.md` | `spec/vault-datum.md`, `contracts/lib/vault/validation.ak`, `contracts/lib/vault/types.ak` `VaultDatum` |
+
+### A.2 Soul-Bound NFT (Gov Signer NFT)
+
+The Gov **Signer** NFT (one per signer, non-transferable, identity / recognition claim) is a separate pattern from the Validator Identity NFT — the two share the word "NFT" but solve orthogonal problems. The Gov Signer NFT is one-per-holder; the Validator Identity NFT is one-per-protocol-singleton. V1 does not include Soul-Bound NFT in the five candidate-pattern list (the focus is on protocol-primitive patterns), but the Gov Signer NFT documentation in `spec/gov-nft.md` §9 covers it as a Phase 3+ CIP opportunity. The distinction matters because future readers searching for "Gov NFT" may land on either:
+
+- The **Gov Identity NFT** — singleton anchor of the `multisig_gov` UTXO, an instance of the Validator Identity NFT pattern, defined in `contracts/validators/governance_nft.ak`.
+- The **Gov Signer NFT** — per-signer recognition NFT, an instance of the Soul-Bound NFT pattern, defined in `contracts/validators/gov_signer_nft.ak` and documented in `spec/gov-nft.md`.
+
+### A.3 Phase vocabulary disambiguation
+
+The word "Phase" appears in two distinct contexts in V1 documentation:
+
+| Sense | Examples | Meaning |
+|---|---|---|
+| **Product roadmap phase** | "Phase 1 TVL cap 100K", "Phase 2+ activation", "Phase 3+ CIP opportunity" | Public sequencing of V1's lifecycle from launch through community-governance transition (§8.2, §8.3). KEEP in public docs |
+| **Internal development phase** (not used in this document) | Pre-public-release internal labels removed from public surfaces during the OSS hygiene sweep | Internal label removed from public OSS per the project's open-source hygiene policy. Replaced with topic-based descriptions (e.g., "authorization-boundary refactor", "validator split refactor") |
+
+If a reader encounters a "Phase NN" reference in V1 docs that does not match the product-roadmap pattern, please file a GitHub issue — it would be an OSS hygiene leak missed by the scrub gate.
+
+### A.4 Cross-reference: ActionKind catalogue
+
+The MultiSig Governance + Timelock pattern instantiates a per-protocol catalogue of governance actions. V1's catalogue is documented in two complementary surfaces:
+
+- **Public-facing actions catalogue** — `spec/governance.md` §4 enumerates each of V1's 14 ActionKinds with purpose, timelock, payload shape, and cross-validator authorisation flow.
+- **Validator-level implementation spec** — `spec/multisig-gov.md` §6 covers the redeemer implementations, action_id derivation, payload-hash recomputation, and the cross-validator authorisation helper.
+- **Generic pattern rationale** — `spec/pattern-rationale-multisig-gov-timelock.md` §6 enumerates the boundary between the pattern itself and V1's instance-specific elaborations (per-action timelock floors, signer compensation pool, empty-hash flexible target mode).
+
+A reviewer auditing governance starts at `spec/governance.md` for the catalogue, drops into `spec/multisig-gov.md` for the validator-level enforcement detail, and reads the pattern rationale doc for the cross-implementation security argument.
+
+### A.5 Where to read further
+
+- `docs/cip-readiness-posture.md` — the project-level CIP posture statement (informational, not a CIP draft)
+- `spec/pattern-rationale-*.md` — five generic pattern rationale docs (per Appendix A.1)
+- `spec/architecture.md` §9 — the architecture-level cross-reference table mapping the five patterns to their V1 homes
+- `docs/security-model.md` §9 — threat-model framing of how each pattern closes specific attack surfaces (CIP Extraction Opportunities section)
 
 ---
 

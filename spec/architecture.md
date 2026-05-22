@@ -3,6 +3,8 @@
 **Status**: V1 design specification
 **Target audience**: protocol auditors, smart-contract developers, integrators, technically-literate depositors
 
+*V1's architecture instantiates five recurring Cardano-DeFi design patterns documented separately in `spec/pattern-rationale-*.md` — see §9 for the cross-link map. This file describes the V1-specific composition of those patterns; the rationale docs describe the patterns themselves in generic terms.*
+
 ---
 
 ## 1. Product in one paragraph
@@ -409,7 +411,25 @@ Several capabilities were considered for V1 and deliberately deferred:
 
 ---
 
-## 9. Reference to companion documents
+## 9. Generic patterns instantiated by V1
+
+V1 is the composition of five recurring patterns. Each pattern is documented in a dedicated `pattern-rationale-*.md` doc covering trade-offs against alternatives, security properties, and open CIP design questions. The pattern docs are intentionally **generic** — V1 is one instantiation; the pattern would look similar in a different protocol. The architecture below shows where in V1 each pattern lives.
+
+| # | Pattern (public name) | Rationale doc | V1 home in this architecture |
+|---|---|---|---|
+| 1 | Validator Identity NFT | [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) | Three one-shot mint policies anchoring the canonical Vault UTXO (§3.1, `vault_nft`), the canonical Governance UTXO (§3.3, `governance_nft`), and the canonical Registry UTXO (§3.6, `registry_auth_nft`) |
+| 2 | MultiSig Governance + Timelock | [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) | `multisig_gov` validator (§3.3, §5.12) — 14 ActionKinds with per-action timelock floors, 1-of-n cancel veto, payload-hash binding |
+| 3 | Withdraw-Zero Forwarding | [`pattern-rationale-withdraw-zero-forwarding.md`](./pattern-rationale-withdraw-zero-forwarding.md) | `vault_proxy` + 10 routed staking validators (§4, §6) — the structural backbone of V1's logic split |
+| 4 | Registry + Auth NFT Whitelist | [`pattern-rationale-registry-auth-nft.md`](./pattern-rationale-registry-auth-nft.md) | `registry` validator + Registry Auth NFT (§3.6) — governance-mutable whitelist of allowed destinations + swap adapters + Liqwid markets + oracles |
+| 5 | VaultDatum Tiered Immutability | [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) | 29-field `VaultDatum` organised across four tiers (§3.1, see `spec/vault-datum.md` §1+§6) — `check_immutable_fields` + `check_policy_fields_unchanged` helpers enforce per-tier mutation envelopes on every redeemer |
+
+The five patterns compose: a Withdraw-Zero proxy (#3) routes to staking validators that mutate a tiered datum (#5) at a state UTXO anchored by an Identity NFT (#1); state changes outside the user-callable surface require governance approval (#2); and governance-mutable destination configuration is held in a separately-anchored Registry (#4) read as a reference input by the routing validators.
+
+[`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) carries the overall V1 posture: V1 uses existing CIPs where applicable but does not author any CIP at the V1 release stage. The four gates before V1 would consider authoring are documented there in §4.
+
+---
+
+## 10. Reference to companion documents
 
 - `spec/vault-datum.md` — exact VaultDatum field definitions, immutability classification, per-redeemer transition rules
 - `spec/treasury.md` — TreasuryDatum, category math, spend redeemer rules, audit reserve lock mechanism

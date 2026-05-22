@@ -1,5 +1,7 @@
 # OptiVaults V1 — VaultDatum Specification
 
+*Implementation of the VaultDatum Tiered Immutability pattern (see [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) for the generic pattern, the helper-function discipline that enforces tier boundaries on every redeemer, and open CIP design questions). V1's 29 fields are organised across four tiers — identity-immutable, governance-mutable policy, accounting, operational — with `check_immutable_fields` and `check_policy_fields_unchanged` helpers enforcing the per-tier mutation envelopes on every redeemer that produces a continuing vault output.*
+
 **Scope**: the single UTXO datum that stores all vault-accounting state.
 
 ---
@@ -8,7 +10,7 @@
 
 ```aiken
 type VaultDatum {
-  // --- Accounting state (mutable under specific redeemers) ---
+  // --- Tier 3 — Accounting state (mutates per-redeemer with math invariants) ---
   total_deposited: Int,           // USDCx total principal + accumulated yield (6 decimals)
   total_shares: Int,              // vUSDCx total supply
   idle_buffer: Int,               // Undeployed USDCx held at vault address
@@ -20,7 +22,7 @@ type VaultDatum {
   strategy_allocations: List<Allocation>,  // Target allocation per protocol
   liqwid_positions: List<LiqwidPosition>,  // Per-market Liqwid holdings
 
-  // --- Policy parameters (adjustable under governance redeemers) ---
+  // --- Tier 2 — Policy parameters (mutates only via dedicated governance redeemers) ---
   performance_fee_bps: Int,       // Performance fee in basis points, [0, 450]
   early_withdraw_fee_bps: Int,    // Early withdrawal fee in basis points
   min_hold_seconds: Int,          // Minimum post-Compound hold before Direct Withdraw
@@ -31,7 +33,7 @@ type VaultDatum {
   max_slippage_bps: Int,          // §5.4 P2 Tier 1 oracle-based fair-price bound, [0, 500] (5% cap)
   min_swap_peg_bps: Int,          // §5.4 P2 Tier 2 peg-floor bound, [9_300, 9_950]
 
-  // --- Immutable identity parameters ---
+  // --- Tier 1 — Identity (immutable; guarded by check_immutable_fields helper) ---
   vault_version: Int,             // V1 = 1; for debugging + version-gated off-chain tools
   governance_policy: ByteArray,   // Governance NFT policy ID
   governance_name: ByteArray,     // Governance NFT asset name
@@ -42,7 +44,7 @@ type VaultDatum {
   registry_hash: ByteArray,       // Registry validator hash
   registry_auth_policy: ByteArray,  // Registry auth NFT policy
 
-  // --- Operational flags ---
+  // --- Tier 4 — Operational flags (one-way transitions; preserved by all non-CommunitySunset / non-Emergency redeemers) ---
   frozen: Int,                          // 0 = normal operation, 1 = emergency frozen
   community_sunset_triggered: Int,      // 0 = normal, 1 = dead-man-switch fired (Phase 1, see governance.md §4.4.1)
 }
@@ -63,7 +65,7 @@ Moving these two anchors to compile-time parameters provides a strictly stronger
 
 ## 2. Field-by-field reference
 
-### 2.1 Accounting state
+### 2.1 Tier 3 — Accounting state (10 fields)
 
 | Field | Type | Meaning | Invariant |
 |-------|------|---------|-----------|
@@ -78,7 +80,7 @@ Moving these two anchors to compile-time parameters provides a strictly stronger
 | `strategy_allocations` | List<Allocation> | Target allocation per protocol — how capital should be distributed. Entries reference `protocol_name` (enum: `Liqwid`, `MinswapLP`, `SundaeSwapLP`) + `amount` + `expected_apy_bps`. | Length ≤ 10; `Σ amount + idle_buffer <= total_deposited + non_deposit_value + Σ liqwid_principal` |
 | `liqwid_positions` | List<LiqwidPosition> | Per-Liqwid-market holdings. Entry = `{market_id, qtokens_held, supplied_value}`. | Length ≤ 5; `qtokens_held > 0` implies position exists; `supplied_value == 0` implies fully recalled |
 
-### 2.2 Policy parameters
+### 2.2 Tier 2 — Policy parameters (8 fields)
 
 | Field | Type | Value at V1 launch | Governance-adjustable range | Adjustable via |
 |-------|------|---------------------|----------------------------|----------------|
@@ -109,7 +111,7 @@ Phase launch roadmap (governance can adjust within the caps, subject to 21-day t
 
 Every fee-split change is a separate `UpdateFeeSplit` governance action with full 21-day timelock and 1-of-n cancel veto. Changes apply from the next Compound onwards — already-accrued gov pool funds retain their prior treatment until distributed.
 
-### 2.3 Identity parameters (immutable)
+### 2.3 Tier 1 — Identity parameters (9 immutable fields)
 
 | Field | Value | Purpose |
 |-------|-------|---------|
@@ -121,7 +123,7 @@ Every fee-split change is a separate `UpdateFeeSplit` governance action with ful
 | `registry_hash` | (set at deploy) | Registry validator hash. DeployToProtocol / RecallFromProtocol read the Registry UTXO as a reference input whose address must match this hash. |
 | `registry_auth_policy` | (set at deploy) | Registry auth NFT policy. The Registry UTXO is only trusted if it carries a token of this policy. |
 
-### 2.4 Operational flag
+### 2.4 Tier 4 — Operational flags (2 one-way fields)
 
 | Field | Values | Effect when = 1 |
 |-------|--------|-----------------|
@@ -188,3 +190,34 @@ Full migration protocol is described in `docs/migration.md`. Key points for depo
 4. internal-verification phase vault UTXO is destroyed after the last depositor exits
 
 There is **no in-place upgrade path** from internal-verification phase to V1 — Cardano contract immutability makes this structurally impossible. Fresh deploy is the only option for a new contract surface.
+
+---
+
+## 6. CIP-applicability
+
+The 4-tier organisation of `VaultDatum` (Tier 1 identity / Tier 2 policy / Tier 3 accounting / Tier 4 operational), combined with the `check_immutable_fields` and `check_policy_fields_unchanged` helpers that enforce per-tier mutation envelopes on every redeemer, is V1's instantiation of the **VaultDatum Tiered Immutability** pattern documented in [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md). The pattern is a candidate for future Cardano Improvement Proposal standardisation; V1 does not author a CIP at the V1 stage. See [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) for the overall posture.
+
+### 6.1 What V1 inherits from the generic pattern
+
+| Pattern property | V1 enforcement point |
+|---|---|
+| Tier 1 (identity) immutable across every non-deploy redeemer | `check_immutable_fields(old, new)` in `lib/vault/validation.ak` enforces equality on all 9 identity fields. Called from nine call sites — seven in `validation.ak` and two in `helpers.ak`. Every redeemer that produces a continuing vault output reaches one of these call sites |
+| Tier 2 (policy) mutable only via dedicated governance redeemers | `check_policy_fields_unchanged(old, new)` enforces equality on all 8 policy fields for non-policy-changing redeemers. The four policy-changing redeemers — `UpdateFee`, `UpdateFeeSplit`, `UpdateStrategy`, `UpdateSlippagePolicy` — explicitly enumerate which subset of policy fields they own |
+| Tier 3 (accounting) governed by per-redeemer math invariants | Each redeemer carries explicit deltas (share math, fee math, buffer constraints, allocation conservation, oracle bounds). The state-transition matrix in §4 above is the audit's primary review object |
+| Tier 4 (operational) one-way flags preserved across non-transitioning redeemers | `frozen` and `community_sunset_triggered` are preserved by every redeemer except the small set that explicitly transitions them; the transitions are one-way (0 → 1) for `community_sunset_triggered` (irreversible) and bidirectional only via dedicated governance redeemers for `frozen` |
+
+§3 "Invariants checked on every redeemer" + §4 "State transitions by redeemer" carry the V1-specific row-by-row reconciliation; the generic pattern's audit-surface reasoning (O(N×M) → O(N + tier_count)) in the rationale doc applies unchanged.
+
+### 6.2 V1-specific design choices on top of the pattern
+
+- **Two helpers, not one** — V1 separates `check_immutable_fields` (Tier 1) from `check_policy_fields_unchanged` (Tier 2) rather than collapsing them. The reason is auditability: policy-changing redeemers call only `check_immutable_fields` and then enumerate which Tier 2 fields they own, so the diff between "what does this redeemer touch in Tier 2" and "what stays equal" is visible in one read. A merged helper would force every policy-changing redeemer to inline the equality checks for the Tier 2 fields it does NOT own, doubling the audit surface.
+- **Per-field bound-check helpers** — Tier 2 mutation redeemers don't just assert "new value differs from old"; they additionally enforce numerical bounds (`performance_fee_bps ∈ [0, 450]`, `min_swap_peg_bps ∈ [9_300, 9_950]`, etc.) via dedicated `validate_update_fee` / `validate_update_strategy` helpers. The bound-check helpers are V1 operational policy, not part of the generic pattern.
+- **Tier 4 `community_sunset_triggered` interaction with redeemer authorization** — the one-way flag's transition opens up several normally-keeper-authorised paths to permissionless invocation. This authorization-layer coupling is a V1-specific elaboration (the generic pattern only specifies that Tier 4 flags are one-way; it does not specify what other validators do based on them).
+
+### 6.3 Related pattern-rationale docs
+
+- [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) — the generic pattern (this file's primary rationale)
+- [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) — the Vault NFT anchor that lets other validators trust this datum (datum without the anchoring NFT could be forged at the vault address)
+- [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) — the governance mechanism that gates Tier 2 mutations
+- [`pattern-rationale-withdraw-zero-forwarding.md`](./pattern-rationale-withdraw-zero-forwarding.md) — the architectural substrate that lets multiple route validators share this one datum
+- [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) — overall V1 stance on Cardano Improvement Proposals

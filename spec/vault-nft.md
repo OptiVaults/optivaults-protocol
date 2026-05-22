@@ -1,5 +1,7 @@
 # OptiVaults V1 — Vault Identity NFT Specification
 
+*Implementation of the Validator Identity NFT pattern (see [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) for the generic pattern, trade-offs against native-script alternatives, and open CIP design questions). V1 instantiates the same pattern three times — Vault NFT (this file), Governance NFT (see `gov-nft.md`), Registry Auth NFT (see `pattern-rationale-registry-auth-nft.md`). This file is the V1 case study for the Vault-NFT instantiation specifically.*
+
 **Scope**: the one-shot Vault Identity NFT minting policy and its role as a compile-time trust anchor.
 
 ---
@@ -173,7 +175,36 @@ For a vault whose target lifetime is indefinite and where the sunset-path ADA re
 
 ---
 
-## 6. Related specs
+## 6. CIP-applicability
+
+The Vault NFT is V1's reference instantiation of the **Validator Identity NFT** pattern documented in [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md). The pattern is a candidate for future Cardano Improvement Proposal standardisation; V1 does not author a CIP at the V1 stage. See [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) for the overall posture.
+
+### 6.1 What V1 inherits from the generic pattern
+
+| Pattern property | V1 Vault NFT enforcement |
+|---|---|
+| Compile-time UTXO-ref anchor | `vault_nft` validator parameterised by `utxo_ref: OutputReference`; the parameter is selected at the V1 mainnet deploy ceremony |
+| Cryptographic one-shot (mint at most once over chain history) | `list.any(tx.inputs, fn(i) { i.output_reference == utxo_ref })` precondition on the mint branch — the UTXO is consumed on first mint and cannot be re-consumed |
+| Burn always available (no time constraint) | Burn branch is unconditional — verifies only `asset_name` and `quantity == -1`. The spending validator guarding the UTXO containing the NFT gates *when* the burn can happen |
+| Mint-quantity safety | `pair.2nd == 1` strict equality on the mint branch (not `> 0`) |
+| Rogue-policy injection defence | `vault_proxy`, `vusdcx`, and `order` validators bake V1's specific `vault_nft_policy` into their own compile-time parameters; an attacker-deployed copy of the validator with a different UTXO-ref produces a different policy ID, which fails the consumer-side check |
+
+§3.1–§3.4 above provide the V1-specific security argument; the generic pattern's security reasoning in the rationale doc applies unchanged.
+
+### 6.2 V1-specific design choice
+
+`asset_name` is hardcoded to the constant `vault_nft_token_name = "OptiVault"` rather than exposed as a compile-time parameter. The pattern document admits both forms (see its §7 open question 1). V1 picks the hardcoded form because the deployment is single-instance — no fork-customisation is intended at V1 stage; the validator code is identical across any conforming V1 deploy. A different deployment that intends to support distinct vault instances under one codebase would expose `asset_name` as a second parameter, matching the shape used by V1's `governance_nft.ak` and `registry_auth_nft.ak` (which do expose `gov_name` / `asset_name` because their reuse profile differs).
+
+### 6.3 Related pattern-rationale docs
+
+- [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) — the generic pattern (V1's primary rationale for the Vault NFT)
+- [`pattern-rationale-withdraw-zero-forwarding.md`](./pattern-rationale-withdraw-zero-forwarding.md) §4.3 — the singleton-enforcement composition: Withdraw-Zero alone does not bound how many UTXOs sit at the vault address; the Vault NFT closes that gap
+- [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) — VaultDatum's identity-tier fields include the compile-time-anchored token references that depend on this NFT being authentic
+- [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) — overall V1 stance on Cardano Improvement Proposals
+
+---
+
+## 7. Related specs
 
 - `spec/architecture.md` §4 — validator #11 summary row
 - `spec/vault-datum.md` §2.3 — how `vault_nft_policy` is used as a compile-time anchor on `vault_proxy`, `vusdcx`, `order`

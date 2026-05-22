@@ -177,7 +177,47 @@ These are **not V1 scope**. V1 ships with only the Gov Signer NFT described here
 
 ---
 
-## 9. See Also
+## 9. CIP-applicability (soul-bound recognition NFT)
+
+The Gov Signer NFT is a working instance of the **Soul-Bound NFT pattern** — a non-transferable token minted to a specific holder under policy-enforced binding, intended for identity / recognition / role-claim use cases rather than financial value. The pattern appears informally across Cardano DeFi and adjacent ecosystems but has no current CIP standardising the on-chain shape.
+
+### 9.1 What V1 demonstrates
+
+The implementation in §2 (Policy Design) and §3 (Redeemer) carries the structural elements of an SBT under the Plutus V3 minting-policy model:
+
+- **Identity binding** — asset name embeds 28 bytes of the holder's PKH, so a single policy supports many one-of-one tokens each cryptographically tied to a distinct holder.
+- **Non-transferability** — enforced by the spending validator gating the UTXO containing the NFT: the NFT can move only between UTXOs sharing the same payment PKH (i.e., the signer's own wallet). Marketplace transfers fail at the validator level.
+- **Authorised mint origin** — the mint precondition requires consuming the singleton Governance NFT UTXO, so only governance-approved transactions can mint or rotate the SBT. No third party can produce a token under this policy.
+- **Authorised burn path** — the signer-rotation `RotateSigners` transaction burns the outgoing signer's SBT in the same TX, keeping the on-chain signer registry and the SBT set in lock-step.
+
+These four elements together constitute the SBT pattern as V1 instantiates it. None is novel — variants of each have appeared across Cardano DeFi — but the V1 form is concrete, audit-traced, and chain-verified, making it suitable as a reference instantiation if a Soul-Bound NFT CIP is ever authored.
+
+### 9.2 V1's posture toward CIP standardisation
+
+V1 does **not** author a CIP for this pattern at the V1 stage. The four general gates documented in [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) §4 apply — external audit pending, no independent implementation, no community-governance transition past founder-only, and the production stress evidence is still pre-mainnet. The pattern's documented form in this file is the V1 reference, not a draft specification.
+
+The §7 "Extensions (future)" entries — Contributor NFT, Auditor NFT — would each be additional instances of the same SBT pattern under different policy parameterisations. They are not V1 scope, and any future CIP discussion about Soul-Bound NFTs would address all three V1 instances (Gov Signer / Contributor / Auditor) under one umbrella rather than each separately.
+
+### 9.3 Distinction from the Validator Identity NFT pattern
+
+The Gov Signer NFT is **not** an instance of the [Validator Identity NFT pattern](./pattern-rationale-validator-identity-nft.md). The two patterns address different problems:
+
+| Pattern | Cardinality | Role | V1 instances |
+|---|---|---|---|
+| Validator Identity NFT | One-to-one (one NFT anchors one canonical UTXO) | Compile-time anchor for validator identity | Vault NFT, Governance NFT (the *spending validator's anchor*, not this file's signer-recognition NFT), Registry Auth NFT |
+| Soul-Bound NFT (this section) | One-per-holder | Identity / recognition claim, non-transferable | Gov Signer NFT (this file), future Contributor NFT, future Auditor NFT |
+
+The Gov **Signer** NFT (this file) is distinct from the Gov **Identity** NFT (the singleton that anchors the `multisig_gov` UTXO — see [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) §5.2). They share the word "Gov" but solve orthogonal problems.
+
+### 9.4 Related pattern-rationale docs
+
+- [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) — the Governance Identity NFT (one-shot anchor) that this Gov Signer NFT's mint policy depends on for authorisation; the two NFTs co-exist with distinct roles
+- [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) — `RotateSigners` is the redeemer that mints / burns Gov Signer NFTs as signers join or leave the multisig set
+- [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) — overall V1 stance on Cardano Improvement Proposals; Soul-Bound NFT is not in the five candidate-pattern list (the focus is on protocol-primitive patterns), but the §6 out-of-scope clarifications mention it implicitly
+
+---
+
+## 10. See Also
 
 - `spec/governance.md` §8 — signer rotation roadmap and launch signer set
 - `spec/multisig-gov.md` — MultisigGov validator internals

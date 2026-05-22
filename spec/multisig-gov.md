@@ -1,5 +1,7 @@
 # OptiVaults V1 — MultisigGov Validator Specification
 
+*Implementation of the MultiSig Governance + Timelock Pattern (see [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) for the generic pattern, trade-off discussion, and open CIP questions).*
+
 **Scope**: the internal implementation details of the `multisig_gov` validator — action_id computation, GovDatum spend/transition rules, cross-validator authorization helpers, and the separation of concerns between this validator and `governance.md` (the public actions catalog).
 
 This document is the implementation-level companion to `spec/governance.md`. If `governance.md` answers "what can governance do and when?", this document answers "how does the validator enforce those rules?".
@@ -74,7 +76,7 @@ type ActionKind {
   UpdateTreasuryParams                              // §4.11
   RotateSigners                                     // §4.12
   SlashBond                                         // Phase 3+ only; confiscate keeper bond
-  UpdateOracleSource                                // SwapAda oracle feed rotation (see spec/ada-swap.md)
+  UpdateSlippagePolicy                              // §4.3.1 — on-chain slippage policy adjustment (48h timelock)
   ActDeregisterStake                                // §4.13 (A2) stake-credential deregister + 2 ADA deposit refund
 }
 
@@ -157,7 +159,7 @@ Payload types per ActionKind (matches `governance.md` §4):
 | UpdateTreasuryParams | `(audit_bps, ops_bps, rd_bps, buffer_bps, cap_audit, cap_ops, cap_rd, cap_buffer)` |
 | RotateSigners | `(new_signers, new_threshold)` |
 | SlashBond | `(bond_owner, evidence_ref, slash_amount)` |
-| UpdateOracleSource | **TBD** — reserved ActionKind; payload layout will be finalized when the SwapAda oracle source is parameterized as a mutable (vs compile-time) anchor in V1.x |
+| UpdateSlippagePolicy | `(new_max_slippage_bps, new_min_swap_peg_bps)` — on-chain slippage policy adjustment for DeployToProtocol swap routing (48h timelock; bounded by `max_slippage_bps_cap = 500` and `min_swap_peg_bps ∈ [9_300, 9_950]`). See `spec/governance.md` §4.3.1. |
 | ActDeregisterStake | `target_hash` — the stake validator's own 28-byte script hash. `payload_hash_deregister_stake(target_hash) = blake2b_256(cbor.serialise(target_hash))`. Redundant-looking (the action's `target_script` field also pins this) but preserves the uniform `payload_hash_*` pattern used across every other ActionKind and guards against off-chain tooling that builds a QueueAction where `target_script ≠ payload_hash_input`. Covered validators: `vault_protocol`, `vault_liqwid`, `vault_admin`, `keeper_stake_script`. **Not covered**: `vault_core` (publish handler omitted due to 16 KB ceiling — see governance.md §4.13). |
 
 At ExecuteAction, the validator recomputes `payload_hash` from the actual redeemer passed to the target validator and compares to the queued `payload_hash`. Mismatch → reject.
@@ -430,7 +432,51 @@ Critical test cases for `multisig_gov_test.ak` (V1 internal-audit regression set
 
 ---
 
-## 10. See also
+## 10. Pattern Extraction
+
+The validator described in §1–§9 is V1's concrete instantiation of the **MultiSig Governance + Timelock Pattern**. The generic pattern is documented separately in [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md), which discusses trade-offs against alternatives, open CIP design questions, and the security argument that does not depend on V1's specific implementation choices. This section captures the boundary: which behaviour is *the pattern* (and therefore appears unchanged in any conforming implementation) versus which behaviour is *V1's operational policy on top of the pattern* (and therefore would change in a different deployment).
+
+### 10.1 What V1 inherits from the generic pattern
+
+All six mechanisms in [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) §2 are enforced by `multisig_gov.ak` without modification:
+
+| Mechanism | V1 enforcement point |
+|---|---|
+| m-of-n threshold signature | `count_signers_in_tx(tx, signers) >= threshold` checked on QueueAction + ExecuteAction + RotateSignersRedeemer |
+| Per-action timelock | `executable_at_ms = queued_at_ms + timelock_ms` recorded at queue; ExecuteAction rejects until `tx.validity_range.lower_bound >= executable_at_ms` |
+| 1-of-n cancel veto | CancelAction requires exactly one signer signature, not m-of-n |
+| Strict-monotonic nonce → `action_id` | `GovDatum.nonce` increments by 1 per QueueAction; `action_id` derived from `(nonce, action_kind, target_script, target_tx_hash, payload_hash, queued_at_ms, executable_at_ms, expires_at_ms)` — see §4 |
+| Payload-hash binding | `payload_hash` recorded at queue; downstream validators (`vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`, `registry`, `treasury`, `keeper_stake_script`) re-verify their actual payload's Blake2b-256 against this hash — see §5 + §7 |
+| Post-timelock TTL ceiling | `expires_at_ms = executable_at_ms + ttl_ms` recorded at queue; ExecuteAction rejects past `expires_at_ms` |
+
+Anyone reviewing or porting the pattern reads the generic rationale doc for these mechanisms' security reasoning; this V1 spec carries the concrete enforcement-point references.
+
+### 10.2 V1-specific elaborations beyond the pattern
+
+V1 adds three structural elaborations on top of the generic pattern. None is required by the pattern itself; each reflects an operational choice for the OptiVaults V1 deployment.
+
+**(a) Per-action-kind timelock floors and ceilings.** The generic pattern allows the queue redeemer to specify any `timelock_ms` value. V1 hardcodes a per-action-kind floor + ceiling table inside the validator so that a queue with `timelock_ms = 0` cannot bypass the protection for a sensitive action. Concrete values appear in `spec/governance.md` §4 per action — for example UpdateFeeSplit is constrained to a 21-day floor (most depositor-sensitive), EmergencyWithdraw to 0 days exactly (the emergency path), FastUpdateMarkets to a 1-hour floor (Liqwid migration agility). A future CIP could either standardise this floor/ceiling table or leave it as deployment policy; V1 picks deployment policy.
+
+**(b) Signer compensation pool + quarterly distribution.** `GovDatum` carries `signer_compensation_pool`, `last_distribute_ms`, `distribute_period_ms` (90 days) and supports `Heartbeat` + `DistributeSignerCompensation` redeemers — operational economics for the human signers monitoring the queue and signing legitimate actions. The pattern itself has no opinion on signer incentives; V1 embeds this layer because the OptiVaults deployment compensates signers from a slice of protocol fees. A different deployment could omit this layer entirely (smaller `GovDatum`, no Heartbeat / DistributeSignerCompensation redeemers, no quarterly distribution).
+
+**(c) Empty-hash flexible target mode.** Each queued action records a `target_tx_hash: ByteArray`. The pattern allows `target_tx_hash` to be either a specific 32-byte commitment (pre-commits to one TX hash at the target) or empty (`#""` — permits execution against any TX hash at the target that matches the `payload_hash`). V1 supports both modes through the same redeemer. The trade-off and selection guidance live in `spec/governance.md`. A future CIP-track discussion is suggested in the rationale doc's §7 open questions.
+
+### 10.3 Where this implementation departs from the pattern's recommendations
+
+The generic pattern recommends `threshold < signer_count` so the 1-of-n veto asymmetry is structurally meaningful. V1's launch configuration is 3-of-3 (i.e., `threshold == signer_count`), which violates this recommendation. The trade-off is explicit in `whitepaper.md` §8.6: V1 launches with a small founder-trusted signer set where unanimous approval reflects the actual operating reality, and the protocol's intended Phase 2+ trajectory (whitepaper §10) broadens the signer set to where `threshold < signer_count` becomes meaningful. The current configuration is acknowledged as a structural launch-stage limitation, not the long-term governance posture.
+
+### 10.4 Related pattern-rationale docs
+
+- [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) — the generic pattern (this validator's primary rationale)
+- [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) — the Governance NFT (one-shot mint anchor) that this validator depends on for canonical-UTXO authentication; see §3.2 of that doc for the V1 Governance NFT instantiation
+- [`pattern-rationale-registry-auth-nft.md`](./pattern-rationale-registry-auth-nft.md) — the Registry validator's `UpdateRegistry` redeemer is one of the 14 ActionKinds gated by this pattern
+- [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) — VaultDatum Tier 2 (policy) mutation requires governance actions through this validator
+- [`pattern-rationale-withdraw-zero-forwarding.md`](./pattern-rationale-withdraw-zero-forwarding.md) — vault-side governance redeemers (in `vault_gov_policy`, `vault_gov_emergency`, `vault_admin_deploy`) are reached through the Withdraw-Zero pattern with their payload bound by `payload_hash` to the queue recorded here
+- [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) — overall V1 stance on Cardano Improvement Proposals
+
+---
+
+## 11. See also
 
 - `spec/governance.md` — public-facing actions catalog, timelock rules, signer lifecycle
 - `spec/gov-nft.md` — Gov Signer NFT minted alongside signer rotations

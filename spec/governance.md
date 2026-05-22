@@ -1,6 +1,8 @@
 # governance.md — MultisigGov Actions Catalog
 
-V1 governance is an m-of-n multisig with timelock and cancel veto. This document enumerates every governance-gated action, its timelock, its cancel window, and the on-chain authorization flow.
+*Public-facing companion to the [`multisig-gov.md`](./multisig-gov.md) implementation spec. V1 governance instantiates the **MultiSig Governance + Timelock Pattern** documented in [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md); this catalog enumerates the 14 V1 action kinds, their timelock floors, and the cross-validator authorization flow.*
+
+V1 governance is an m-of-n multisig with timelock and cancel veto — the **MultiSig Governance + Timelock Pattern** instantiated for V1's specific action set. This document enumerates every governance-gated action, its timelock, its cancel window, and the on-chain authorization flow.
 
 ---
 
@@ -547,7 +549,33 @@ Heartbeat exists specifically so that signers in quiet quarters can still qualif
 
 ---
 
-## 10. See Also
+## 10. Pattern Extraction
+
+The catalog of 14 ActionKinds in §4 is the V1-specific instantiation of the **MultiSig Governance + Timelock Pattern**. The generic pattern — m-of-n threshold approval, per-action timelock, 1-of-n cancel veto, strict-monotonic nonce-bound `action_id`, payload-hash binding, post-timelock TTL ceiling — is documented in [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md), along with trade-offs against alternatives and open CIP design questions. The companion file [`multisig-gov.md`](./multisig-gov.md) §10 captures the implementation-side boundary between the pattern and V1's operational elaborations.
+
+### 10.1 What this catalog is
+
+- A **public-facing enumeration** of which ActionKinds V1 supports, what each one mutates, and on whose authority.
+- A **timelock-floor reference** (§3) — operational policy specific to OptiVaults V1, not part of the generic pattern.
+- A **cross-validator authorization flow** (§7) — the wiring between MultisigGov's payload-hash check and each consuming validator's payload-recomputation step.
+
+### 10.2 What this catalog is NOT
+
+- It is **not** the security argument for the pattern. The security argument is in [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) §4 (threshold security / detection time / veto asymmetry / replay resistance / payload immutability / TTL ceiling) and applies to any conforming implementation.
+- It is **not** a CIP draft. V1 does not author a CIP at the V1 stage; see [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) §4 for the four gates before V1 would consider authoring.
+- It is **not** the validator-level enforcement detail. That lives in [`multisig-gov.md`](./multisig-gov.md) §3–§9 (signer membership invariants, action_id computation, payload_hash computation, redeemer implementations, cross-validator authorization helpers, size considerations, regression test surface).
+
+### 10.3 Where to read next, by question
+
+- *"What guarantees does this governance design give a depositor?"* → [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) §4 (the generic security argument)
+- *"How does V1 enforce those guarantees in Aiken?"* → [`multisig-gov.md`](./multisig-gov.md) §3–§9 (the implementation spec)
+- *"What can V1 governance do and how long does each action take?"* → this file's §4 (the action catalog)
+- *"What V1-specific choices sit on top of the pattern?"* → [`multisig-gov.md`](./multisig-gov.md) §10 (timelock floors, signer compensation, empty-hash mode)
+- *"How does V1's governance design relate to Cardano-ledger-level CIP-1694 governance?"* → [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) §5 (complementary, not in tension)
+
+---
+
+## 11. See Also
 
 - `spec/architecture.md` — validator catalog, governance's role in the trust model
 - `spec/keeper-auth.md` — how governance authorizes keepers via `UpdateKeeperAuth`

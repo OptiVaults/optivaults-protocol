@@ -340,6 +340,24 @@ Audit firms evaluating V1 operational risk should note this posture as separate 
 
 ---
 
-## 9. Disclosure Policy
+## 9. Generic Patterns in V1 — CIP Extraction Opportunities
+
+V1's security argument rests in part on five recurring patterns documented in `spec/pattern-rationale-*.md`. The patterns appear across Cardano DeFi protocols informally; V1 instantiates each one with a documented, audit-traced implementation. None is V1-novel — variants exist in other live protocols — but the V1 instances are concrete reference points for future Cardano Improvement Proposal discussions. V1 does not author any CIP at the V1 release stage; see [`cip-readiness-posture.md`](./cip-readiness-posture.md) for the four gates before V1 would consider authoring.
+
+Each pattern's security argument is partially independent of V1's specific implementation choices. Reviewers and integrators reading this threat model should refer to the rationale docs for the cross-implementation parts of the argument.
+
+| Pattern | Rationale doc | Threat surface this defence closes (relative to this file's catalog) |
+|---|---|---|
+| Validator Identity NFT | [`pattern-rationale-validator-identity-nft.md`](../spec/pattern-rationale-validator-identity-nft.md) | "Forged state UTXO at the canonical script address" — §3.1.1 phantom-vault class, §3.3.1 phantom-Governance-UTXO class, §3.6.1 phantom-Registry-UTXO class. Defence is cryptographic via the compile-time UTXO-ref anchor; not key-trust-based |
+| MultiSig Governance + Timelock | [`pattern-rationale-multisig-gov-timelock.md`](../spec/pattern-rationale-multisig-gov-timelock.md) | "Compromised governance quorum" — §1 adversary class. The pattern composes m-of-n threshold + per-action timelock + 1-of-n cancel veto + nonce-bound action_id + payload-hash binding + TTL ceiling; defence sits on detection-time + asymmetric veto. The compromised-quorum residual risk remains non-zero (§7) — the pattern bounds the *speed* and *scope* of exploitation, not the existence of authority |
+| Withdraw-Zero Forwarding | [`pattern-rationale-withdraw-zero-forwarding.md`](../spec/pattern-rationale-withdraw-zero-forwarding.md) | "Monolithic-validator authorisation confusion" — the architectural substrate that allows V1 to separate user-callable / keeper-callable / governance-callable redeemers across distinct staking validators, each with its own authorisation rule. The pattern doesn't add new defences per se; it makes existing authorisation rules cleanly auditable per route |
+| Registry + Auth NFT Whitelist | [`pattern-rationale-registry-auth-nft.md`](../spec/pattern-rationale-registry-auth-nft.md) | "Off-chain-config injection" — §3.4 attack surface (destination-whitelist forgery). Defence is the Auth NFT anchor + per-redeemer mutation envelopes + upper-bound caps + time-cooldowns. Authenticated-read helper (`helpers.read_registry_datum`) is the centralised choke point that every consumer routes through |
+| VaultDatum Tiered Immutability | [`pattern-rationale-vault-datum-tiered.md`](../spec/pattern-rationale-vault-datum-tiered.md) | "Identity drift across non-deploy redeemers" — Tier 1 immutability via `check_immutable_fields` on every continuing-output redeemer. "Authorisation confusion across keeper / governance / user redeemers" — Tier 2 mutation requires explicit dedicated governance redeemers. The audit surface collapses from O(redeemers × fields) to O(redeemers + tiers) |
+
+For each pattern, the rationale doc's §4 covers the cross-implementation security argument; this file's threat-model catalog covers the V1-specific application. A reviewer comparing V1 against another protocol that uses the same pattern would compare implementations at the rationale-doc level, not at the V1-catalog level.
+
+---
+
+## 10. Disclosure Policy
 
 Any suspected vulnerability should be reported privately to `optivaults@gmail.com` with PGP encryption (key at optivaults.app/security). Response SLA: 24 hours acknowledgment, 72 hours triage, bounty payable from treasury audit reserve category per severity tier. Public disclosure follows a 90-day coordinated window unless actively exploited.
