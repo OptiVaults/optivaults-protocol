@@ -177,7 +177,47 @@ V2+ 可能會把 NFT 系統擴展為:
 
 ---
 
-## 9. 延伸閱讀
+## 9. CIP-applicability（soul-bound recognition NFT）
+
+Gov Signer NFT 是 **Soul-Bound NFT pattern** 的一個工作中實例 — 在 policy 強制的綁定條件下、鑄給特定持有者的不可轉移 token，用途是身份 / 認可 / 角色宣稱，而不是金融價值。這個模式在 Cardano DeFi 與鄰近生態系中以非正式形式出現，但目前沒有任何 CIP 把鏈上形狀標準化。
+
+### 9.1 V1 示範了什麼
+
+§2（Policy Design）與 §3（Redeemer）的實作在 Plutus V3 minting-policy 模型下，攜帶了一份 SBT 的結構元素：
+
+- **身份綁定** — asset name 嵌入持有者 PKH 的 28 bytes，所以單一一個 policy 可以支援多個 one-of-one token，每一個都從密碼學上綁到不同的持有者。
+- **不可轉移** — 由「守著裝有 NFT 的 UTXO」的 spending validator 強制：NFT 只能在「共用同一把 payment PKH」（亦即同一位簽名者自己錢包內部）的 UTXO 之間移動。在交易市場上轉移會在 validator 層被擋下來。
+- **授權 mint 來源** — 鑄造前提要求消費 singleton Governance NFT UTXO，所以只有 governance 核可過的交易才能鑄造或輪替 SBT。沒有第三方能在這個 policy 下產生 token。
+- **授權 burn 路徑** — 簽名者輪替的 `RotateSigners` 交易在同一筆 TX 內把退場簽名者的 SBT burn 掉，使「鏈上簽名者 registry」與「SBT 集合」保持同步。
+
+這四個元素合在一起構成 V1 實例化的 SBT 模式。每一項都不新 — Cardano DeFi 中都看過各自變體 — 但 V1 的形式是具體、有審計軌跡、且鏈上可驗證的，如果未來有人撰寫 Soul-Bound NFT CIP，它適合當作參考實例。
+
+### 9.2 V1 對 CIP 標準化的立場
+
+V1 在 V1 階段**不會**為這個模式撰寫 CIP。[`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) §4 中所列的四個一般 gate 都適用 — 外部審計尚未完成、沒有獨立實作、社群治理還沒從 founder-only 階段過渡、且生產壓力證據仍處於 pre-mainnet 狀態。本檔中模式被文件化的形式是 V1 參考實作,不是 CIP 草案。
+
+§7 「Extensions (future)」中列出的 Contributor NFT、Auditor NFT,每個都會是同一個 SBT 模式在不同 policy 參數化下的額外實例。它們不在 V1 範圍內;若未來有 Soul-Bound NFT CIP 討論,會把三個 V1 實例(Gov Signer / Contributor / Auditor)放在同一個傘狀討論下,而不是各自分開。
+
+### 9.3 與 Validator Identity NFT 模式的區別
+
+Gov Signer NFT **不是** [Validator Identity NFT 模式](./pattern-rationale-validator-identity-nft.md) 的實例。兩者處理不同問題:
+
+| 模式 | Cardinality | 角色 | V1 實例 |
+|---|---|---|---|
+| Validator Identity NFT | 一對一(一顆 NFT 錨定一顆標準 UTXO) | validator 身份的編譯期錨點 | Vault NFT、Governance NFT(*spending validator 的錨點*,不是本檔的簽名者-識別 NFT)、Registry Auth NFT |
+| Soul-Bound NFT(本節) | 每個持有者一顆 | 身份 / 認可宣稱、不可轉移 | Gov Signer NFT(本檔)、未來的 Contributor NFT、未來的 Auditor NFT |
+
+Gov **Signer** NFT(本檔)與 Gov **Identity** NFT(錨定 `multisig_gov` UTXO 的 singleton — 見 [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) §5.2)是不同的東西。兩者都用了「Gov」這個字,但解決的是正交的問題。
+
+### 9.4 相關 pattern-rationale 文件
+
+- [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) — Governance Identity NFT(one-shot anchor),本檔 Gov Signer NFT 的 mint policy 在授權上依賴它;兩顆 NFT 共存且角色不同
+- [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) — `RotateSigners` 是「簽名者加入或退出 multisig 集合時 mint / burn Gov Signer NFT」的 redeemer
+- [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) — V1 對 Cardano Improvement Proposals 的整體立場;Soul-Bound NFT 不在五個候選模式清單裡(重點放在 protocol-primitive 模式),但 §6 範圍外的釐清處有隱含提及
+
+---
+
+## 10. 延伸閱讀
 
 - `spec/governance.md §8` — 簽名者輪替路線圖與啟動簽名者集合
 - `spec/multisig-gov.md` — MultisigGov validator 內部

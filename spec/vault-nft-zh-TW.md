@@ -1,5 +1,7 @@
 # OptiVaults V1 — Vault Identity NFT 規格
 
+*Validator Identity NFT 模式的實作(通用模式、與 native-script 替代方案的取捨、待答 CIP 設計問題見 [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md))。V1 把同一個模式實例化了三次 — Vault NFT(本檔)、Governance NFT(見 `gov-nft.md`)、Registry Auth NFT(見 `pattern-rationale-registry-auth-nft.md`)。本檔是針對 Vault-NFT 實例化的 V1 案例研究。*
+
 **範圍**:one-shot Vault Identity NFT 的 minting policy,以及它作為編譯時信任錨點的角色。
 
 ---
@@ -171,7 +173,36 @@ V1 以 PlutusV3 換取的 trade-off:
 
 ---
 
-## 6. 相關 spec
+## 6. CIP-applicability
+
+Vault NFT 是 V1 對 [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) 所述 **Validator Identity NFT** 模式的參考實例。本模式是未來 Cardano Improvement Proposal 標準化的候選;V1 在 V1 階段不會撰寫 CIP。整體立場見 [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md)。
+
+### 6.1 V1 從通用模式繼承了什麼
+
+| 模式性質 | V1 Vault NFT 強制 |
+|---|---|
+| 編譯時 UTXO-ref 錨點 | `vault_nft` validator 以 `utxo_ref: OutputReference` 參數化;該參數由 V1 mainnet 部署 ceremony 選定 |
+| 密碼學 one-shot(整條鏈歷史最多 mint 一次) | mint 分支的前提條件 `list.any(tx.inputs, fn(i) { i.output_reference == utxo_ref })` — UTXO 在第一次 mint 時被消耗、之後再也無法被消耗 |
+| burn 永遠可用(無時間限制) | burn 分支無條件 — 只驗證 `asset_name` 與 `quantity == -1`。守著「裝有 NFT 的 UTXO」的 spending validator 決定 burn *什麼時候*可以發生 |
+| mint quantity 安全性 | mint 分支採用 `pair.2nd == 1` 嚴格相等(不是 `> 0`) |
+| 對 rogue-policy 注入的防禦 | `vault_proxy`、`vusdcx`、`order` validator 把 V1 特定的 `vault_nft_policy` 烘進自己的編譯時參數;攻擊者用不同 UTXO-ref 部署的 validator 副本會編出不同的 policy ID,通不過消費端的檢查 |
+
+§3.1–§3.4 提供 V1 特定的安全性論證;rationale 文件中通用模式的安全性推理原樣適用。
+
+### 6.2 V1 特定的設計選擇
+
+`asset_name` 被寫死為常數 `vault_nft_token_name = "OptiVault"`,沒有暴露為編譯時參數。模式文件允許兩種形式(見其 §7 待答問題 1)。V1 選擇寫死的形式,因為這個部署是單實例 — V1 階段並不打算支援 fork 客製;validator 程式碼在任何符合 V1 的部署上都是相同的。如果另一個部署想在同一份程式碼下支援多個不同 vault 實例,就會把 `asset_name` 暴露為第二個參數,跟 V1 的 `governance_nft.ak` 與 `registry_auth_nft.ak` 一樣(那兩個之所以暴露 `gov_name` / `asset_name`,是因為它們的重用 profile 不同)。
+
+### 6.3 相關 pattern-rationale 文件
+
+- [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) — 通用模式(本檔 Vault NFT 的主要 rationale)
+- [`pattern-rationale-withdraw-zero-forwarding.md`](./pattern-rationale-withdraw-zero-forwarding.md) §4.3 — singleton 強制的組合:Withdraw-Zero 本身並不會約束 vault address 上有幾顆 UTXO,Vault NFT 把這個縫合上
+- [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) — VaultDatum 的 identity tier 欄位包含依賴這顆 NFT 真實性的編譯時錨定 token 參考
+- [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) — V1 對 Cardano Improvement Proposals 的整體立場
+
+---
+
+## 7. 相關 spec
 
 - `spec/architecture.md §4` — validator #11 摘要列
 - `spec/vault-datum.md §2.3` — `vault_nft_policy` 如何作為 `vault_proxy`、`vusdcx`、`order` 的編譯時錨點使用

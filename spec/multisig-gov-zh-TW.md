@@ -1,5 +1,7 @@
 # OptiVaults V1 — MultisigGov Validator 規格
 
+*MultiSig Governance + Timelock Pattern 的實作(通用模式、與替代方案的取捨討論、待答 CIP 問題見 [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md))。*
+
 **範圍**:`multisig_gov` validator 的內部實作細節:action_id 計算、GovDatum spend / 轉移規則、跨 validator 授權 helper,以及本 validator 與 `governance.md`(公開動作目錄)的職責分離。
 
 本文件是 `spec/governance.md` 的**實作層級**伴隨文件。如果 `governance.md` 回答「治理能做什麼、什麼時候能做?」,本文件回答「validator 怎麼強制這些規則?」
@@ -74,7 +76,7 @@ type ActionKind {
   UpdateTreasuryParams                              // §4.11
   RotateSigners                                     // §4.12
   SlashBond                                         // Phase 3+ only;沒收 keeper bond
-  UpdateOracleSource                                // SwapAda oracle feed 輪替(見 spec/ada-swap.md)
+  UpdateSlippagePolicy                              // §4.3.1 — 鏈上 slippage policy 調整(48h timelock)
   ActDeregisterStake                                // §4.13(A2)取消 stake credential + 退 2 ADA 押金
 }
 
@@ -157,7 +159,7 @@ payload_hash = blake2b_256(cbor.serialise(payload))
 | UpdateTreasuryParams | `(audit_bps, ops_bps, rd_bps, buffer_bps, cap_audit, cap_ops, cap_rd, cap_buffer)` |
 | RotateSigners | `(new_signers, new_threshold)` |
 | SlashBond | `(bond_owner, evidence_ref, slash_amount)` |
-| UpdateOracleSource | **TBD**:保留的 ActionKind;payload 佈局在 V1.x 把 SwapAda oracle source 從編譯時錨點改為 mutable 欄位時定案 |
+| UpdateSlippagePolicy | `(new_max_slippage_bps, new_min_swap_peg_bps)`:DeployToProtocol swap routing 的鏈上 slippage policy 調整(48h timelock;受 `max_slippage_bps_cap = 500` 與 `min_swap_peg_bps ∈ [9_300, 9_950]` 界限約束)。見 `spec/governance.md` §4.3.1。 |
 | ActDeregisterStake | `target_hash`:stake validator 自己的 28-byte script hash。`payload_hash_deregister_stake(target_hash) = blake2b_256(cbor.serialise(target_hash))`。看起來冗餘(動作的 `target_script` 欄也釘這個),但保留跨所有 ActionKind 一致的 `payload_hash_*` 模式,並擋住 off-chain 工具構造 `target_script ≠ payload_hash_input` 的 QueueAction。涵蓋的 validator:`vault_protocol`、`vault_liqwid`、`vault_admin`、`keeper_stake_script`。**不涵蓋**:`vault_core`(publish handler 因 16 KB 上限省略,見 governance.md §4.13)。 |
 
 ExecuteAction 時,validator 從實際傳給 target validator 的 redeemer 重新計算 `payload_hash`,並與 queued 的 `payload_hash` 比對。不相符 → 拒絕。
@@ -430,7 +432,51 @@ let governance_authorized = is_gov_authorized(
 
 ---
 
-## 10. 延伸閱讀
+## 10. Pattern Extraction
+
+§1–§9 描述的 validator 是 **MultiSig Governance + Timelock Pattern** 的 V1 具體實例。通用模式被獨立文件化在 [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md),內容包括與替代方案的取捨、待答 CIP 設計問題、以及不依賴 V1 具體實作選擇的安全性論證。本節抓住邊界:哪些行為屬於*模式本身*(因此在任何符合此模式的實作中都會原樣出現),哪些屬於 *V1 在模式之上的操作政策*(因此會隨部署改變)。
+
+### 10.1 V1 從通用模式繼承了什麼
+
+[`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) §2 的六個機制在 `multisig_gov.ak` 中被原樣執行:
+
+| 機制 | V1 強制點 |
+|---|---|
+| m-of-n 門檻簽名 | `count_signers_in_tx(tx, signers) >= threshold` 在 QueueAction + ExecuteAction + RotateSignersRedeemer 上檢查 |
+| 每個動作各自的 timelock | queue 時記錄 `executable_at_ms = queued_at_ms + timelock_ms`;ExecuteAction 在 `tx.validity_range.lower_bound >= executable_at_ms` 之前拒絕 |
+| 1-of-n cancel veto | CancelAction 要求剛好一位 signer 簽名,不是 m-of-n |
+| 嚴格單調 nonce → `action_id` | 每次 QueueAction 都讓 `GovDatum.nonce` 加 1;`action_id` 由 `(nonce, action_kind, target_script, target_tx_hash, payload_hash, queued_at_ms, executable_at_ms, expires_at_ms)` 推出 — 見 §4 |
+| payload-hash 綁定 | queue 時記錄 `payload_hash`;下游 validator(`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`、`registry`、`treasury`、`keeper_stake_script`)再次驗證實際 payload 的 Blake2b-256 是否等於這個 hash — 見 §5 + §7 |
+| timelock 過後的 TTL 上限 | queue 時記錄 `expires_at_ms = executable_at_ms + ttl_ms`;ExecuteAction 過了 `expires_at_ms` 即拒絕 |
+
+任何要 review 或 port 這個模式的人,都會去讀通用 rationale 文件來理解這些機制的安全性推理;本 V1 規格只攜帶具體強制點的位置。
+
+### 10.2 V1 在模式之外多加的具體延伸
+
+V1 在通用模式之上多加了三層結構性延伸。沒有任何一層是模式本身要求的;每一層都反映 OptiVaults V1 這個部署的操作選擇。
+
+**(a) 每種 action kind 各自的 timelock 下限與上限。** 通用模式允許 queue redeemer 指定任何 `timelock_ms` 值。V1 在 validator 內把每種 action kind 的 floor + ceiling 表寫死,使得 `timelock_ms = 0` 的 queue 無法繞過敏感動作該有的保護。具體數值見 `spec/governance.md` §4 中每個動作 — 例如 UpdateFeeSplit 被限為 21 天下限(對存款人最敏感)、EmergencyWithdraw 必須是剛好 0 天(緊急路徑)、FastUpdateMarkets 是 1 小時下限(Liqwid 遷移的敏捷度)。未來的 CIP 可以把這份 floor/ceiling 表標準化,或是留為部署政策;V1 選擇部署政策。
+
+**(b) Signer 補償池 + 每季分發。** `GovDatum` 攜帶 `signer_compensation_pool`、`last_distribute_ms`、`distribute_period_ms`(90 天),並支援 `Heartbeat` + `DistributeSignerCompensation` redeemer — 這是給「監看 queue 與在合法動作上簽名」的人類簽名者的操作經濟學。模式本身對 signer 激勵不表態;V1 之所以嵌入這一層,是因為 OptiVaults 部署從協議費用中切一部分來補償 signer。另一個部署可以完全省略這一層(更小的 `GovDatum`、沒有 Heartbeat / DistributeSignerCompensation redeemer、沒有每季分發)。
+
+**(c) Empty-hash 彈性目標模式。** 每個 queued action 都記一份 `target_tx_hash: ByteArray`。模式允許 `target_tx_hash` 是具體的 32-byte 承諾(預先承諾 target 上的某一個 TX hash)或空(`#""` — 允許在 target 上對任何符合 `payload_hash` 的 TX hash 執行)。V1 透過同一個 redeemer 同時支援兩種模式。取捨與選擇指引在 `spec/governance.md`。未來 CIP 軌的討論在 rationale 文件 §7 待答問題中有建議。
+
+### 10.3 本實作在哪些地方偏離了模式的建議
+
+通用模式建議 `threshold < signer_count`,讓 1-of-n veto 的不對稱在結構上有意義。V1 啟動配置是 3-of-3(亦即 `threshold == signer_count`),違反這個建議。取捨在 `whitepaper.md` §8.6 明示:V1 啟動時是 founder-trusted 的小簽名者集合,全員一致的核可反映了實際運維現況;且協議計畫的 Phase 2+ 軌跡(whitepaper §10)會把簽名者集合擴大到「`threshold < signer_count` 變得有意義」的程度。當前配置被承認是結構性的啟動階段限制,不是長期治理姿態。
+
+### 10.4 相關 pattern-rationale 文件
+
+- [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) — 通用模式(本 validator 的主要 rationale)
+- [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) — Governance NFT(one-shot mint anchor),本 validator 依賴它做標準 UTXO 認證;V1 Governance NFT 實例化見該文件 §3.2
+- [`pattern-rationale-registry-auth-nft.md`](./pattern-rationale-registry-auth-nft.md) — Registry validator 的 `UpdateRegistry` redeemer 是 14 種 ActionKind 之中受本模式守的動作之一
+- [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) — VaultDatum Tier 2(policy)變更需要透過本 validator 走治理動作
+- [`pattern-rationale-withdraw-zero-forwarding.md`](./pattern-rationale-withdraw-zero-forwarding.md) — vault 端的治理 redeemer(在 `vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`)透過 Withdraw-Zero 模式被觸發,且其 payload 經由 `payload_hash` 綁回此處所 queue 的 action
+- [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) — V1 對 Cardano Improvement Proposals 的整體立場
+
+---
+
+## 11. 延伸閱讀
 
 - `spec/governance.md` — 公開動作目錄、timelock 規則、簽名者生命週期
 - `spec/gov-nft.md` — 與簽名者輪替同時鑄造的 Gov Signer NFT

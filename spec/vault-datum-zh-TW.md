@@ -1,5 +1,7 @@
 # OptiVaults V1 — VaultDatum 規格
 
+*VaultDatum Tiered Immutability 模式的實作(通用模式、強制 tier 邊界的 helper 函數紀律、與待答 CIP 設計問題見 [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md))。V1 的 29 個欄位組織在四個 tier — identity-immutable、governance-mutable policy、accounting、operational — 並由 `check_immutable_fields` 與 `check_policy_fields_unchanged` helper 在每一條會產出 continuing vault output 的 redeemer 上強制執行該 tier 的變更包絡。*
+
 **範圍**:存放所有 vault 會計狀態的單一 UTxO datum。
 
 ---
@@ -8,7 +10,7 @@
 
 ```aiken
 type VaultDatum {
-  // --- 會計狀態(在特定 redeemer 下可變) ---
+  // --- Tier 3 — 會計狀態(逐 redeemer 變動,搭配各自的數學不變式) ---
   total_deposited: Int,           // USDCx 總本金 + 累積收益(6 位小數)
   total_shares: Int,              // vUSDCx 總供給
   idle_buffer: Int,               // 尚未部署、留在 vault 地址的 USDCx
@@ -20,7 +22,7 @@ type VaultDatum {
   strategy_allocations: List<Allocation>,  // 每個協議的目標配置
   liqwid_positions: List<LiqwidPosition>,  // 每個市場的 Liqwid 持倉
 
-  // --- 政策參數(在治理 redeemer 下可調) ---
+  // --- Tier 2 — 政策參數(只透過專屬治理 redeemer 變動) ---
   performance_fee_bps: Int,       // 績效費 bps,[0, 450]
   early_withdraw_fee_bps: Int,    // Early withdrawal fee bps
   min_hold_seconds: Int,          // Compound 後到 Direct Withdraw 間的最短持有時間
@@ -31,7 +33,7 @@ type VaultDatum {
   max_slippage_bps: Int,          // §5.4 P2 Tier 1 oracle 公允價邊界,[0, 500](5% 上限)
   min_swap_peg_bps: Int,          // §5.4 P2 Tier 2 peg-floor 邊界,[9_300, 9_950]
 
-  // --- 不可變的身份參數 ---
+  // --- Tier 1 — 身份(不可變;由 check_immutable_fields helper 守) ---
   vault_version: Int,             // V1 = 1;debug + 版本閘控鏈下工具用
   governance_policy: ByteArray,   // 治理 NFT policy ID
   governance_name: ByteArray,     // 治理 NFT asset name
@@ -42,7 +44,7 @@ type VaultDatum {
   registry_hash: ByteArray,       // Registry validator hash
   registry_auth_policy: ByteArray,  // Registry auth NFT policy
 
-  // --- 運營旗標 ---
+  // --- Tier 4 — 運營旗標(單向轉移;除 CommunitySunset / Emergency 之外的 redeemer 全部保留) ---
   frozen: Int,                          // 0 = 正常、1 = 緊急凍結
   community_sunset_triggered: Int,      // 0 = 正常、1 = dead-man-switch 已觸發(Phase 1,見 governance.md §4.4.1)
 }
@@ -63,7 +65,7 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 
 ## 2. 逐欄位說明
 
-### 2.1 會計狀態
+### 2.1 Tier 3 — 會計狀態(10 個欄位)
 
 | 欄位 | 型別 | 意義 | 不變量 |
 |------|------|------|-------|
@@ -78,7 +80,7 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 | `strategy_allocations` | List<Allocation> | 每個協議的目標配置,即資本應如何分配。每項包含 `protocol_name`(enum:`Liqwid`、`MinswapLP`、`SundaeSwapLP`)+ `amount` + `expected_apy_bps`。 | 長度 ≤ 10;`Σ amount + idle_buffer <= total_deposited + non_deposit_value + Σ liqwid_principal` |
 | `liqwid_positions` | List<LiqwidPosition> | 每個 Liqwid 市場的持倉。每項 = `{market_id, qtokens_held, supplied_value}`。 | 長度 ≤ 5;`qtokens_held > 0` 代表該部位存在;`supplied_value == 0` 代表已完全 recall |
 
-### 2.2 政策參數
+### 2.2 Tier 2 — 政策參數(8 個欄位)
 
 | 欄位 | 型別 | V1 啟動值 | 治理可調範圍 | 透過誰調整 |
 |------|------|-----------|--------------|-----------|
@@ -109,7 +111,7 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 
 每次 fee-split 變更都是獨立的 `UpdateFeeSplit` 治理動作,帶完整 21 天 timelock + 1-of-n cancel 否決。變更從**下次** Compound 之後才適用;已累積的 gov pool 資金保留先前的處理方式,直到分配。
 
-### 2.3 身份參數(不可變)
+### 2.3 Tier 1 — 身份參數(9 個不可變欄位)
 
 | 欄位 | 值 | 用途 |
 |------|------|------|
@@ -121,7 +123,7 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 | `registry_hash` | (部署時設定) | Registry validator hash。DeployToProtocol / RecallFromProtocol 把 Registry UTxO 當 reference input 讀,地址必須 match。 |
 | `registry_auth_policy` | (部署時設定) | Registry auth NFT policy。Registry UTxO 必須帶此 policy 的 token 才被信任。 |
 
-### 2.4 運營旗標
+### 2.4 Tier 4 — 運營旗標(2 個單向欄位)
 
 | 欄位 | 值 | `= 1` 時的效果 |
 |------|------|---------------|
@@ -188,3 +190,34 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 4. 最後一位存入者退場後,內部驗證期的 vault UTxO 被銷毀
 
 **沒有**從內部驗證期到 V1 的原地升級路徑:Cardano 合約不可變使這結構上不可能。新的合約面,唯一選項就是 fresh deploy。
+
+---
+
+## 6. CIP-applicability
+
+`VaultDatum` 的 4-tier 組織(Tier 1 identity / Tier 2 policy / Tier 3 accounting / Tier 4 operational),搭配 `check_immutable_fields` 與 `check_policy_fields_unchanged` helper 在每一條 redeemer 上強制執行該 tier 的變更包絡,是 V1 對 [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) 中所述 **VaultDatum Tiered Immutability** 模式的實例化。本模式是未來 Cardano Improvement Proposal 標準化的候選;V1 在 V1 階段不會撰寫 CIP。整體立場見 [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md)。
+
+### 6.1 V1 從通用模式繼承了什麼
+
+| 模式性質 | V1 強制點 |
+|---|---|
+| Tier 1(身份)在每一條 non-deploy redeemer 上保持不變 | `lib/vault/validation.ak` 中的 `check_immutable_fields(old, new)` 對 9 個身份欄位執行相等性檢查。從九個 call site 被呼叫 — 七個在 `validation.ak`、兩個在 `helpers.ak`。每一條會產出 continuing vault output 的 redeemer 都會走到其中一個 |
+| Tier 2(政策)只透過專屬治理 redeemer 變動 | 非 policy-changing redeemer 全部呼叫 `check_policy_fields_unchanged(old, new)`,對 8 個政策欄位執行相等性檢查。四條 policy-changing redeemer — `UpdateFee`、`UpdateFeeSplit`、`UpdateStrategy`、`UpdateSlippagePolicy` — 明確列舉它擁有哪些政策欄位 |
+| Tier 3(會計)由每條 redeemer 的數學不變式守 | 每條 redeemer 各自攜帶明確的 delta(share 數學、fee 數學、buffer 約束、配置守恆、oracle 界限)。§4 的 state-transition 矩陣是審計的主要檢視對象 |
+| Tier 4(運營)單向旗標在不轉移它的 redeemer 上保持不變 | `frozen` 與 `community_sunset_triggered` 在每一條 redeemer 中都被保留,除了少數明確轉移它們的 redeemer;`community_sunset_triggered` 的轉移是單向(0 → 1,不可逆),`frozen` 的反向則僅透過專屬治理 redeemer 提供 |
+
+§3「在每一條 redeemer 上檢查的不變式」+ §4「依 redeemer 看的狀態轉移」攜帶 V1 具體的逐列對帳;rationale 文件中通用模式的審計面推理(O(N×M) → O(N + tier_count))原樣適用。
+
+### 6.2 V1 在模式之上的具體設計選擇
+
+- **兩個 helper、不是一個** — V1 把 `check_immutable_fields`(Tier 1)與 `check_policy_fields_unchanged`(Tier 2)分開,而不是合在一起。理由是可審計性:policy-changing redeemer 只呼叫 `check_immutable_fields`,然後列舉自己擁有哪些 Tier 2 欄位,於是「這條 redeemer 在 Tier 2 動了什麼」與「哪些保持不變」之間的差異一眼可看。如果合成一個 helper,每條 policy-changing redeemer 都得 inline 它*不*擁有的 Tier 2 欄位的相等性檢查,審計面會加倍。
+- **逐欄位的界限檢查 helper** — Tier 2 變更 redeemer 不只斷言「新值與舊值不同」;它們還透過專屬的 `validate_update_fee` / `validate_update_strategy` helper 強制數值界限(`performance_fee_bps ∈ [0, 450]`、`min_swap_peg_bps ∈ [9_300, 9_950]` 等等)。這些界限檢查 helper 是 V1 的操作政策,不是通用模式的一部分。
+- **Tier 4 `community_sunset_triggered` 與 redeemer 授權的互動** — 這個單向旗標的轉移會把幾條原本只能由 keeper 授權的路徑放給任何人呼叫。這層授權層級的耦合是 V1 特定的延伸(通用模式只規定 Tier 4 旗標單向;不規定其他 validator 應該怎麼依旗標決定行為)。
+
+### 6.3 相關 pattern-rationale 文件
+
+- [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) — 通用模式(本檔的主要 rationale)
+- [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) — 讓其他 validator 能信任這份 datum 的 Vault NFT 錨點(沒有 NFT 錨定的話,datum 可以在 vault address 上被偽造)
+- [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) — 守 Tier 2 變更的治理機制
+- [`pattern-rationale-withdraw-zero-forwarding.md`](./pattern-rationale-withdraw-zero-forwarding.md) — 讓多個 route validator 共用這一份 datum 的架構基底
+- [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) — V1 對 Cardano Improvement Proposals 的整體立場
