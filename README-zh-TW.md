@@ -127,9 +127,9 @@ V1 另外為它實作的五個反覆出現的 Cardano DeFi 模式發布了**模�
 
 ### 開發歷史說明
 
-本 repo 在 2026-04-22 以 **`v1-postphase77d-preprod`** release tag 起頭。程式碼本身有更早的開發歷史(約 1,000+ commit,跨越多輪內部驗證期迭代),在 V1 切換時整批整合收攏。內部驗證期的細節整理在 `spec/architecture.md §4.1`(切分歷史)與 `docs/migration.md`(sunset 計畫)。
+本 repo 在 2026 年 4 月作為 V1 branch 公開發布,整合收攏了大約 1,000+ commit 的內部驗證期迭代。內部驗證期脈絡見 `spec/architecture.md §4.1`(切分歷史)與 `docs/migration.md`(sunset 計畫)。
 
-給審計合作方:V1 的審計基準是 `v1-postphase77d-preprod` tag。更早的開發歷史可依需要在非正式保密前提下提供。
+給審計合作方:V1 的審計基準會是 engagement letter 簽署時 v1 branch 上釘住的那個 commit。更早的開發歷史可依需要在非正式保密前提下提供。
 
 ---
 

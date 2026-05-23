@@ -33,17 +33,19 @@ their UTXOs back to the wallet. Once destroyed, they can only be
 re-created by re-deploying them (each ~40-70 ADA min-UTXO) — which
 costs more than the 28 ADA being recovered.
 
-**Historical incident**: 2026-04-22 `v1-postphase77d-preprod` sunset.
-Reclaim-refs was run before A2. All 18 ref scripts consumed. Attempt to
-queue A2 deregister for `vaultUser` failed with:
+**Failure mode (ref-script premature reclaim)**: If reclaim-refs is run
+before A2's Execute step, all ref scripts are consumed before A2 needs
+them. The subsequent A2 deregister queue attempt then fails with:
 
 ```
 [ERROR] multisig_gov ref script not found on-chain
 ```
 
-24 ADA in stake deposits locked permanently on that release.
+The stake deposits on that ceremony cannot be recovered — the
+governance Execute path cannot complete without the ref scripts, and
+re-deploying replacements costs more than the deposit being recovered.
 The fixed reclaim order documented in this runbook is the durable
-response to that incident.
+response to this class of out-of-order failure.
 
 ---
 

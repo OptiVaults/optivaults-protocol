@@ -13,7 +13,7 @@
  *
  * Usage:
  *   npx tsx deploy/tools/sunset-ceremony.ts \
- *     --network Preprod --releaseTag v1-postphase77d-preprod
+ *     --network Preprod --releaseTag <your-release-tag>
  *
  * Flags:
  *   --phase queue    — only step 1

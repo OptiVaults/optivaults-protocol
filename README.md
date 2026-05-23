@@ -132,9 +132,9 @@ Each document is written as a standalone V1 reference. No document in this tree 
 
 ### Development history note
 
-This repository was initialized at the **`v1-postphase77d-preprod`** release tag on 2026-04-22. The codebase has earlier development history (~1,000+ commits across prior internal-verification-phase iterations) that was consolidated at V1 cutover. The internal-verification phase is covered in `spec/architecture.md §4.1` (partitioning history) and `docs/migration.md` (sunset plan).
+This repository was published as the V1 branch in April 2026, consolidating roughly 1,000+ commits of prior internal-verification-phase iterations. The internal-verification phase context is covered in `spec/architecture.md §4.1` (partitioning history) and `docs/migration.md` (sunset plan).
 
-For audit engagement: the V1 audit baseline is the `v1-postphase77d-preprod` tag. Earlier development history is available on request under informal confidentiality.
+For audit engagement: the V1 audit baseline will be the v1-branch commit pinned at the time the engagement letter is signed. Earlier development history is available on request under informal confidentiality.
 
 ---
 
