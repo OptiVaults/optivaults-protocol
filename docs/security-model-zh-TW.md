@@ -341,6 +341,24 @@ V1 定位為非商業 Cardano DeFi 公共財參考實作:**不是投資產品、
 
 ---
 
-## 9. 揭露政策
+## 9. V1 之中的通用模式 — CIP 萃取機會
+
+V1 的安全性論證部分建立在 `spec/pattern-rationale-*.md` 中所述五個反覆出現的模式之上。這些模式在 Cardano DeFi 協議中以非正式形式出現過;V1 把每一個都實例化成一份有文件、有審計軌跡的實作。沒有一個是 V1 自創的 — 在其他正在運行的協議都看得到變體 — 但 V1 的實例可以當作未來 Cardano Improvement Proposal 討論的具體參考點。V1 在 V1 release 階段不會撰寫 CIP;V1 是否未來才考慮撰寫的四個 gate 見 [`cip-readiness-posture.md`](./cip-readiness-posture.md)。
+
+每個模式的安全性論證有一部分獨立於 V1 的具體實作選擇。讀本威脅模型的審查者與整合者,如果關心跨實作的論證部分,應該參照對應的 rationale 文件。
+
+| 模式 | Rationale 文件 | 這層防禦對應本檔目錄中的哪個威脅面 |
+|---|---|---|
+| Validator Identity NFT | [`pattern-rationale-validator-identity-nft.md`](../spec/pattern-rationale-validator-identity-nft.md) | 「在標準 script address 上偽造狀態 UTXO」 — §3.1.1 phantom-vault 類、§3.3.1 phantom-Governance-UTXO 類、§3.6.1 phantom-Registry-UTXO 類。防禦是密碼學的(透過編譯時 UTXO-ref 錨點),不是 key-trust 型 |
+| MultiSig Governance + Timelock | [`pattern-rationale-multisig-gov-timelock.md`](../spec/pattern-rationale-multisig-gov-timelock.md) | 「被入侵的治理 quorum」 — §1 對手類別。模式組合了 m-of-n 門檻 + 每動作 timelock + 1-of-n cancel veto + nonce 綁定 action_id + payload-hash 綁定 + TTL 上限;防禦建立在偵測時間 + 不對稱的 veto 上。被入侵 quorum 的殘餘風險仍然非零(§7) — 模式約束的是利用的*速度*與*範圍*,不是權限本身的存在 |
+| Withdraw-Zero Forwarding | [`pattern-rationale-withdraw-zero-forwarding.md`](../spec/pattern-rationale-withdraw-zero-forwarding.md) | 「單體 validator 的授權混淆」 — 是讓 V1 把使用者可呼叫 / keeper 可呼叫 / governance 可呼叫的 redeemer 切散在不同 staking validator(各自有自己的授權規則)的架構基底。模式本身不新增防禦;它讓既有授權規則可以乾淨地依 route 被審計 |
+| Registry + Auth NFT Whitelist | [`pattern-rationale-registry-auth-nft.md`](../spec/pattern-rationale-registry-auth-nft.md) | 「鏈下 config 注入」 — §3.4 攻擊面(目的地白名單偽造)。防禦是 Auth NFT 錨定 + per-redeemer 變更包絡 + 上限 cap + 時間 cooldown。Authenticated-read helper(`helpers.read_registry_datum`)是每個消費端都會經過的集中化扼制點 |
+| VaultDatum Tiered Immutability | [`pattern-rationale-vault-datum-tiered.md`](../spec/pattern-rationale-vault-datum-tiered.md) | 「跨 non-deploy redeemer 的身份漂移」 — 透過在每條會產出 continuing output 的 redeemer 上呼叫 `check_immutable_fields` 強制 Tier 1 不可變性。「跨 keeper / governance / user redeemer 的授權混淆」 — Tier 2 變更必須走專屬治理 redeemer。審計面從 O(redeemer × 欄位)縮到 O(redeemer + tier) |
+
+每個模式的 rationale 文件 §4 涵蓋跨實作的安全性論證;本檔威脅模型目錄涵蓋 V1 特定的應用。要把 V1 與另一個用同模式的協議放在一起比較的審查者,會在 rationale 文件層比較實作,而不是在 V1 目錄層比較。
+
+---
+
+## 10. 揭露政策
 
 任何疑似漏洞請私下寄到 `optivaults@gmail.com`,建議用 PGP 加密(key 在 optivaults.app/security)。回應 SLA:24 小時確認收到、72 小時 triage;依嚴重性 tier 從 treasury audit reserve 類別支付 bounty。公開揭露預設 90 天協調窗口,除非漏洞正在被積極利用。

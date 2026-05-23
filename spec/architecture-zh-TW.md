@@ -3,6 +3,8 @@
 **狀態**:V1 設計規格
 **對象**:協議審計者、智能合約開發者、整合者、具技術素養的存入者
 
+*V1 的架構實例化了五個反覆出現的 Cardano-DeFi 設計模式,通用模式文件單獨放在 `spec/pattern-rationale-*.md` — 對照表見 §9。本檔描述 V1 特定的模式組合;rationale 文件用通用詞彙描述模式本身。*
+
 ---
 
 ## 1. 一段話說明產品
@@ -409,7 +411,25 @@ V1 mainnet 可能呈現與估計不同的部署時 ADA 需求。Operator 應該�
 
 ---
 
-## 9. 相關文件引用
+## 9. V1 實例化的通用模式
+
+V1 是五個反覆出現模式的組合。每個模式都有專屬的 `pattern-rationale-*.md` 文件,涵蓋與替代方案的取捨、安全性質、與待答 CIP 設計問題。模式文件刻意寫成**通用的** — V1 只是其中一個實例;在另一個協議裡這個模式會長得很像。下表顯示每個模式在 V1 的位置。
+
+| # | 模式(公開名稱) | Rationale 文件 | V1 在本架構中的家 |
+|---|---|---|---|
+| 1 | Validator Identity NFT | [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) | 三個 one-shot mint policy,分別錨定標準的 Vault UTXO(§3.1, `vault_nft`)、標準的 Governance UTXO(§3.3, `governance_nft`)、與標準的 Registry UTXO(§3.6, `registry_auth_nft`) |
+| 2 | MultiSig Governance + Timelock | [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) | `multisig_gov` validator(§3.3、§5.12) — 14 個 ActionKind、每動作各自 timelock 下限、1-of-n cancel veto、payload-hash 綁定 |
+| 3 | Withdraw-Zero Forwarding | [`pattern-rationale-withdraw-zero-forwarding.md`](./pattern-rationale-withdraw-zero-forwarding.md) | `vault_proxy` + 10 個被路由的 staking validator(§4、§6) — V1 邏輯切分的結構骨幹 |
+| 4 | Registry + Auth NFT Whitelist | [`pattern-rationale-registry-auth-nft.md`](./pattern-rationale-registry-auth-nft.md) | `registry` validator + Registry Auth NFT(§3.6) — governance-mutable 的允許目的地、swap adapter、Liqwid 市場、oracle 白名單 |
+| 5 | VaultDatum Tiered Immutability | [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) | 29 個欄位的 `VaultDatum` 組織在四個 tier(§3.1,見 `spec/vault-datum.md` §1+§6) — `check_immutable_fields` + `check_policy_fields_unchanged` helper 在每一條 redeemer 上強制 tier 變更包絡 |
+
+這五個模式互相組合:一個 Withdraw-Zero proxy(#3)路由到那些在「由 Identity NFT(#1)錨定的狀態 UTXO」上改寫一份 tiered datum(#5)的 staking validator;落在使用者可呼叫面之外的狀態變更需要 governance 核可(#2);而 governance-mutable 的目的地 configuration 放在另一顆由獨立 NFT 錨定的 Registry(#4)裡,給 routing validator 當作 reference input 讀。
+
+[`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) 攜帶 V1 的整體立場:V1 在適用時使用既有的 CIP,但 V1 階段不會撰寫任何 CIP。V1 是否未來才考慮撰寫的四個 gate 寫在那份文件 §4。
+
+---
+
+## 10. 相關文件引用
 
 - `spec/vault-datum.md` — VaultDatum 欄位精確定義、不可變性分類、每 redeemer 的轉移規則
 - `spec/treasury.md` — TreasuryDatum、類別數學、支出 redeemer 規則、audit reserve 鎖定機制
