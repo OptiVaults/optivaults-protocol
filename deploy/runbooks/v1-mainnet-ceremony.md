@@ -21,7 +21,7 @@ Do NOT start this ceremony if any of these are false:
 - [ ] **Deploy-wallet UTxO hygiene**. Run `tsx deploy/tools/scrub-deploy-wallet.ts --network Mainnet --releaseTag v1-mainnet-r0` BEFORE invoking `deploy.ts`. The scrub fold consolidates token-tank UTxOs into `tankAdaPerBucket = 30 ADA` bins and leaves the wallet with ≥ 1 pure-ADA UTxO ≥ 50 ADA at the front of the coin pool. **Why both halves matter**: (a) `deployRefScript.ts::consolidateTokensIfNeeded` re-folds existing tanks at exactly 30 ADA each — without a pure-ADA UTxO to absorb the ~600K-1.2M lovelace TX fee, the consolidator throws an actionable `[deployRefScript] consolidation BLOCKED: wallet has 0 pure-ADA UTxOs` (replaces the older opaque `change too small: -N` failure mask). (b) The stake-credential registration step now uses `fetchPureAdaUtxosForStakeReg` (Blockfrost-direct query that filters scriptRef-bearing + token-carrying + < 3 ADA UTxOs) instead of Lucid's wallet coin selector, preventing accidental ref-script destruction. A clean wallet keeps both helpers' inputs available. Confirm post-scrub by inspecting wallet UTxOs and checking that pure-ADA pool ≥ 100 ADA and at least one pure-ADA UTxO ≥ 3 ADA exists.
 - [ ] Blockfrost Mainnet quota: ≥ 2,000 requests headroom (ceremony consumes ~400–600 requests over 10–15 min).
 - [ ] Key daemon running on the deploy host with the mainnet deploy wallet seed unlocked. Socket path canonicalized.
-- [ ] `git status` clean on the working tree. `aiken check` in `contracts/` passes 218 tests / 0 failed (213 unit + 5 property × 100 iter ≈ 713 randomized checks).
+- [ ] `git status` clean on the working tree. `aiken check` in `contracts/` passes with 0 failed tests on the ceremony commit.
 - [ ] `deploy/state/mainnet-<releaseTag>.json` does NOT exist (or is archived). Starting fresh.
 
 ---
@@ -48,7 +48,7 @@ Mainnet wallet budget recommendation: **≥ 1,000 ADA** (as above, with headroom
 cd contracts
 rm -rf build plutus.json
 aiken build                      # plain build — NO --trace-level / --trace-filter on mainnet
-aiken check                      # 218 tests / 0 failed (213 unit + 5 property × 100 iter)
+aiken check                      # all tests pass / 0 failed
 ```
 
 **Pre-build constants audit** — partial-patch defence. Before `aiken build`, confirm the Preprod-vs-mainnet timelock posture via three greps against `lib/vault/constants.ak`:
