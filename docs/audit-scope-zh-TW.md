@@ -32,6 +32,23 @@ V1 validator 集合從內部驗證期設計繼承下列架構不變量,作為 V1
 
 ---
 
+## 1.5 資訊性質、不在審計範圍內的文件
+
+下列文件是專案發布的散文,而非鏈上合約邏輯。它們會在審計時被一起讀,但本身不構成審計目標:
+
+- `docs/cip-readiness-posture.md` — V1 對 Cardano Improvement Proposal 流程的立場。
+- `spec/pattern-rationale-validator-identity-nft.md`
+- `spec/pattern-rationale-multisig-gov-timelock.md`
+- `spec/pattern-rationale-withdraw-zero-forwarding.md`
+- `spec/pattern-rationale-registry-auth-nft.md`
+- `spec/pattern-rationale-vault-datum-tiered.md`
+
+每份 pattern-rationale 文件都用通用詞彙描述一個反覆出現的 Cardano DeFi 模式,並把 V1 的實例化當作具體案例引用。V1 的實例本身 — 實際的 `vault_nft.ak` mint policy、實際的 `multisig_gov.ak` 狀態機、實際的 `vault_proxy.ak` router、實際的 `registry.ak` validator、實際的 29 欄位 VaultDatum + `check_immutable_fields` helper — **屬於** §4 各 coverage area 下的審計範圍。圍繞它們的散文不屬於。
+
+審計者發現 pattern-rationale 文件與實際 V1 合約程式碼之間有出入時,應該把它當作對應 rationale 文件的文件 bug 回報,而不是針對合約的審計 finding;合約程式碼是權威來源。
+
+---
+
 ## 2. V1 特有的新審計範圍
 
 ### 2.1 `keeper_stake_script.ak`
@@ -283,3 +300,5 @@ V1 定位為 Cardano DeFi **非商業公共財**參考實作。審計接洽資�
 - `spec/governance.md` — timelock 下限與 action payload
 - `spec/treasury.md` — TreasuryDatum 不變量
 - `spec/keeper-auth.md` — keeper_stake_script 與保證金生命週期
+- `docs/cip-readiness-posture.md` — V1 對 Cardano Improvement Proposal 流程的立場(資訊性質,見 §1.5)
+- `spec/pattern-rationale-*.md` — 五個 V1 模式的通用模式文件(資訊性質,見 §1.5)

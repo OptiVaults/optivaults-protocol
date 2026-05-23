@@ -98,6 +98,13 @@ V1 對前三個約束的綜合答案是 **Withdraw-Zero Forwarding Pattern**，�
 
 對第四個約束的答案是把 Vault NFT 的 minting policy 變成 spending validator 的編譯期參數，讓 phantom UTXO 從架構層級就無法被合法視為 vault。
 
+讀者若想看 **V1 的回應如何延伸到 OptiVaults 之外**，四個約束各自對應到一個在 Cardano DeFi 中反覆出現的模式:
+
+- **約束 2 + 3**（大小限制 + per-TX ref-script 費用）→ **Withdraw-Zero Forwarding Pattern**,通用模式文件在 [`spec/pattern-rationale-withdraw-zero-forwarding.md`](../../../spec/pattern-rationale-withdraw-zero-forwarding.md)。V1 的 `vault_proxy` + 10 個被路由的 staking validator 是其中一個具體實例。
+- **約束 4**（UTXO 沒有原生身份）→ **Validator Identity NFT Pattern**,通用模式文件在 [`spec/pattern-rationale-validator-identity-nft.md`](../../../spec/pattern-rationale-validator-identity-nft.md)。V1 的 Vault NFT + `vault_proxy` / `vusdcx` / `order` 編譯期錨點是其中一個具體實例。
+
+V1 對這些模式以及 Cardano Improvement Proposal 流程的更廣立場見 [`docs/cip-readiness-posture.md`](../../cip-readiness-posture.md)。立場文件是**資訊性質的** — V1 發布模式 rationale,但在 V1 release 階段不會撰寫 CIP 提案。
+
 接下來三篇會分別深入：
 
 - **第 2 篇**：Withdraw-Zero Forwarding Pattern 是怎麼運作的、有什麼效益、一筆 Compound TX 怎麼跑

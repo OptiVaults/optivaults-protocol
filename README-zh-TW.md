@@ -52,6 +52,12 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 
 ---
 
+## 延伸閱讀
+
+V1 另外為它實作的五個反覆出現的 Cardano DeFi 模式發布了**模式 rationale 筆記**:Validator Identity NFT、MultiSig Governance + Timelock、Withdraw-Zero Forwarding、Registry + Auth NFT Whitelist、VaultDatum Tiered Immutability。每份筆記都用通用詞彙描述模式本身,並把 V1 的實例化當作具體案例引用。專案對 Cardano Improvement Proposal 流程的整體立場見 [`docs/cip-readiness-posture.md`](docs/cip-readiness-posture.md) — V1 準備模式文件、但在 V1 release 階段不會撰寫任何 CIP 提案 — 五份逐模式筆記見 [`spec/pattern-rationale-*.md`](spec/)。
+
+---
+
 ## 目錄結構
 
 ```
@@ -68,7 +74,12 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 │   ├── gov-nft.md              治理簽名者 soul-bound NFT
 │   ├── ada-swap.md             SwapAda redeemer + dual-feed 預言機讀取器
 │   ├── vault-nft.md            Vault Identity NFT one-shot mint 模式
-│   └── swap-adapter.md         SwapAdapter 介面 + B@launch=1 上線後新增 DEX 流程
+│   ├── swap-adapter.md         SwapAdapter 介面 + B@launch=1 上線後新增 DEX 流程
+│   ├── pattern-rationale-validator-identity-nft.md     通用 Validator Identity NFT 模式(V1 案例研究)
+│   ├── pattern-rationale-multisig-gov-timelock.md      通用 m-of-n + timelock + cancel veto 模式
+│   ├── pattern-rationale-withdraw-zero-forwarding.md   通用 Withdraw-Zero Forwarding 模式(size + per-TX-fee 切分)
+│   ├── pattern-rationale-registry-auth-nft.md          通用 governance-mutable whitelist + auth NFT 模式
+│   └── pattern-rationale-vault-datum-tiered.md         通用 tiered-immutability datum 模式
 ├── contracts/                  V1 Aiken PlutusV3 原始碼——17 個 logic validator + 4 個 NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact;`aiken check` 全綠（對應部署 commit 跑可取得當前 test summary）
 ├── deploy/                     部署流程
 │   ├── README.md               Deploy pipeline 總覽 + checklist
@@ -101,7 +112,8 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 │   ├── security-model.md       信任邊界、威脅模型、已知殘餘風險
 │   ├── audit-scope.md          Pre-audit 內部輪次計畫 + 外部審計範圍
 │   ├── integration-playbook.md 新增 DEX 路徑 / Liqwid market 的 operator SOP
-│   └── contributor-program.md  開源貢獻者回饋(Phase 2+ 啟用)
+│   ├── contributor-program.md  開源貢獻者回饋(Phase 2+ 啟用)
+│   └── cip-readiness-posture.md   V1 對 Cardano Improvement Proposal 流程的立場(資訊性質)
 ├── tests/
 │   └── preprod-e2e-plan.md     規格層級的情境目錄(100+);可執行的 TS 腳本放在 `optivaults-reference`(operator repo)
 └── whitepaper/
