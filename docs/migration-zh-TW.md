@@ -128,7 +128,7 @@ Phase B 凍結時的所有舊 vault 部位快照,會公開發布:
 
 ### 8.3 V1 在遷移期間發現重大 bug
 
-Operator 透過 `tvlCapMonitor` 的 breach 門檻停止 V1 存款(或手動把 cap 設為 0)。已遷移的使用者可以正常從 V1 提領。新遷移暫停,直到 V2 準備好。
+Operator 透過鏈下 TVL 監控 breach 門檻停止 V1 存款(或在前端 gating 層手動把 cap 設為 0)。已遷移的使用者可以正常從 V1 提領。新遷移暫停,直到 V2 準備好。
 
 ### 8.4 遷移期間 USDCx 脫鉤
 

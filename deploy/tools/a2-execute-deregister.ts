@@ -102,7 +102,7 @@ function buildTargetScript(target: Target, state: any, plutus: any): Script {
   const govName = state.hashes.governanceNftName;
   switch (target) {
     case "vaultUser":
-      // Phase 77d: vault_user dropped keeper_stake_hash param (Deposit +
+      // BatchProcess extraction: vault_user dropped keeper_stake_hash param (Deposit +
       // Withdraw are permissionless; BatchProcess moved to vault_batcher).
       return { type: "PlutusV3", script: applyParamsToScript(getCode("vault_user.vault_user.withdraw"), [govPolicy, govName]) };
     case "vaultKeeperHot":

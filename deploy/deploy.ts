@@ -481,14 +481,14 @@ async function main() {
       treasuryHash: compiled.treasuryHash,
       userStakeHash: compiled.userStakeHash,
       keeperHotStakeHash: compiled.keeperHotStakeHash,
-      batcherStakeHash: compiled.batcherStakeHash,           // Phase 77d
-      swapAdaStakeHash: compiled.swapAdaStakeHash,           // Phase 77b
+      batcherStakeHash: compiled.batcherStakeHash,           // BatchProcess extraction
+      swapAdaStakeHash: compiled.swapAdaStakeHash,           // SwapAda extraction
       protocolStakeHash: compiled.protocolStakeHash,
       recallStakeHash: compiled.recallStakeHash,             // authorization-boundary split
       liqwidStakeHash: compiled.liqwidStakeHash,
       govPolicyStakeHash: compiled.govPolicyStakeHash,
       govEmergencyStakeHash: compiled.govEmergencyStakeHash,
-      adminDeployStakeHash: compiled.adminDeployStakeHash,   // Phase 77c
+      adminDeployStakeHash: compiled.adminDeployStakeHash,   // AdminDeployNonDeposit extraction
       vaultProxyHash: compiled.vaultProxyHash,
       orderScriptHash: compiled.orderScriptHash,
       vusdcxPolicy: compiled.vusdcxPolicy,

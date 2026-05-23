@@ -167,7 +167,7 @@ V1 特有的內部審計依**涵蓋區**組織,而不是用輪次編號。每個
 把所有 heritage regression test 重跑一遍 V1 validator。標記新編譯時參數帶來的任何 cascade 影響。出口:V1 重構後所有既有測試仍通過。
 
 **涵蓋區 E — V1 鏈下程式**
-Keeper、API、frontend、CLI 全部為 V1 stack 更新過。具體面向:keeper 的 slippage policy 範圍(跨 validator 對 `vault_gov_policy.UpdateSlippagePolicy`)、API 的 JWT 簽名驗證流程、withdraw-cli + emergency-withdraw 的 HTML 不變量(不依賴 frontend 的自助退場路徑)、TVL 上限在 frontend 存款閘控 + keeper `tvlCapMonitor` alert 的執行。**嚴重性層級**:CRITICAL = 直接造成使用者資金損失 / 未授權的資金移動;HIGH = 鏈下與鏈上間的靜默狀態失步;MEDIUM = liveness 退化,需要 operator 介入;LOW = 外觀 / 可觀測性缺口。**出口**:keeper 0 CRIT / 0 HIGH;API + CLI 0 CRIT。(鏈下程式與鏈上 validator 不在同一個爆炸半徑內,存入者資金的保護來自鏈上檢查,與鏈下 bug 無關,但鏈下 CRIT/HIGH 仍值得在上線前修,因為它們可能把使用者面的體驗降到「沒有 operator 協助就退不了場」的程度。)
+Keeper、API、frontend、CLI 全部為 V1 stack 更新過。具體面向:keeper 的 slippage policy 範圍(跨 validator 對 `vault_gov_policy.UpdateSlippagePolicy`)、API 的 JWT 簽名驗證流程、withdraw-cli + emergency-withdraw 的 HTML 不變量(不依賴 frontend 的自助退場路徑)、TVL 上限在 frontend 存款閘控 + 鏈下 TVL 監控 alert 的執行。**嚴重性層級**:CRITICAL = 直接造成使用者資金損失 / 未授權的資金移動;HIGH = 鏈下與鏈上間的靜默狀態失步;MEDIUM = liveness 退化,需要 operator 介入;LOW = 外觀 / 可觀測性缺口。**出口**:keeper 0 CRIT / 0 HIGH;API + CLI 0 CRIT。(鏈下程式與鏈上 validator 不在同一個爆炸半徑內,存入者資金的保護來自鏈上檢查,與鏈下 bug 無關,但鏈下 CRIT/HIGH 仍值得在上線前修,因為它們可能把使用者面的體驗降到「沒有 operator 協助就退不了場」的程度。)
 
 **涵蓋區 F — V1 部署流程**
 V1 的部署 ceremony 多了 treasury UTXO init + keeper_stake_script UTXO init。部署流程審計方法論套用到這些新步驟。出口:狀態機 0 CRIT;runbook 已文件化。

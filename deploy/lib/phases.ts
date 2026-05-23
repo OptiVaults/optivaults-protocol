@@ -299,12 +299,12 @@ export async function runPhase2Mints(
 //   Post the authorization-boundary split:      vault_core → vault_user + vault_keeper_hot;
 //                              vault_protocol → vault_protocol + vault_recall.
 //   Post §B@launch=1:          minswap_v2_adapter (SwapAdapter) added.
-//   Post Phase 77b split:      SwapAda extracted from vault_keeper_hot
+//   SwapAda split:      SwapAda extracted from vault_keeper_hot
 //                              into standalone vault_swap_ada.
-//   Post Phase 77c split:      AdminDeployNonDeposit extracted from
+//   AdminDeployNonDeposit split:      AdminDeployNonDeposit extracted from
 //                              vault_gov_emergency into standalone
 //                              vault_admin_deploy.
-//   Post Phase 77d split:      BatchProcess extracted from vault_user
+//   BatchProcess split:      BatchProcess extracted from vault_user
 //                              into standalone vault_batcher;
 //                              vault_user becomes purely permissionless
 //                              (no keeper_stake_hash param).

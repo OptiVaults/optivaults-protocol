@@ -18,7 +18,7 @@
  *
  *   vault_user(gov_nft_policy, gov_nft_name)
  *     → user_stake_hash
- *     (Phase 77d: keeper_stake_hash dropped — Deposit + Withdraw are
+ *     (BatchProcess extraction: keeper_stake_hash dropped — Deposit + Withdraw are
  *      both permissionless, BatchProcess moved to vault_batcher.)
  *   vault_keeper_hot(keeper_stake_hash, treasury_hash, gov_nft_policy, gov_nft_name)
  *     → keeper_hot_stake_hash
@@ -119,15 +119,15 @@ interface CompiledHashes {
   // Authorization-boundary split (2026-04-22): vault_core split into vault_user + vault_keeper_hot;
   //   vault_protocol split into vault_protocol + vault_recall (headroom
   //   after SwapAdapter dispatch + Tier 1 oracle wiring).
-  // Phase 77b (2026-04-22): SwapAda extracted from vault_keeper_hot into
+  // SwapAda extraction (2026-04-22): SwapAda extracted from vault_keeper_hot into
   //   standalone vault_swap_ada (dual-feed oracle reader + 6-tuple
   //   registry read no longer pressure vault_keeper_hot's bytecode
   //   budget).
-  // Phase 77c (2026-04-22): AdminDeployNonDeposit extracted from
+  // AdminDeployNonDeposit extraction (2026-04-22): AdminDeployNonDeposit extracted from
   //   vault_gov_emergency into standalone vault_admin_deploy
   //   (SwapAdapter dispatch + destination-whitelist no longer pressure
   //   vault_gov_emergency's bytecode budget).
-  // Phase 77d (2026-04-22): BatchProcess extracted from vault_user
+  // BatchProcess extraction (2026-04-22): BatchProcess extracted from vault_user
   //   into standalone vault_batcher (4 fold loops + OrderDatum/OrderRedeemer
   //   decode + list.unique + vUSDCx no-leak + payout-output uniqueness invariants no longer
   //   pressure vault_user's bytecode budget; vault_user also drops its
@@ -298,7 +298,7 @@ export function compile(
   // deregister at sunset.
 
   // vault_user: (gov_nft_policy, gov_nft_name)
-  //   Phase 77d: keeper_stake_hash dropped — Deposit + Withdraw are
+  //   BatchProcess extraction: keeper_stake_hash dropped — Deposit + Withdraw are
   //   permissionless; BatchProcess moved to vault_batcher.
   const vaultUser = applyAndHash(
     getCompiledCode(bp, "vault_user.vault_user"),
@@ -323,7 +323,7 @@ export function compile(
   );
 
   // vault_batcher: (keeper_stake_hash, gov_nft_policy, gov_nft_name)
-  //   Phase 77d split from vault_user. Holds BatchProcess only —
+  //   BatchProcess extraction split from vault_user. Holds BatchProcess only —
   //   the 4 fold loops + OrderDatum/OrderRedeemer decode + list.unique
   //   + vUSDCx no-leak + payout-output uniqueness invariants no longer pressure vault_user's
   //   bytecode budget.
@@ -338,7 +338,7 @@ export function compile(
   );
 
   // vault_swap_ada: (keeper_stake_hash, gov_nft_policy, gov_nft_name)
-  //   Phase 77b split from vault_keeper_hot. Holds SwapAda only —
+  //   SwapAda extraction split from vault_keeper_hot. Holds SwapAda only —
   //   the §5.4 P5 dual-feed oracle reader + registry 6-tuple read
   //   machinery no longer pressures Compound's host.
   const vaultSwapAda = applyAndHash(
@@ -401,7 +401,7 @@ export function compile(
 
   // vault_gov_emergency: (gov_nft_policy, gov_nft_name)
   //   — EmergencyWithdraw only (AdminDeployNonDeposit moved to
-  //     vault_admin_deploy in Phase 77c).
+  //     vault_admin_deploy in AdminDeployNonDeposit extraction).
   const vaultGovEmergency = applyAndHash(
     getCompiledCode(bp, "vault_gov_emergency.vault_gov_emergency"),
     [
@@ -412,7 +412,7 @@ export function compile(
   );
 
   // vault_admin_deploy: (gov_nft_policy, gov_nft_name)
-  //   Phase 77c split from vault_gov_emergency. Holds
+  //   AdminDeployNonDeposit extraction split from vault_gov_emergency. Holds
   //   AdminDeployNonDeposit only — SwapAdapter dispatch +
   //   destination-whitelist check + 6-tuple registry read no longer
   //   pressure EmergencyWithdraw's host.
@@ -432,7 +432,7 @@ export function compile(
   //   UseBatcher
   //
   // vault_proxy's compile-time parameter order (from vault_proxy.ak,
-  // post Phase 77b/77c/77d):
+  // post-split):
   //   (user_stake_hash, keeper_hot_stake_hash, swap_ada_stake_hash,
   //    protocol_stake_hash, recall_stake_hash, liqwid_stake_hash,
   //    gov_policy_stake_hash, gov_emergency_stake_hash,

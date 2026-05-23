@@ -67,9 +67,9 @@ export interface CeremonyState {
     treasuryHash: string;
     userStakeHash: string;
     keeperHotStakeHash: string;
-    /// Phase 77d: BatchProcess extracted from vault_user.
+    /// BatchProcess extraction: BatchProcess extracted from vault_user.
     batcherStakeHash: string;
-    /// Phase 77b: SwapAda extracted from vault_keeper_hot.
+    /// SwapAda extraction: SwapAda extracted from vault_keeper_hot.
     swapAdaStakeHash: string;
     protocolStakeHash: string;
     /// vault_recall was split from vault_protocol during the authorization-boundary refactor.
@@ -77,7 +77,7 @@ export interface CeremonyState {
     liqwidStakeHash: string;
     govPolicyStakeHash: string;
     govEmergencyStakeHash: string;
-    /// Phase 77c: AdminDeployNonDeposit extracted from vault_gov_emergency.
+    /// AdminDeployNonDeposit extraction: AdminDeployNonDeposit extracted from vault_gov_emergency.
     adminDeployStakeHash: string;
     vaultProxyHash: string;
     orderScriptHash: string;
@@ -94,10 +94,10 @@ export interface CeremonyState {
   // Pass 1: ref script publications (one entry per validator).
   // Post the authorization-boundary split:  +vaultRecall (split from vaultProtocol)
   //                 +minswapV2Adapter (§B@launch=1 SwapAdapter)
-  // Post Phase 77b: +vaultSwapAda (SwapAda extracted from vaultKeeperHot)
-  // Post Phase 77c: +vaultAdminDeploy (AdminDeployNonDeposit extracted
+  // Post SwapAda extraction: +vaultSwapAda (SwapAda extracted from vaultKeeperHot)
+  // Post AdminDeployNonDeposit extraction: +vaultAdminDeploy (AdminDeployNonDeposit extracted
   //                  from vaultGovEmergency)
-  // Post Phase 77d: +vaultBatcher (BatchProcess extracted from vaultUser;
+  // Post BatchProcess extraction: +vaultBatcher (BatchProcess extracted from vaultUser;
   //                  vaultUser loses its keeper_stake_hash param)
   // → 18 ref scripts total.
   refScripts: {

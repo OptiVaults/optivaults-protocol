@@ -316,7 +316,7 @@ These exercise the full TX patterns where multiple validators must succeed toget
 ## 5. Test execution conventions
 
 - Each test script lives at `tests/preprod/<id>.test.ts` (TypeScript w/ Lucid Evolution or CML).
-- Test reads/writes deploy state from `tests/preprod/state/v1-r0-preprod.json` (single-source canonical state file, atomic-write pattern; mirrors `data/v9.3-ref-scripts-preprod.json` from the internal-verification flow).
+- Test reads/writes deploy state from `tests/preprod/state/v1-r0-preprod.json` (single-source canonical state file, atomic-write pattern; matches the ceremony state-tracking pattern from prior pre-V1 deployments).
 - Each test asserts on TX confirmation + on-chain datum/balance after `awaitTx`.
 - Failing assertions throw with a clear message; successful runs print the TX hash + a one-line summary.
 - A wrapper script `npm run e2e:v1` runs all tests in dependency order (NFT-1 first, then proxy/vusdcx/order, then redeemer-specific, then INT-*).

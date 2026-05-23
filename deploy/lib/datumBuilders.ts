@@ -24,12 +24,12 @@ export interface CeremonyHashes {
   treasuryHash: string;
   userStakeHash: string;
   keeperHotStakeHash: string;
-  /// Phase 77d: BatchProcess extracted from vault_user (4 folds +
+  /// BatchProcess extraction: BatchProcess extracted from vault_user (4 folds +
   /// OrderDatum decode + vUSDCx no-leak + payout-output uniqueness invariants moved to
   /// standalone validator; vault_user becomes purely permissionless
   /// with no keeper_stake_hash param).
   batcherStakeHash: string;
-  /// Phase 77b: SwapAda extracted from vault_keeper_hot (dual-feed
+  /// SwapAda extraction: SwapAda extracted from vault_keeper_hot (dual-feed
   /// oracle + 6-tuple registry read moved to standalone validator).
   swapAdaStakeHash: string;
   protocolStakeHash: string;
@@ -39,7 +39,7 @@ export interface CeremonyHashes {
   liqwidStakeHash: string;
   govPolicyStakeHash: string;
   govEmergencyStakeHash: string;
-  /// Phase 77c: AdminDeployNonDeposit extracted from vault_gov_emergency
+  /// AdminDeployNonDeposit extraction: AdminDeployNonDeposit extracted from vault_gov_emergency
   /// (SwapAdapter dispatch + destination-whitelist moved to standalone
   /// validator).
   adminDeployStakeHash: string;

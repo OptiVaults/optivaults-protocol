@@ -132,7 +132,7 @@ Common mischaracterization to flag: **"any 1-of-n signer can execute arbitrary a
 
 **V1 defense:** V1 has **no on-chain USDCx price oracle**. This is intentional — adding a price feed would introduce oracle manipulation attack surface.
 
-**Off-chain defense:** `tvlCapMonitor` + depeg monitoring via **Cardano-native oracle feeds** (Charli3 + Orcfax + Minswap V2 TWAP as an on-chain triangulation source), 15-min sustained deviation threshold, 2/day trigger rate-limit. No cross-chain oracle bridges are used (consistent with whitepaper §2.3 "no cross-chain bridges"). Prior internal-verification-phase deployments polled CoinGecko + DeFi Llama off-chain feeds — those were convenient for testing but are web2 price APIs, not on-chain oracles. V1 moves to on-chain Cardano oracles for the launch configuration. On sustained depeg, keeper triggers `KeeperToggleMarket` (no timelock) + governance queues `EmergencyWithdraw` (timelock per `governance.md` §4.6).
+**Off-chain defense:** operator-side TVL cap + depeg monitoring via **Cardano-native oracle feeds** (Charli3 + Orcfax + Minswap V2 TWAP as an on-chain triangulation source), 15-min sustained deviation threshold, 2/day trigger rate-limit. No cross-chain oracle bridges are used (consistent with whitepaper §2.3 "no cross-chain bridges"). Prior internal-verification-phase deployments polled CoinGecko + DeFi Llama off-chain feeds — those were convenient for testing but are web2 price APIs, not on-chain oracles. V1 moves to on-chain Cardano oracles for the launch configuration. On sustained depeg, keeper triggers `KeeperToggleMarket` (no timelock) + governance queues `EmergencyWithdraw` (timelock per `governance.md` §4.6).
 
 **Operator obligation:** suspend new deposits within 1 hour of sustained depeg signal. Withdraws remain open (client-side whitelist never blocks withdraw — see whitepaper §9.2). Disclosed in whitepaper §6.5.
 
@@ -208,7 +208,7 @@ Note on keeper identity: V1 does NOT anchor a specific `keeper_pkh` at compile t
 
 ### 5.3 Economic / social layer
 
-- 100K USDCx pre-audit TVL cap (operator-enforced via `tvlCapMonitor`)
+- 100K USDCx pre-audit TVL cap (operator-enforced via off-chain monitoring + frontend deposit gating)
 - Public disclosure of governance signer identities
 - 1-hour broadcast obligation for governance queues
 - Orderly wind-down protocol (whitepaper §9.2)

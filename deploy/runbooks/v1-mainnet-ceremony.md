@@ -182,7 +182,7 @@ Two governance redeemers have production timelock ≤ 1 hour and remain runnable
 
 - [ ] `aiken build && aiken check` clean on the Preprod ceremony commit (218 / 0 / 0)
 - [ ] `mainnet-hash-preview.txt` matches `aiken build` output byte-for-byte
-- [ ] All 20 ref scripts deploy on Preprod (visible via `data/v9.3-ref-scripts-preprod.json` or equivalent)
+- [ ] All 20 ref scripts deploy on Preprod (visible via the ceremony's state file under `deploy/state/`)
 - [ ] 11 governance redeemers pass numeric assertion (A)
 - [ ] 4 high-frequency redeemers pass full Queue+Execute via backdate (B)
 - [ ] EmergencyWithdraw + FastUpdateMarkets pass full Queue+Execute on production timelock

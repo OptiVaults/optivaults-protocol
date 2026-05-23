@@ -114,7 +114,7 @@ Preprod:
 | Reclaim 20 refs | 1 | 5.11 ADA | 5.11 ADA | 962 ADA |
 | **Net** | **29** | — | **~17 ADA** | **990 ADA** |
 
-Net recovery: **~973 ADA per sunset** (post Phase 77b/77c/77d topology).
+Net recovery: **~973 ADA per sunset** (V1 post-split topology).
 
 ---
 

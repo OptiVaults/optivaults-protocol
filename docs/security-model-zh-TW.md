@@ -133,7 +133,7 @@ V1 把權責拆在六個不同的密鑰控制身份。依政策,**沒有任何�
 
 **V1 防禦**:V1 **沒有**鏈上 USDCx 價格預言機。這是刻意的,加進 price feed 會引入 oracle 操弄攻擊面。
 
-**鏈下防禦**:`tvlCapMonitor` + 透過 **Cardano 原生預言機** feed 的脫鉤監控(Charli3 + Orcfax + Minswap V2 TWAP 作為鏈上三方交叉驗證),15 分鐘 sustained 偏差門檻,每日 2 次觸發限流。**不使用跨鏈 oracle bridge**(與白皮書 §2.3 「no cross-chain bridges」一致)。先前內部驗證期的部署在鏈下輪詢 CoinGecko + DeFi Llama,測試階段方便,但那些是 web2 價格 API,不是鏈上 oracle。V1 上線設定改為鏈上 Cardano oracle。偵測到持續脫鉤時,keeper 觸發 `KeeperToggleMarket`(無 timelock)+ 治理 queue `EmergencyWithdraw`(timelock 依 `governance.md §4.6`)。
+**鏈下防禦**:operator 端 TVL 上限 + 透過 **Cardano 原生預言機** feed 的脫鉤監控(Charli3 + Orcfax + Minswap V2 TWAP 作為鏈上三方交叉驗證),15 分鐘 sustained 偏差門檻,每日 2 次觸發限流。**不使用跨鏈 oracle bridge**(與白皮書 §2.3 「no cross-chain bridges」一致)。先前內部驗證期的部署在鏈下輪詢 CoinGecko + DeFi Llama,測試階段方便,但那些是 web2 價格 API,不是鏈上 oracle。V1 上線設定改為鏈上 Cardano oracle。偵測到持續脫鉤時,keeper 觸發 `KeeperToggleMarket`(無 timelock)+ 治理 queue `EmergencyWithdraw`(timelock 依 `governance.md §4.6`)。
 
 **Operator 義務**:在持續脫鉤訊號出現的 1 小時內停掉新存款。提領保持開放(client-side whitelist 從不阻擋提領,見白皮書 §9.2)。見白皮書 §6.5 揭露。
 
@@ -209,7 +209,7 @@ Validator hash + 基礎身份。任何一個變動都會強制新部署(新地�
 
 ### 5.3 經濟 / 社會層
 
-- 100K USDCx pre-audit TVL 上限(operator 透過 `tvlCapMonitor` 自律執行)
+- 100K USDCx pre-audit TVL 上限(operator 透過鏈下監控 + 前端存款 gating 自律執行)
 - 治理簽名者身份公開揭露
 - 治理 queue 的 1 小時廣播義務
 - 有序停運協議(白皮書 §9.2)

@@ -128,7 +128,7 @@ No action needed. Their old-vault position remains spendable indefinitely. Opera
 
 ### 8.3 V1 vault has a critical bug discovered during migration
 
-Operator halts V1 deposits via `tvlCapMonitor` breach threshold (or manual cap-to-zero). Users already migrated can withdraw normally from V1. New migrations pause until V2 is prepared.
+Operator halts V1 deposits via the off-chain TVL-monitor breach threshold (or manual cap-to-zero in the frontend gating layer). Users already migrated can withdraw normally from V1. New migrations pause until V2 is prepared.
 
 ### 8.4 USDCx depeg during migration
 
