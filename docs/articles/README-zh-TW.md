@@ -65,6 +65,24 @@ V1 的營運層機制：SwapAda 鏈上 ADA 補充閉環、7 天 keeper-inactivit
 
 ---
 
+## 配套參考文件
+
+在上面四個敘事系列之外,V1 另外有一組**參考式文件**,用通用詞彙描述反覆出現的 Cardano DeFi 模式,並把 V1 的實例化當作具體案例引用:
+
+| 文件 | 涵蓋內容 |
+|---|---|
+| [Validator Identity NFT](../../spec/pattern-rationale-validator-identity-nft-zh-TW.md) | 用 UTXO-ref one-shot NFT 作為編譯期身份錨點 — V1 實例:Vault NFT、Governance NFT、Registry Auth NFT |
+| [MultiSig Governance + Timelock](../../spec/pattern-rationale-multisig-gov-timelock-zh-TW.md) | m-of-n 核可 + 每動作 timelock + 1-of-n cancel veto + nonce 綁定的 action_id |
+| [Withdraw-Zero Forwarding](../../spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md) | 把業務邏輯切散到 staking validator、由一層薄薄的 spending validator 路由 — 突破 16 KB 上限,同時不會撐大 per-TX ref-script 費用 |
+| [Registry + Auth NFT Whitelist](../../spec/pattern-rationale-registry-auth-nft-zh-TW.md) | 由 one-shot Registry Auth NFT 錨定的、governance-mutable 的白名單 datum |
+| [VaultDatum Tiered Immutability](../../spec/pattern-rationale-vault-datum-tiered-zh-TW.md) | Datum 欄位分層(身份不可變 / governance-mutable / accounting / operational),透過 `check_immutable_fields` 強制 |
+
+這些與架構系列文章配對:架構第三篇(「17 Validators: Four Orthogonal Cuts」)是 OptiVaults 特定的目錄,而 **Withdraw-Zero Forwarding** rationale 文件則是該目錄實例化的那個通用模式。
+
+V1 對這些模式與 Cardano Improvement Proposal 流程的更廣立場 — 資訊性質;V1 準備模式文件,但在 V1 release 階段不會撰寫 CIP 提案 — 在 [`docs/cip-readiness-posture.md`](../cip-readiness-posture-zh-TW.md)。
+
+---
+
 ## Medium 對應
 
 每篇文章也會發佈在 Medium，canonical URL 指回此 repository。
