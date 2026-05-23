@@ -1,6 +1,6 @@
 # Pattern Rationale — Registry + Auth NFT Whitelist
 
-**狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture.md`。
+**狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture-zh-TW.md`。
 
 **範圍**：一個反覆出現的模式 — 用一顆 one-shot identity NFT 錨定、由 redeemer 各自規範變更權限、用來維護一份可被 governance 修改的鏈上 configuration 物件（典型是允許目的地的 whitelist、市場目錄、或參數表）。本模式把 Pattern 1（Validator Identity NFT）、一份 singleton 狀態 validator、與一套 per-redeemer 變更政策組合在一起。OptiVaults V1 把它當作 protocol-destination + Liqwid-market + swap-adapter 的 registry 在用（案例研究見 §6）。
 
@@ -176,7 +176,7 @@ Registry validator 只在 Registry UTXO 被花掉（亦即 update）時才會跑
 
 本模式做的取捨是：每次讀都付一次 NFT 檢查，換來 runtime 可更新性、singleton 錨定、與「所有消費端共用同一份真實來源」。對「一年變更 1–10 次、每天被讀 100–1000 次」這種 configuration 來說，這個取捨明顯划算。
 
-**關於 CIP-72**：CIP-72 描述的是 dApp 對外發布身份 metadata。Registry + Auth NFT 模式是反方向的事 — 協議內部 configuration 由協議自己的 validator 消費。兩者解的是正交的問題、不會被歸在同一份 CIP 之下。完整的 CIP-72 立場見 `docs/cip-readiness-posture.md` §3。
+**關於 CIP-72**：CIP-72 描述的是 dApp 對外發布身份 metadata。Registry + Auth NFT 模式是反方向的事 — 協議內部 configuration 由協議自己的 validator 消費。兩者解的是正交的問題、不會被歸在同一份 CIP 之下。完整的 CIP-72 立場見 `docs/cip-readiness-posture-zh-TW.md` §3。
 
 ---
 
@@ -226,11 +226,11 @@ authenticated read 是 `lib/vault/helpers.ak` 裡的 `helpers.read_registry_datu
 - `contracts/validators/registry_auth_nft.ak` — Auth NFT（Pattern 1 實例 #3）
 - `contracts/lib/vault/helpers.ak` `read_registry_datum` — authenticated read helper
 - `contracts/lib/vault/types.ak` `RegistryDatum` / `RegistryRedeemer` — V1 的 datum 形狀
-- `spec/pattern-rationale-validator-identity-nft.md` — Pattern 1，與本模式組合使用
-- `spec/pattern-rationale-withdraw-zero-forwarding.md` — Pattern 3；V1 中讀 Registry 的 validator 透過 Withdraw-Zero 被觸發
-- `spec/pattern-rationale-multisig-gov-timelock.md` — Pattern 2；守 `UpdateRegistry` 與 `FastUpdateMarkets` 的 governance 系統
-- `docs/cip-readiness-posture.md` — 整體 CIP 立場；§3 特別處理了 CIP-72
+- `spec/pattern-rationale-validator-identity-nft-zh-TW.md` — Pattern 1，與本模式組合使用
+- `spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md` — Pattern 3；V1 中讀 Registry 的 validator 透過 Withdraw-Zero 被觸發
+- `spec/pattern-rationale-multisig-gov-timelock-zh-TW.md` — Pattern 2；守 `UpdateRegistry` 與 `FastUpdateMarkets` 的 governance 系統
+- `docs/cip-readiness-posture-zh-TW.md` — 整體 CIP 立場；§3 特別處理了 CIP-72
 
 ---
 
-**文件狀態**：資訊性質的模式背景說明。反映 V1 在 launch readiness 階段的設計。修訂時機依循 `cip-readiness-posture.md` §4 所述條件。
+**文件狀態**：資訊性質的模式背景說明。反映 V1 在 launch readiness 階段的設計。修訂時機依循 `cip-readiness-posture-zh-TW.md` §4 所述條件。

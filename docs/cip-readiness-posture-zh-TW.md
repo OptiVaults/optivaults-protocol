@@ -1,4 +1,4 @@
-# cip-readiness-posture.md — OptiVaults V1 對 Cardano Improvement Proposals 的立場
+# cip-readiness-posture-zh-TW.md — OptiVaults V1 對 Cardano Improvement Proposals 的立場
 
 **範圍**：OptiVaults V1 與 Cardano Improvement Proposal 流程之間的關係 — V1 目前直接使用了哪些 CIP、V1 自己實作的哪些東西未來有可能成為 CIP、以及在什麼條件下 V1 才會真的去撰寫或共同撰寫提案。
 
@@ -27,11 +27,11 @@ V1 的文件因此採取另一種形式：與 V1 規格放在一起的**模式�
 
 | # | 模式（公開名稱） | V1 實作 | 背景說明文件 |
 |---|---|---|---|
-| 1 | Validator Identity NFT | Vault NFT、Governance NFT、Registry Auth NFT（one-shot mint、以 UTXO ref 錨定） | `spec/pattern-rationale-validator-identity-nft.md` |
-| 2 | MultiSig Governance + Timelock | `multisig_gov.ak` — m-of-n approve、每個動作各自 timelock、1-of-n cancel、nonce 綁定 action_id | `spec/pattern-rationale-multisig-gov-timelock.md` |
-| 3 | Withdraw-Zero Forwarding | `vault_proxy` + 十個被路由出去的 staking validator；16 KB 腳本大小預算切散到多個 validator，而使用者 TX 並不會因此變大 | `spec/pattern-rationale-withdraw-zero-forwarding.md` |
-| 4 | Registry + Auth NFT Whitelist | `registry.ak` 持有一份可被 governance 修改的 whitelist datum，並由一顆 one-shot Registry Auth NFT 錨定 | `spec/pattern-rationale-registry-auth-nft.md` |
-| 5 | VaultDatum Tiered Immutability | 29 個欄位的 VaultDatum，依四個 tier（身份不可變 / governance 可變 / accounting / 操作）切開，並透過 `check_immutable_fields` helper 強制執行 | `spec/pattern-rationale-vault-datum-tiered.md` |
+| 1 | Validator Identity NFT | Vault NFT、Governance NFT、Registry Auth NFT（one-shot mint、以 UTXO ref 錨定） | `spec/pattern-rationale-validator-identity-nft-zh-TW.md` |
+| 2 | MultiSig Governance + Timelock | `multisig_gov.ak` — m-of-n approve、每個動作各自 timelock、1-of-n cancel、nonce 綁定 action_id | `spec/pattern-rationale-multisig-gov-timelock-zh-TW.md` |
+| 3 | Withdraw-Zero Forwarding | `vault_proxy` + 十個被路由出去的 staking validator；16 KB 腳本大小預算切散到多個 validator，而使用者 TX 並不會因此變大 | `spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md` |
+| 4 | Registry + Auth NFT Whitelist | `registry.ak` 持有一份可被 governance 修改的 whitelist datum，並由一顆 one-shot Registry Auth NFT 錨定 | `spec/pattern-rationale-registry-auth-nft-zh-TW.md` |
+| 5 | VaultDatum Tiered Immutability | 29 個欄位的 VaultDatum，依四個 tier（身份不可變 / governance 可變 / accounting / 操作）切開，並透過 `check_immutable_fields` helper 強制執行 | `spec/pattern-rationale-vault-datum-tiered-zh-TW.md` |
 
 這五個模式沒有一個是根本性的全新發明 — 在其他 Cardano DeFi 協議中都可以看到每一個模式的變體。V1 真正貢獻的是：**一份有文件、有審計軌跡、且鏈上可驗證的具體實作**，在這些模式之中未來真的被提案時，可以拿來當作參考實作。
 

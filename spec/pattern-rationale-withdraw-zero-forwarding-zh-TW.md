@@ -1,6 +1,6 @@
 # Pattern Rationale — Withdraw-Zero Forwarding
 
-**狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture.md`。
+**狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture-zh-TW.md`。
 
 **範圍**：一個反覆出現的模式 — 把鏈上業務邏輯從 spending validator 移出去、放進一個或多個 staking validator，並用 zero-amount withdrawal 來觸發。這個模式是通用的；OptiVaults V1 把它當作整個 vault 的結構骨幹來用（1 個 proxy validator + 10 個被路由的 staking validator），案例研究見 §6。
 
@@ -118,7 +118,7 @@ proxy 的編譯期 `routes` 參數在部署時就把可接受的 staking validat
 
 只憑這個模式本身，並不會強制「proxy address 上剛好只有一顆狀態 UTXO」。任何人都可以付 ADA 進 proxy address 並夾帶任意 inline datum，造出「幽靈」狀態 UTXO。常見有兩種防禦：
 
-- **Identity-NFT 錨定。** proxy 額外驗證被花掉的 UTXO 攜帶某一個特定 minting policy 的 token（見 `pattern-rationale-validator-identity-nft.md`）。route validator 也對它們讀到的任何狀態 UTXO 做同樣的檢查。偽造 UTXO 通不過 NFT 檢查。
+- **Identity-NFT 錨定。** proxy 額外驗證被花掉的 UTXO 攜帶某一個特定 minting policy 的 token（見 `pattern-rationale-validator-identity-nft-zh-TW.md`）。route validator 也對它們讀到的任何狀態 UTXO 做同樣的檢查。偽造 UTXO 通不過 NFT 檢查。
 - **Datum 形狀過濾。** proxy 或 route 拒絕 inline datum 不符合預期 schema 的 UTXO。這比 NFT 錨定弱，因為攻擊者也可以造出形狀正確的 datum；當作 defence-in-depth 仍然有用。
 
 V1 兩個都用。本模式文件把「錨定」當作互補模式（Pattern 1，Validator Identity NFT），而不把它烘進 Withdraw-Zero Forwarding 自己裡面。
@@ -189,12 +189,12 @@ V1 也把 Withdraw-Zero 當作 **keeper 授權**的基底：keeper 的權限由�
 - `docs/articles/architecture/02-withdraw-zero-forwarding-pattern.md` — V1 實作的長篇敘事，包含一筆 Compound TX 的完整 walk-through
 - `docs/articles/architecture/03-seventeen-validators-four-cuts.md` — V1 為什麼選擇沿那四個正交軸切分的敘事
 - `spec/architecture.md` §4 — V1 validator 名錄
-- `spec/pattern-rationale-validator-identity-nft.md` — Pattern 1，經常與本模式組合來強制 singleton 性質
-- `spec/pattern-rationale-registry-auth-nft.md` — Pattern 4，同時用到 Withdraw-Zero（讓讀 Registry 的 validator 走這條）與 Identity NFT（錨定 Registry 的 singleton 性質）
+- `spec/pattern-rationale-validator-identity-nft-zh-TW.md` — Pattern 1，經常與本模式組合來強制 singleton 性質
+- `spec/pattern-rationale-registry-auth-nft-zh-TW.md` — Pattern 4，同時用到 Withdraw-Zero（讓讀 Registry 的 validator 走這條）與 Identity NFT（錨定 Registry 的 singleton 性質）
 - `spec/keeper-auth.md` — V1 的 keeper-authorisation stake-script，本模式的 consumer
-- `docs/cip-readiness-posture.md` — 整體 CIP 立場
+- `docs/cip-readiness-posture-zh-TW.md` — 整體 CIP 立場
 - `contracts/validators/vault_proxy.ak` — 參考 proxy 實作
 
 ---
 
-**文件狀態**：資訊性質的模式背景說明。反映 V1 在 launch readiness 階段的設計。修訂時機依循 `cip-readiness-posture.md` §4 所述條件。
+**文件狀態**：資訊性質的模式背景說明。反映 V1 在 launch readiness 階段的設計。修訂時機依循 `cip-readiness-posture-zh-TW.md` §4 所述條件。

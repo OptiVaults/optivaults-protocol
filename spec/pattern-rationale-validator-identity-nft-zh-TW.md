@@ -1,6 +1,6 @@
 # Pattern Rationale — Validator Identity NFT
 
-**狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture.md`。
+**狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture-zh-TW.md`。
 
 **範圍**：一個反覆出現的模式 — 用一個由「被消耗 UTXO 參考」參數化的 one-shot mint policy，在整個協議生命週期裡把一顆單一的標準 UTXO 與某個特定的鏈上 script 綁定起來。這個模式是通用的；OptiVaults V1 在三個地方用到它，案例研究見 §5。
 
@@ -113,7 +113,7 @@ burn 分支沒有時間限制、也沒有 signer 限制。唯一的要求是 bur
 
 Validator Identity NFT 模式做的取捨是：付出 ~1.5 KB 的 script size 與一點點評估成本，換取密碼學意義上的 one-shot 加上無條件的 burn。對一顆生命週期不定、且 sunset 時 min-ADA 回收在經濟上有意義的 singleton 狀態 UTXO 來說，這是對的取捨。
 
-**CIP-68 立場**：這份文件描述的 identity NFT 模式**刻意不**攜帶 metadata。這顆 NFT 的工作是錨點識別、不是顯示。把本模式與 CIP-68 reference NFT 結合來提供顯示用 metadata 的未來變體是可行的 — 兩者可以共存 — 但不屬於 V1 實作的範圍。完整的 CIP-68 / CIP-25 立場見 `docs/cip-readiness-posture.md` §3。
+**CIP-68 立場**：這份文件描述的 identity NFT 模式**刻意不**攜帶 metadata。這顆 NFT 的工作是錨點識別、不是顯示。把本模式與 CIP-68 reference NFT 結合來提供顯示用 metadata 的未來變體是可行的 — 兩者可以共存 — 但不屬於 V1 實作的範圍。完整的 CIP-68 / CIP-25 立場見 `docs/cip-readiness-posture-zh-TW.md` §3。
 
 ---
 
@@ -159,7 +159,7 @@ validator registry_auth_nft(utxo_ref: OutputReference, asset_name: ByteArray) {
 - 兩個編譯期參數：`utxo_ref` + `asset_name`。形狀與 Governance NFT 相同。
 - 錨定標準的 Registry UTXO。當 `vault_protocol` 把 Registry 當作 reference input 讀取、以檢查某個目的地是否在 whitelist 內時，會驗證 Registry UTXO 攜帶這顆特定 policy 的 NFT。沒有 NFT 檢查的話，攻擊者可以在 Registry script address 上種一顆攜帶寬鬆 whitelist 的偽造 Registry UTXO。
 - NFT 存在性的檢查放在 `helpers.read_registry_datum` 裡執行，使得每個讀 Registry 的 validator 都走同一條經過認證的讀取路徑。
-- 完整討論見 `spec/pattern-rationale-registry-auth-nft.md`（Pattern 4 — Registry + Auth NFT Whitelist），它建構在本模式之上。
+- 完整討論見 `spec/pattern-rationale-registry-auth-nft-zh-TW.md`（Pattern 4 — Registry + Auth NFT Whitelist），它建構在本模式之上。
 
 ### 5.4 三者共用了什麼
 
@@ -194,11 +194,11 @@ validator registry_auth_nft(utxo_ref: OutputReference, asset_name: ByteArray) {
 
 - `spec/vault-nft.md` — V1 具體實例 #1（Vault Identity NFT）
 - `spec/multisig-gov.md` §4 + `spec/gov-nft.md` — V1 具體實例 #2（Governance NFT）
-- `spec/pattern-rationale-registry-auth-nft.md` — V1 具體實例 #3（Registry Auth NFT，在 NFT 之上又疊了 whitelist datum）
-- `spec/pattern-rationale-withdraw-zero-forwarding.md` — Pattern 3，與 Identity NFT 搭配使用以強制「singleton UTXO 必須是我們 validator 錨定的那一顆」
-- `docs/cip-readiness-posture.md` — 整體 CIP 立場
+- `spec/pattern-rationale-registry-auth-nft-zh-TW.md` — V1 具體實例 #3（Registry Auth NFT，在 NFT 之上又疊了 whitelist datum）
+- `spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md` — Pattern 3，與 Identity NFT 搭配使用以強制「singleton UTXO 必須是我們 validator 錨定的那一顆」
+- `docs/cip-readiness-posture-zh-TW.md` — 整體 CIP 立場
 - `contracts/validators/vault_nft.ak` / `governance_nft.ak` / `registry_auth_nft.ak` — 三份參考實作
 
 ---
 
-**文件狀態**：資訊性質的模式背景說明。反映 V1 在 launch readiness 階段的設計。修訂時機依循 `cip-readiness-posture.md` §4 所述條件。
+**文件狀態**：資訊性質的模式背景說明。反映 V1 在 launch readiness 階段的設計。修訂時機依循 `cip-readiness-posture-zh-TW.md` §4 所述條件。

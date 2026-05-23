@@ -1,6 +1,6 @@
 # Pattern Rationale — VaultDatum Tiered Immutability
 
-**狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture.md`。
+**狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture-zh-TW.md`。
 
 **範圍**：一個反覆出現的模式 — 把 singleton 狀態 UTXO 的 inline datum 切成幾個 tier（identity 不可變、governance 可變、accounting、operational），並用 helper 函數在每一條 redeemer 上強制執行該 redeemer 對應的 tier 變更包絡。模式本身是通用的；OptiVaults V1 把它具現為一份 29 個欄位的 VaultDatum（案例研究見 §6）。
 
@@ -287,11 +287,11 @@ Tier 1 有 9 個欄位，並在 `docs/audit-scope.md` 的 coverage matrix 中被
 - `contracts/lib/vault/helpers.ak` — 其他共用驗證 helper
 - `spec/vault-datum.md` — V1 的 vault-datum 規格（逐欄位文件）
 - `docs/audit-scope.md` Coverage area C — V1 Integration Flows 的審計覆蓋
-- `spec/pattern-rationale-multisig-gov-timelock.md` — Pattern 2；守 Tier 2 變更 redeemer
-- `spec/pattern-rationale-validator-identity-nft.md` — Pattern 1；讓 validator 能信任這份 datum 的 Vault NFT 錨點
-- `spec/pattern-rationale-withdraw-zero-forwarding.md` — Pattern 3；讓多個 validator 共用一份 VaultDatum 的架構基底
-- `docs/cip-readiness-posture.md` — 整體 CIP 立場
+- `spec/pattern-rationale-multisig-gov-timelock-zh-TW.md` — Pattern 2；守 Tier 2 變更 redeemer
+- `spec/pattern-rationale-validator-identity-nft-zh-TW.md` — Pattern 1；讓 validator 能信任這份 datum 的 Vault NFT 錨點
+- `spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md` — Pattern 3；讓多個 validator 共用一份 VaultDatum 的架構基底
+- `docs/cip-readiness-posture-zh-TW.md` — 整體 CIP 立場
 
 ---
 
-**文件狀態**：資訊性質的模式背景說明。反映 V1 在 launch readiness 階段的設計。修訂時機依循 `cip-readiness-posture.md` §4 所述條件。
+**文件狀態**：資訊性質的模式背景說明。反映 V1 在 launch readiness 階段的設計。修訂時機依循 `cip-readiness-posture-zh-TW.md` §4 所述條件。

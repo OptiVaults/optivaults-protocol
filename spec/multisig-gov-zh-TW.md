@@ -1,6 +1,6 @@
 # OptiVaults V1 — MultisigGov Validator 規格
 
-*MultiSig Governance + Timelock Pattern 的實作(通用模式、與替代方案的取捨討論、待答 CIP 問題見 [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md))。*
+*MultiSig Governance + Timelock Pattern 的實作(通用模式、與替代方案的取捨討論、待答 CIP 問題見 [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md))。*
 
 **範圍**:`multisig_gov` validator 的內部實作細節:action_id 計算、GovDatum spend / 轉移規則、跨 validator 授權 helper,以及本 validator 與 `governance.md`(公開動作目錄)的職責分離。
 
@@ -434,11 +434,11 @@ let governance_authorized = is_gov_authorized(
 
 ## 10. Pattern Extraction
 
-§1–§9 描述的 validator 是 **MultiSig Governance + Timelock Pattern** 的 V1 具體實例。通用模式被獨立文件化在 [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md),內容包括與替代方案的取捨、待答 CIP 設計問題、以及不依賴 V1 具體實作選擇的安全性論證。本節抓住邊界:哪些行為屬於*模式本身*(因此在任何符合此模式的實作中都會原樣出現),哪些屬於 *V1 在模式之上的操作政策*(因此會隨部署改變)。
+§1–§9 描述的 validator 是 **MultiSig Governance + Timelock Pattern** 的 V1 具體實例。通用模式被獨立文件化在 [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md),內容包括與替代方案的取捨、待答 CIP 設計問題、以及不依賴 V1 具體實作選擇的安全性論證。本節抓住邊界:哪些行為屬於*模式本身*(因此在任何符合此模式的實作中都會原樣出現),哪些屬於 *V1 在模式之上的操作政策*(因此會隨部署改變)。
 
 ### 10.1 V1 從通用模式繼承了什麼
 
-[`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) §2 的六個機制在 `multisig_gov.ak` 中被原樣執行:
+[`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md) §2 的六個機制在 `multisig_gov.ak` 中被原樣執行:
 
 | 機制 | V1 強制點 |
 |---|---|
@@ -467,12 +467,12 @@ V1 在通用模式之上多加了三層結構性延伸。沒有任何一層是�
 
 ### 10.4 相關 pattern-rationale 文件
 
-- [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) — 通用模式(本 validator 的主要 rationale)
-- [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) — Governance NFT(one-shot mint anchor),本 validator 依賴它做標準 UTXO 認證;V1 Governance NFT 實例化見該文件 §3.2
-- [`pattern-rationale-registry-auth-nft.md`](./pattern-rationale-registry-auth-nft.md) — Registry validator 的 `UpdateRegistry` redeemer 是 14 種 ActionKind 之中受本模式守的動作之一
-- [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) — VaultDatum Tier 2(policy)變更需要透過本 validator 走治理動作
-- [`pattern-rationale-withdraw-zero-forwarding.md`](./pattern-rationale-withdraw-zero-forwarding.md) — vault 端的治理 redeemer(在 `vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`)透過 Withdraw-Zero 模式被觸發,且其 payload 經由 `payload_hash` 綁回此處所 queue 的 action
-- [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) — V1 對 Cardano Improvement Proposals 的整體立場
+- [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md) — 通用模式(本 validator 的主要 rationale)
+- [`pattern-rationale-validator-identity-nft-zh-TW.md`](./pattern-rationale-validator-identity-nft-zh-TW.md) — Governance NFT(one-shot mint anchor),本 validator 依賴它做標準 UTXO 認證;V1 Governance NFT 實例化見該文件 §3.2
+- [`pattern-rationale-registry-auth-nft-zh-TW.md`](./pattern-rationale-registry-auth-nft-zh-TW.md) — Registry validator 的 `UpdateRegistry` redeemer 是 14 種 ActionKind 之中受本模式守的動作之一
+- [`pattern-rationale-vault-datum-tiered-zh-TW.md`](./pattern-rationale-vault-datum-tiered-zh-TW.md) — VaultDatum Tier 2(policy)變更需要透過本 validator 走治理動作
+- [`pattern-rationale-withdraw-zero-forwarding-zh-TW.md`](./pattern-rationale-withdraw-zero-forwarding-zh-TW.md) — vault 端的治理 redeemer(在 `vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`)透過 Withdraw-Zero 模式被觸發,且其 payload 經由 `payload_hash` 綁回此處所 queue 的 action
+- [`cip-readiness-posture-zh-TW.md`](../docs/cip-readiness-posture-zh-TW.md) — V1 對 Cardano Improvement Proposals 的整體立場
 
 ---
 

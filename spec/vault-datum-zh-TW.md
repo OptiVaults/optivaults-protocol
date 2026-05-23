@@ -1,6 +1,6 @@
 # OptiVaults V1 — VaultDatum 規格
 
-*VaultDatum Tiered Immutability 模式的實作(通用模式、強制 tier 邊界的 helper 函數紀律、與待答 CIP 設計問題見 [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md))。V1 的 29 個欄位組織在四個 tier — identity-immutable、governance-mutable policy、accounting、operational — 並由 `check_immutable_fields` 與 `check_policy_fields_unchanged` helper 在每一條會產出 continuing vault output 的 redeemer 上強制執行該 tier 的變更包絡。*
+*VaultDatum Tiered Immutability 模式的實作(通用模式、強制 tier 邊界的 helper 函數紀律、與待答 CIP 設計問題見 [`pattern-rationale-vault-datum-tiered-zh-TW.md`](./pattern-rationale-vault-datum-tiered-zh-TW.md))。V1 的 29 個欄位組織在四個 tier — identity-immutable、governance-mutable policy、accounting、operational — 並由 `check_immutable_fields` 與 `check_policy_fields_unchanged` helper 在每一條會產出 continuing vault output 的 redeemer 上強制執行該 tier 的變更包絡。*
 
 **範圍**:存放所有 vault 會計狀態的單一 UTxO datum。
 
@@ -195,7 +195,7 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 
 ## 6. CIP-applicability
 
-`VaultDatum` 的 4-tier 組織(Tier 1 identity / Tier 2 policy / Tier 3 accounting / Tier 4 operational),搭配 `check_immutable_fields` 與 `check_policy_fields_unchanged` helper 在每一條 redeemer 上強制執行該 tier 的變更包絡,是 V1 對 [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) 中所述 **VaultDatum Tiered Immutability** 模式的實例化。本模式是未來 Cardano Improvement Proposal 標準化的候選;V1 在 V1 階段不會撰寫 CIP。整體立場見 [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md)。
+`VaultDatum` 的 4-tier 組織(Tier 1 identity / Tier 2 policy / Tier 3 accounting / Tier 4 operational),搭配 `check_immutable_fields` 與 `check_policy_fields_unchanged` helper 在每一條 redeemer 上強制執行該 tier 的變更包絡,是 V1 對 [`pattern-rationale-vault-datum-tiered-zh-TW.md`](./pattern-rationale-vault-datum-tiered-zh-TW.md) 中所述 **VaultDatum Tiered Immutability** 模式的實例化。本模式是未來 Cardano Improvement Proposal 標準化的候選;V1 在 V1 階段不會撰寫 CIP。整體立場見 [`cip-readiness-posture-zh-TW.md`](../docs/cip-readiness-posture-zh-TW.md)。
 
 ### 6.1 V1 從通用模式繼承了什麼
 
@@ -216,8 +216,8 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 
 ### 6.3 相關 pattern-rationale 文件
 
-- [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) — 通用模式(本檔的主要 rationale)
-- [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) — 讓其他 validator 能信任這份 datum 的 Vault NFT 錨點(沒有 NFT 錨定的話,datum 可以在 vault address 上被偽造)
-- [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) — 守 Tier 2 變更的治理機制
-- [`pattern-rationale-withdraw-zero-forwarding.md`](./pattern-rationale-withdraw-zero-forwarding.md) — 讓多個 route validator 共用這一份 datum 的架構基底
-- [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) — V1 對 Cardano Improvement Proposals 的整體立場
+- [`pattern-rationale-vault-datum-tiered-zh-TW.md`](./pattern-rationale-vault-datum-tiered-zh-TW.md) — 通用模式(本檔的主要 rationale)
+- [`pattern-rationale-validator-identity-nft-zh-TW.md`](./pattern-rationale-validator-identity-nft-zh-TW.md) — 讓其他 validator 能信任這份 datum 的 Vault NFT 錨點(沒有 NFT 錨定的話,datum 可以在 vault address 上被偽造)
+- [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md) — 守 Tier 2 變更的治理機制
+- [`pattern-rationale-withdraw-zero-forwarding-zh-TW.md`](./pattern-rationale-withdraw-zero-forwarding-zh-TW.md) — 讓多個 route validator 共用這一份 datum 的架構基底
+- [`cip-readiness-posture-zh-TW.md`](../docs/cip-readiness-posture-zh-TW.md) — V1 對 Cardano Improvement Proposals 的整體立場

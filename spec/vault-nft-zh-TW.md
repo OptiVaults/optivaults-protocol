@@ -1,6 +1,6 @@
 # OptiVaults V1 — Vault Identity NFT 規格
 
-*Validator Identity NFT 模式的實作(通用模式、與 native-script 替代方案的取捨、待答 CIP 設計問題見 [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md))。V1 把同一個模式實例化了三次 — Vault NFT(本檔)、Governance NFT(見 `gov-nft.md`)、Registry Auth NFT(見 `pattern-rationale-registry-auth-nft.md`)。本檔是針對 Vault-NFT 實例化的 V1 案例研究。*
+*Validator Identity NFT 模式的實作(通用模式、與 native-script 替代方案的取捨、待答 CIP 設計問題見 [`pattern-rationale-validator-identity-nft-zh-TW.md`](./pattern-rationale-validator-identity-nft-zh-TW.md))。V1 把同一個模式實例化了三次 — Vault NFT(本檔)、Governance NFT(見 `gov-nft.md`)、Registry Auth NFT(見 `pattern-rationale-registry-auth-nft-zh-TW.md`)。本檔是針對 Vault-NFT 實例化的 V1 案例研究。*
 
 **範圍**:one-shot Vault Identity NFT 的 minting policy,以及它作為編譯時信任錨點的角色。
 
@@ -175,7 +175,7 @@ V1 以 PlutusV3 換取的 trade-off:
 
 ## 6. CIP-applicability
 
-Vault NFT 是 V1 對 [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) 所述 **Validator Identity NFT** 模式的參考實例。本模式是未來 Cardano Improvement Proposal 標準化的候選;V1 在 V1 階段不會撰寫 CIP。整體立場見 [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md)。
+Vault NFT 是 V1 對 [`pattern-rationale-validator-identity-nft-zh-TW.md`](./pattern-rationale-validator-identity-nft-zh-TW.md) 所述 **Validator Identity NFT** 模式的參考實例。本模式是未來 Cardano Improvement Proposal 標準化的候選;V1 在 V1 階段不會撰寫 CIP。整體立場見 [`cip-readiness-posture-zh-TW.md`](../docs/cip-readiness-posture-zh-TW.md)。
 
 ### 6.1 V1 從通用模式繼承了什麼
 
@@ -195,10 +195,10 @@ Vault NFT 是 V1 對 [`pattern-rationale-validator-identity-nft.md`](./pattern-r
 
 ### 6.3 相關 pattern-rationale 文件
 
-- [`pattern-rationale-validator-identity-nft.md`](./pattern-rationale-validator-identity-nft.md) — 通用模式(本檔 Vault NFT 的主要 rationale)
-- [`pattern-rationale-withdraw-zero-forwarding.md`](./pattern-rationale-withdraw-zero-forwarding.md) §4.3 — singleton 強制的組合:Withdraw-Zero 本身並不會約束 vault address 上有幾顆 UTXO,Vault NFT 把這個縫合上
-- [`pattern-rationale-vault-datum-tiered.md`](./pattern-rationale-vault-datum-tiered.md) — VaultDatum 的 identity tier 欄位包含依賴這顆 NFT 真實性的編譯時錨定 token 參考
-- [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) — V1 對 Cardano Improvement Proposals 的整體立場
+- [`pattern-rationale-validator-identity-nft-zh-TW.md`](./pattern-rationale-validator-identity-nft-zh-TW.md) — 通用模式(本檔 Vault NFT 的主要 rationale)
+- [`pattern-rationale-withdraw-zero-forwarding-zh-TW.md`](./pattern-rationale-withdraw-zero-forwarding-zh-TW.md) §4.3 — singleton 強制的組合:Withdraw-Zero 本身並不會約束 vault address 上有幾顆 UTXO,Vault NFT 把這個縫合上
+- [`pattern-rationale-vault-datum-tiered-zh-TW.md`](./pattern-rationale-vault-datum-tiered-zh-TW.md) — VaultDatum 的 identity tier 欄位包含依賴這顆 NFT 真實性的編譯時錨定 token 參考
+- [`cip-readiness-posture-zh-TW.md`](../docs/cip-readiness-posture-zh-TW.md) — V1 對 Cardano Improvement Proposals 的整體立場
 
 ---
 

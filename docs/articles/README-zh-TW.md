@@ -79,7 +79,7 @@ V1 的營運層機制：SwapAda 鏈上 ADA 補充閉環、7 天 keeper-inactivit
 
 這些與架構系列文章配對:架構第三篇(「17 Validators: Four Orthogonal Cuts」)是 OptiVaults 特定的目錄,而 **Withdraw-Zero Forwarding** rationale 文件則是該目錄實例化的那個通用模式。
 
-V1 對這些模式與 Cardano Improvement Proposal 流程的更廣立場 — 資訊性質;V1 準備模式文件,但在 V1 release 階段不會撰寫 CIP 提案 — 在 [`docs/cip-readiness-posture.md`](../cip-readiness-posture-zh-TW.md)。
+V1 對這些模式與 Cardano Improvement Proposal 流程的更廣立場 — 資訊性質;V1 準備模式文件,但在 V1 release 階段不會撰寫 CIP 提案 — 在 [`docs/cip-readiness-posture-zh-TW.md`](../cip-readiness-posture-zh-TW.md)。
 
 ---
 

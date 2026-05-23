@@ -1,6 +1,6 @@
 # governance.md — MultisigGov 動作目錄
 
-*[`multisig-gov.md`](./multisig-gov.md) 實作規格的公開面向 companion。V1 治理是 [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) 中所述 **MultiSig Governance + Timelock Pattern** 的實例化;本目錄列出 V1 的 14 種 action kind、其 timelock 下限、與跨 validator 的授權流程。*
+*[`multisig-gov.md`](./multisig-gov.md) 實作規格的公開面向 companion。V1 治理是 [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md) 中所述 **MultiSig Governance + Timelock Pattern** 的實例化;本目錄列出 V1 的 14 種 action kind、其 timelock 下限、與跨 validator 的授權流程。*
 
 V1 治理是帶 timelock 與 cancel 否決的 m-of-n 多簽 — 也就是 **MultiSig Governance + Timelock Pattern** 為 V1 的具體 action 集合所做的實例化。本文件列出每個受治理閘控的動作、其 timelock、cancel 窗口、以及鏈上授權流程。
 
@@ -551,7 +551,7 @@ Heartbeat 的存在,就是為了讓安靜季的簽名者**仍可**合格。
 
 ## 10. Pattern Extraction
 
-§4 列出的 14 個 ActionKind 目錄是 **MultiSig Governance + Timelock Pattern** 的 V1 特定實例。通用模式 — m-of-n 門檻核可、每個動作各自的 timelock、1-of-n cancel veto、嚴格單調 nonce 綁定的 `action_id`、payload-hash 綁定、timelock 過後的 TTL 上限 — 文件在 [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md),並包含與替代方案的取捨與待答 CIP 設計問題。companion 檔 [`multisig-gov.md`](./multisig-gov.md) §10 抓住實作端的邊界:模式本身與 V1 的操作性延伸。
+§4 列出的 14 個 ActionKind 目錄是 **MultiSig Governance + Timelock Pattern** 的 V1 特定實例。通用模式 — m-of-n 門檻核可、每個動作各自的 timelock、1-of-n cancel veto、嚴格單調 nonce 綁定的 `action_id`、payload-hash 綁定、timelock 過後的 TTL 上限 — 文件在 [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md),並包含與替代方案的取捨與待答 CIP 設計問題。companion 檔 [`multisig-gov.md`](./multisig-gov.md) §10 抓住實作端的邊界:模式本身與 V1 的操作性延伸。
 
 ### 10.1 本目錄是什麼
 
@@ -561,17 +561,17 @@ Heartbeat 的存在,就是為了讓安靜季的簽名者**仍可**合格。
 
 ### 10.2 本目錄不是什麼
 
-- 它**不是**模式的安全性論證。安全性論證在 [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) §4(門檻安全性 / 偵測時間 / veto 不對稱 / 抗重放 / payload 不可變性 / TTL 上限),適用於任何符合此模式的實作。
-- 它**不是** CIP 草案。V1 在 V1 階段不會撰寫 CIP;V1 是否未來才考慮撰寫的四個 gate 見 [`cip-readiness-posture.md`](../docs/cip-readiness-posture.md) §4。
+- 它**不是**模式的安全性論證。安全性論證在 [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md) §4(門檻安全性 / 偵測時間 / veto 不對稱 / 抗重放 / payload 不可變性 / TTL 上限),適用於任何符合此模式的實作。
+- 它**不是** CIP 草案。V1 在 V1 階段不會撰寫 CIP;V1 是否未來才考慮撰寫的四個 gate 見 [`cip-readiness-posture-zh-TW.md`](../docs/cip-readiness-posture-zh-TW.md) §4。
 - 它**不是** validator 層級的執行細節。那部分在 [`multisig-gov.md`](./multisig-gov.md) §3–§9(簽名者成員不變式、action_id 計算、payload_hash 計算、redeemer 實作、跨 validator 授權 helper、size 考量、回歸測試面)。
 
 ### 10.3 依問題往下讀
 
-- *「這份治理設計給存款人什麼保證?」* → [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) §4(通用安全性論證)
+- *「這份治理設計給存款人什麼保證?」* → [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md) §4(通用安全性論證)
 - *「V1 在 Aiken 中如何強制這些保證?」* → [`multisig-gov.md`](./multisig-gov.md) §3–§9(實作規格)
 - *「V1 治理可以做什麼、每個動作要多久?」* → 本檔 §4(action 目錄)
 - *「在模式之上 V1 多疊了什麼具體選擇?」* → [`multisig-gov.md`](./multisig-gov.md) §10(timelock 下限、簽名者補償、empty-hash 模式)
-- *「V1 的治理設計與 Cardano ledger 層級的 CIP-1694 治理是什麼關係?」* → [`pattern-rationale-multisig-gov-timelock.md`](./pattern-rationale-multisig-gov-timelock.md) §5(互補、不衝突)
+- *「V1 的治理設計與 Cardano ledger 層級的 CIP-1694 治理是什麼關係?」* → [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md) §5(互補、不衝突)
 
 ---
 

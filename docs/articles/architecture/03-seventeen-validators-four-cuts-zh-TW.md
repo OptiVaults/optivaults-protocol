@@ -130,11 +130,11 @@ V1 引入 oracle / asset_oracles / Minswap V2 SwapAdapter dispatch 之後，原�
 
 最後一個提醒:什麼會延伸到 OptiVaults V1 之外、什麼不會。
 
-本篇文章建立在底層技術 — **Withdraw-Zero Forwarding**,把業務邏輯從 spending validator 搬到多個 staking validator、由一層薄薄的 proxy 路由 — 之上;這是一個**通用的 Cardano DeFi 模式**,適用於任何撞到 16 KB Plutus V3 上限、或想要 per-TX ref-script fee 隨實際 redeemer 使用而成比例的協議。通用文件(獨立於 OptiVaults 特定細節)在 [`spec/pattern-rationale-withdraw-zero-forwarding.md`](../../../spec/pattern-rationale-withdraw-zero-forwarding.md)。
+本篇文章建立在底層技術 — **Withdraw-Zero Forwarding**,把業務邏輯從 spending validator 搬到多個 staking validator、由一層薄薄的 proxy 路由 — 之上;這是一個**通用的 Cardano DeFi 模式**,適用於任何撞到 16 KB Plutus V3 上限、或想要 per-TX ref-script fee 隨實際 redeemer 使用而成比例的協議。通用文件(獨立於 OptiVaults 特定細節)在 [`spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md`](../../../spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md)。
 
 而上表中**具體的 17-validator 目錄** — 那組精確的集合 `vault_user` / `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada` / `vault_protocol` / `vault_recall` / `vault_liqwid` / `vault_gov_policy` / `vault_gov_emergency` / `vault_admin_deploy` / `keeper_stake_script` / `treasury` / `multisig_gov` / `registry` / `order` / `vusdcx` / `vault_proxy`,沿四條切割線切分 — 是 **OptiVaults V1 特有的**。這裡展示的切分軸是被 V1 自己的邏輯組合所推動(`vault_gov_policy` 的八個 redeemer、`vault_swap_ada` 裡的 dual-feed oracle、`vault_protocol` 的 SwapAdapter dispatch、`vault_liqwid` 的逐市場部位追蹤)。另一個套用 Withdraw-Zero 的協議會沿著自己的 redeemer 面切分 — 不同的切割軸、不同的 validator 數。
 
-簡單講:**模式**是通用的,**目錄**是特定的。V1 為未來 CIP 考量所文件化的五個模式見 [`docs/cip-readiness-posture.md`](../../cip-readiness-posture.md) §2,V1 明確標為「專案特定、不是 CIP 候選」的元件見其 §6。
+簡單講:**模式**是通用的,**目錄**是特定的。V1 為未來 CIP 考量所文件化的五個模式見 [`docs/cip-readiness-posture-zh-TW.md`](../../cip-readiness-posture-zh-TW.md) §2,V1 明確標為「專案特定、不是 CIP 候選」的元件見其 §6。
 
 ---
 

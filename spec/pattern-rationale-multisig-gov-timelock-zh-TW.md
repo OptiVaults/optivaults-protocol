@@ -1,6 +1,6 @@
 # Pattern Rationale — MultiSig Governance + Timelock
 
-**狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture.md`。
+**狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture-zh-TW.md`。
 
 **範圍**：一個反覆出現的協議政策治理模式，組合了 (a) m-of-n 門檻簽名核可、(b) 每個動作各自的 timelock（核可與執行之間的時間差）、(c) timelock 窗內任一 signer 都可以行使 1-of-n veto、(d) 嚴格單調遞增的 nonce 綁定 action 識別碼、(e) payload-hash 綁定 — 確保被 queue 的動作在執行之前其效果不會漂移、(f) timelock 過後的 TTL 上限 — 不讓過期的核可一直留在 queue 裡。模式本身是通用的；OptiVaults V1 把它具現為 14 種 action kind，案例研究見 §6。
 
@@ -281,11 +281,11 @@ V1 的審計歷史（Coverage area C — V1 Integration Flows；見 `docs/audit-
 - `contracts/lib/vault/types.ak` `GovDatum` / `QueuedAction` / `ActionKind` / `GovRedeemer` — V1 的 datum + redeemer 形狀
 - `spec/multisig-gov.md` — V1 的實作規格（~440 行，比本背景說明更深入）
 - `spec/governance.md` — V1 公開動作的目錄（每種 action kind 的用途 + timelock + payload 形狀）
-- `spec/pattern-rationale-validator-identity-nft.md` — Pattern 1，Gov NFT 錨定的基底
-- `spec/pattern-rationale-withdraw-zero-forwarding.md` — Pattern 3；V1 的 gov-authorised redeemer 透過 Withdraw-Zero 被路由到 `vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`
-- `spec/pattern-rationale-registry-auth-nft.md` — Pattern 4；Registry 的 `UpdateRegistry` redeemer 是 14 種 ActionKind 之中一個由本模式守的動作
-- `docs/cip-readiness-posture.md` — 整體 CIP 立場
+- `spec/pattern-rationale-validator-identity-nft-zh-TW.md` — Pattern 1，Gov NFT 錨定的基底
+- `spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md` — Pattern 3；V1 的 gov-authorised redeemer 透過 Withdraw-Zero 被路由到 `vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`
+- `spec/pattern-rationale-registry-auth-nft-zh-TW.md` — Pattern 4；Registry 的 `UpdateRegistry` redeemer 是 14 種 ActionKind 之中一個由本模式守的動作
+- `docs/cip-readiness-posture-zh-TW.md` — 整體 CIP 立場
 
 ---
 
-**文件狀態**：資訊性質的模式背景說明。反映 V1 在 launch readiness 階段的設計。修訂時機依循 `cip-readiness-posture.md` §4 所述條件。
+**文件狀態**：資訊性質的模式背景說明。反映 V1 在 launch readiness 階段的設計。修訂時機依循 `cip-readiness-posture-zh-TW.md` §4 所述條件。

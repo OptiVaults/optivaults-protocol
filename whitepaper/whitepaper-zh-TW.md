@@ -884,7 +884,7 @@ V1 部署 **17 個 logic validator**(其中 #17 `vusdcx` 是份額代幣鑄造�
 
 ### 3.2 Withdraw-Zero Forwarding Pattern
 
-*本子節摘要 V1 的具體實例化。通用模式 rationale、與替代方案的取捨、待答 CIP 設計問題見:`spec/pattern-rationale-withdraw-zero-forwarding.md`（白皮書層級的摘要見下方 §3.6.3）。*
+*本子節摘要 V1 的具體實例化。通用模式 rationale、與替代方案的取捨、待答 CIP 設計問題見:`spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md`（白皮書層級的摘要見下方 §3.6.3）。*
 
 Cardano Plutus V3 對 validator reference script 大小有 16 KB 限制。V1 的金庫邏輯超過此限。解法：將金庫邏輯拆分至多個 staking validators（`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`），用 `vault_proxy` 作為 spend-path 轉發器。
 
@@ -898,7 +898,7 @@ Cardano Plutus V3 對 validator reference script 大小有 16 KB 限制。V1 的
 
 ### 3.3 編譯期信任錨
 
-*V1 的三個 Validator Identity NFT（`vault_nft` / `governance_nft` / `registry_auth_nft`）提供這裡討論的編譯期身份錨。模式 rationale、安全性論證、待答 CIP 設計問題見:`spec/pattern-rationale-validator-identity-nft.md`（白皮書層級的摘要見下方 §3.6.1）。*
+*V1 的三個 Validator Identity NFT（`vault_nft` / `governance_nft` / `registry_auth_nft`）提供這裡討論的編譯期身份錨。模式 rationale、安全性論證、待答 CIP 設計問題見:`spec/pattern-rationale-validator-identity-nft-zh-TW.md`（白皮書層級的摘要見下方 §3.6.1）。*
 
 V1 大量使用編譯期參數，把信任在部署當下就錨定住。寫進 validator hash 的欄位包括：
 
@@ -943,7 +943,7 @@ V1 的原始碼**拆在兩個獨立的公開 repo**,各自有自己的審計範�
 
 V1 的架構是五個反覆出現模式的組合,各自獨立文件化在 `spec/pattern-rationale-*.md`。每個模式都在 Cardano DeFi 協議中以非正式形式出現過;V1 把每一個都實例化成一份有文件、有審計軌跡、且鏈上可驗證的實作。沒有一個是 V1 自創的 — 在其他正在運行的協議都看得到變體 — 但 V1 的實例是具體的參考點,適合作為未來 Cardano Improvement Proposal 討論的基底。
 
-本節是這五個模式在白皮書層級的公開摘要。每個模式完整的設計 rationale 放在它專屬的 spec 文件;V1 特定的實作則在現有的 spec 檔(`spec/vault-nft.md` / `spec/multisig-gov.md` / `spec/vault-datum.md` 等等)。CIP-readiness 立場 — V1 在什麼條件下會撰寫 CIP — 寫在 §3.7 與 `docs/cip-readiness-posture.md`。
+本節是這五個模式在白皮書層級的公開摘要。每個模式完整的設計 rationale 放在它專屬的 spec 文件;V1 特定的實作則在現有的 spec 檔(`spec/vault-nft.md` / `spec/multisig-gov.md` / `spec/vault-datum.md` 等等)。CIP-readiness 立場 — V1 在什麼條件下會撰寫 CIP — 寫在 §3.7 與 `docs/cip-readiness-posture-zh-TW.md`。
 
 #### 3.6.1 Validator Identity NFT 模式
 
@@ -953,7 +953,7 @@ V1 的架構是五個反覆出現模式的組合,各自獨立文件化在 `spec/
 
 **生態系現況。** 這個模式的變體已經在其他 Cardano DeFi 協議中出貨過;底層「透過消耗 UTXO ref 做 one-shot mint」的想法被廣泛認可。V1 文件中的新貢獻不是模式本身,而是「三個 NFT 案例系統性放在一起」與「相對於舊式 `{all: [sig, before(slot)]}` native-script 替代方案的明確比較」 — V1 內部驗證期就是用 native-script,結果在 deadline 過期之後產生永遠 burn 不掉的 NFT(每個 vault 鎖死約 15-20 ADA,在舊版部署中觀察到)。
 
-**待答的 CIP 問題。** `asset_name` 參數應該是編譯期常數(V1 `vault_nft` 形狀)還是 runtime 參數(V1 `governance_nft` 與 `registry_auth_nft` 形狀),以及這個模式是否要與 CIP-68 reference NFT 組合來支援攜帶 metadata 的用途。V1 允許兩種 `asset_name` 形式且不主張其中一種。完整討論:`spec/pattern-rationale-validator-identity-nft.md` §7。
+**待答的 CIP 問題。** `asset_name` 參數應該是編譯期常數(V1 `vault_nft` 形狀)還是 runtime 參數(V1 `governance_nft` 與 `registry_auth_nft` 形狀),以及這個模式是否要與 CIP-68 reference NFT 組合來支援攜帶 metadata 的用途。V1 允許兩種 `asset_name` 形式且不主張其中一種。完整討論:`spec/pattern-rationale-validator-identity-nft-zh-TW.md` §7。
 
 **存款人或審計者會檢查什麼。** 三個 Validator Identity NFT minting policy 在 `contracts/validators/` 裡各自不到 60 行 Aiken。審查者可以在五分鐘內讀完三份、把 mint 與 burn 分支與模式的參考形狀對照、並確認每份 policy 部署交易中編譯期 `utxo_ref` 參數的確被消耗(V1 部署 ceremony 的交易軌跡讓這在鏈上可驗證)。V1 mainnet ceremony 完成後,每份 NFT policy 的參數 UTxO 與消耗它的交易都會公布在 `deploy/state/`。fork 運營者要在自己的協議裡實作這個模式,只需要用同一份 minting-policy template、配上自己的 `utxo_ref` 與 asset name 選擇;他們 fork 的 NFT policy ID 與 V1 不同,因為編譯期參數不同 — 跨 vault 混淆在結構上不可能。
 
@@ -965,7 +965,7 @@ V1 的架構是五個反覆出現模式的組合,各自獨立文件化在 `spec/
 
 **生態系現況。** Multisig-with-timelock 治理在跨 DeFi 領域很常見;payload-hash 綁定是舊式實作裡最常被 underspecified 的一塊。Cardano 生態系有多份多簽治理設計在生產環境運行。V1 的貢獻是明確的六機制分解、與每種 action kind 各自 timelock-下限的表 — 後者比較像運維政策而非協議 primitive,但對考慮類似設計的協議來說值得文件化。
 
-**待答的 CIP 問題。** 每種 action kind 的 timelock 下限表應該由協議層規範(被 CIP 鎖住)還是鏈下專案政策(每個部署自己挑)。V1 選擇部署政策。動作 target 的兩種綁定模式(`target_tx_hash == #""` 彈性執行,vs. 具體 32-byte 承諾的預簽流程)也都允許,且沒有標準預設。完整討論:`spec/pattern-rationale-multisig-gov-timelock.md` §7。
+**待答的 CIP 問題。** 每種 action kind 的 timelock 下限表應該由協議層規範(被 CIP 鎖住)還是鏈下專案政策(每個部署自己挑)。V1 選擇部署政策。動作 target 的兩種綁定模式(`target_tx_hash == #""` 彈性執行,vs. 具體 32-byte 承諾的預簽流程)也都允許,且沒有標準預設。完整討論:`spec/pattern-rationale-multisig-gov-timelock-zh-TW.md` §7。
 
 **V1 在模式之上的三個具體延伸。** (1) 每種 action kind 的 timelock 下限與上限寫死在 validator 裡,使 `timelock_ms = 0` 的 queue 無法繞過敏感動作該有的保護(§6.2 目錄列出每個動作的下限 — 預設 14 天、UpdateFeeSplit 21 天、EmergencyWithdraw 0 天、FastUpdateMarkets 1 小時、UpdateSlippagePolicy 48 小時)。(2) Signer 補償池 + 每季分發疊在 `GovDatum` 裡,讓 signer 經濟上對齊而不需要每動作支付。(3) Empty-hash 彈性目標模式(`target_tx_hash == #""`)在同一套 payload-hash 紀律下同時支援預先承諾與彈性執行流程。這三層延伸是 V1 的運維選擇、不是通用模式的一部分;另一個部署可以省略其中任何一層或全部。pattern-core 與 V1-elaboration 之間的邊界在 `spec/multisig-gov.md` §10 中明確文件化。
 
@@ -979,7 +979,7 @@ V1 的架構是五個反覆出現模式的組合,各自獨立文件化在 `spec/
 
 **生態系現況。** Withdraw-Zero 基底從 V8 / V9 Plutus 時代起就在多個 Cardano DeFi 協議中出貨;V1 沒有發明它。但無論英文還是中文,長篇 write-up 都很少 — V1 的 `docs/articles/architecture/02-withdraw-zero-forwarding-pattern.md` 是比較易讀的入門之一,V1 合約集也是已公開、把這個模式拉到全規模在用的較大型部署之一。
 
-**待答的 CIP 問題。** Conway 時代 reference-script 費用曲線與典型 Withdraw-Zero 協議的互動(這類協議每筆交易常規會引用 4-6 份腳本)值得一份文件化的分析。Stake-credential 生命週期(每個 route 2 ADA 的 stake-registration deposit、deregistration 路徑、部署 ceremony 複雜度)是另一個標準化候選。完整討論:`spec/pattern-rationale-withdraw-zero-forwarding.md` §7。
+**待答的 CIP 問題。** Conway 時代 reference-script 費用曲線與典型 Withdraw-Zero 協議的互動(這類協議每筆交易常規會引用 4-6 份腳本)值得一份文件化的分析。Stake-credential 生命週期(每個 route 2 ADA 的 stake-registration deposit、deregistration 路徑、部署 ceremony 複雜度)是另一個標準化候選。完整討論:`spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md` §7。
 
 **為什麼 V1 切成 10 個 route 而不是 5 或 20。** 每個 route 的 stake-credential 註冊要 2 ADA(deregistration 時退還)。10 個 route 加上周邊 staking validator(`keeper_stake_script` 等等),V1 的部署 ceremony 在任何時刻會攜帶大約 24-30 ADA 的 stake-credential float — 在運維上不可忽略,但完全在 V1 部署 ceremony ADA 預算之內。切分軸(permissionless vs keeper / hot-path vs governance / vault 內 vs 外部 / 同步 vs 佇列)依據的是審計驅動的授權邊界,而不是均等大小的 partition。每個 route 編譯後大小都各自獨立壓在 16 KB 以下;最緊的是 `vault_liqwid` ~13.4 KB,還剩約 3 KB headroom 給未來的 per-market 邏輯。另一個用同模式的協議會依自己的授權矩陣決定切多少:協議簡單就切少、授權邏輯多樣就切多。
 
@@ -993,7 +993,7 @@ V1 的架構是五個反覆出現模式的組合,各自獨立文件化在 `spec/
 
 **生態系現況。** 帶 NFT 認證的 configuration anchor 模式在 Cardano DeFi 都看得到;具體的三 redeemer 切分(慢速 / 快速 / 單邊 pause)與上限 cap 紀律是 V1 的組織貢獻,而不是新原語。本模式與 CIP-72(dApp Registration & Discovery)正交:CIP-72 是錢包與瀏覽器消費的對外身份宣告;本模式是協議自己 validator 消費的對內授權 datum。兩者只是共用「registry」這個英文字。
 
-**待答的 CIP 問題。** Registry datum 跨協議升級的 schema 版本化、authenticated-read helper signature 的標準化、cap-發現機制(cap 寫在 datum 自己裡,還是另外發布)。完整討論:`spec/pattern-rationale-registry-auth-nft.md` §7。
+**待答的 CIP 問題。** Registry datum 跨協議升級的 schema 版本化、authenticated-read helper signature 的標準化、cap-發現機制(cap 寫在 datum 自己裡,還是另外發布)。完整討論:`spec/pattern-rationale-registry-auth-nft-zh-TW.md` §7。
 
 **Authenticated-read 不變式。** 每個把 Registry 當 reference input 讀的 V1 validator 都走同一個 helper 函數(`helpers.read_registry_datum`),它在回傳 datum 之前先驗證傳進來的 UTxO 攜帶預期的 Registry Auth NFT。一個跳過 helper、直接讀 reference input 的 validator 會是輕易就被利用的:攻擊者可以在 Registry script address 上種一顆攜帶寬鬆白名單的偽造 UTxO,而直讀的 validator 會把它當成真的 Registry 來消費。「只走一份 helper」這個紀律就是結構性的防禦;審計不變式是「V1 source 中每個 Registry reference-input 讀都會經過 `helpers.read_registry_datum`」。審查者可以 grep `lib/vault/helpers.ak` 找 helper 定義、再 grep 每個消費端 validator 找 helper 呼叫 — 審計的主要檢查就是「沒有任何 call site 漏掉它」。
 
@@ -1007,7 +1007,7 @@ V1 的架構是五個反覆出現模式的組合,各自獨立文件化在 `spec/
 
 **生態系現況。** Datum 欄位 tier 化在 Cardano DeFi 中以非正式形式被實踐,但很少配上明確的 tier 名稱與 helper 函數紀律。V1 的貢獻是明確的四 tier 命名與「helper-call 不變式」的審計面。曾經在多鏈 DeFi 歷史上出現的事故 — fee-update redeemer 不小心改寫了 deposit-token policy 欄位 — V1 的 tier 紀律從結構上把這個 bug 類別封閉。
 
-**待答的 CIP 問題。** Tier 應該被編碼在鏈上(放一個 leading enum 欄位、struct-nested tier marker)還是繼續留為 code-organisation 慣例。Helper 函數是否要標準化成參考 Aiken library。跨協議升級的 datum-schema 版本化。完整討論:`spec/pattern-rationale-vault-datum-tiered.md` §7。
+**待答的 CIP 問題。** Tier 應該被編碼在鏈上(放一個 leading enum 欄位、struct-nested tier marker)還是繼續留為 code-organisation 慣例。Helper 函數是否要標準化成參考 Aiken library。跨協議升級的 datum-schema 版本化。完整討論:`spec/pattern-rationale-vault-datum-tiered-zh-TW.md` §7。
 
 **為什麼是兩個 helper 而不是一個。** V1 把 `check_immutable_fields`(Tier 1)與 `check_policy_fields_unchanged`(Tier 2)分開,而不是合成一個 mega-helper。理由是可審計性:policy-changing redeemer(UpdateFee / UpdateFeeSplit / UpdateStrategy / UpdateSlippagePolicy)只呼叫 `check_immutable_fields`,然後明確列舉自己擁有哪些 Tier 2 欄位。合成一個 helper 的話,每條 policy-changing redeemer 都得 inline 它*不*擁有的 Tier 2 欄位的相等性檢查,審計面加倍、且會多出一個 bug 類別(redeemer「忘記」對自己範圍外的某個 Tier 2 欄位作出斷言)。兩 helper 紀律讓每條 redeemer 的變更包絡從它的結構就看得出來:呼叫了哪些 helper、哪些欄位等於 `old`、哪些是從 redeemer 參數推出來、哪些帶有數學不變式。
 
@@ -1054,7 +1054,7 @@ V1 的文件因此採取另一種形式:與 V1 規格放在一起的模式 ratio
 
 (d) 社群治理轉移(§10)已經跨過 founder-controlled 階段,使 CIP 作者身份不再實質上由單一行動者壟斷。
 
-如果 (a)–(d) 沒有全部成立,文件就以資訊性質的模式 rationale 留在原處。模式本身對任何讀 V1 程式碼的人仍然有用 — 只是還沒被標準化而已。完整立場聲明:`docs/cip-readiness-posture.md`。
+如果 (a)–(d) 沒有全部成立,文件就以資訊性質的模式 rationale 留在原處。模式本身對任何讀 V1 程式碼的人仍然有用 — 只是還沒被標準化而已。完整立場聲明:`docs/cip-readiness-posture-zh-TW.md`。
 
 #### 3.7.4 社群現在可以怎麼參與
 
@@ -2015,11 +2015,11 @@ V1 的文件同時使用**通用模式名稱**(被設計成在 Cardano DeFi 協�
 
 | 通用名稱 | OptiVaults 風味名稱(V1 特定) | Pattern-rationale 文件 | V1 spec / 實作 |
 |---|---|---|---|
-| Validator Identity NFT(一次性 UTXO-ref mint 錨點) | Vault NFT / Governance NFT / Registry Auth NFT | `spec/pattern-rationale-validator-identity-nft.md` | `spec/vault-nft.md`、`spec/gov-nft.md` §9 區別說明、`contracts/validators/vault_nft.ak` / `governance_nft.ak` / `registry_auth_nft.ak` |
-| MultiSig Governance + Timelock | MultisigGov + 14 ActionKind + 每動作 timelock 下限 | `spec/pattern-rationale-multisig-gov-timelock.md` | `spec/governance.md`、`spec/multisig-gov.md`、`contracts/validators/multisig_gov.ak` |
-| Withdraw-Zero Forwarding | `vault_proxy` + 10 個被路由的 staking validator | `spec/pattern-rationale-withdraw-zero-forwarding.md` | `spec/architecture.md` §4 + §6、`docs/articles/architecture/02-withdraw-zero-forwarding-pattern.md`、`contracts/validators/vault_proxy.ak` |
-| Registry + Auth NFT Whitelist | Registry V2(9 欄位 RegistryDatum + 3 redeemer + authenticated-read helper) | `spec/pattern-rationale-registry-auth-nft.md` | `contracts/validators/registry.ak`、`contracts/lib/vault/helpers.ak` `read_registry_datum` |
-| VaultDatum Tiered Immutability | 29 欄位 VaultDatum × 4 tier + `check_immutable_fields` / `check_policy_fields_unchanged` helper | `spec/pattern-rationale-vault-datum-tiered.md` | `spec/vault-datum.md`、`contracts/lib/vault/validation.ak`、`contracts/lib/vault/types.ak` `VaultDatum` |
+| Validator Identity NFT(一次性 UTXO-ref mint 錨點) | Vault NFT / Governance NFT / Registry Auth NFT | `spec/pattern-rationale-validator-identity-nft-zh-TW.md` | `spec/vault-nft.md`、`spec/gov-nft.md` §9 區別說明、`contracts/validators/vault_nft.ak` / `governance_nft.ak` / `registry_auth_nft.ak` |
+| MultiSig Governance + Timelock | MultisigGov + 14 ActionKind + 每動作 timelock 下限 | `spec/pattern-rationale-multisig-gov-timelock-zh-TW.md` | `spec/governance.md`、`spec/multisig-gov.md`、`contracts/validators/multisig_gov.ak` |
+| Withdraw-Zero Forwarding | `vault_proxy` + 10 個被路由的 staking validator | `spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md` | `spec/architecture.md` §4 + §6、`docs/articles/architecture/02-withdraw-zero-forwarding-pattern.md`、`contracts/validators/vault_proxy.ak` |
+| Registry + Auth NFT Whitelist | Registry V2(9 欄位 RegistryDatum + 3 redeemer + authenticated-read helper) | `spec/pattern-rationale-registry-auth-nft-zh-TW.md` | `contracts/validators/registry.ak`、`contracts/lib/vault/helpers.ak` `read_registry_datum` |
+| VaultDatum Tiered Immutability | 29 欄位 VaultDatum × 4 tier + `check_immutable_fields` / `check_policy_fields_unchanged` helper | `spec/pattern-rationale-vault-datum-tiered-zh-TW.md` | `spec/vault-datum.md`、`contracts/lib/vault/validation.ak`、`contracts/lib/vault/types.ak` `VaultDatum` |
 
 ### A.2 Soul-Bound NFT(Gov Signer NFT)
 
@@ -2045,13 +2045,13 @@ MultiSig Governance + Timelock 模式實例化的是「每個協議各自的治�
 
 - **公開面動作目錄** — `spec/governance.md` §4 列出 V1 的 14 個 ActionKind,每一個的用途、timelock、payload 形狀、跨 validator 授權流程。
 - **Validator 層級實作規格** — `spec/multisig-gov.md` §6 涵蓋 redeemer 實作、action_id 推導、payload-hash 重算、跨 validator 授權 helper。
-- **通用 pattern rationale** — `spec/pattern-rationale-multisig-gov-timelock.md` §6 列出「模式本身」與「V1 實例特定延伸」(每 action kind timelock 下限、signer 補償池、empty-hash 彈性目標模式)之間的邊界。
+- **通用 pattern rationale** — `spec/pattern-rationale-multisig-gov-timelock-zh-TW.md` §6 列出「模式本身」與「V1 實例特定延伸」(每 action kind timelock 下限、signer 補償池、empty-hash 彈性目標模式)之間的邊界。
 
 審查 governance 的審查者會從 `spec/governance.md` 看目錄、進到 `spec/multisig-gov.md` 看 validator 層強制細節、再讀 pattern rationale 文件看跨實作的安全性論證。
 
 ### A.5 進一步閱讀
 
-- `docs/cip-readiness-posture.md` — 專案層級的 CIP 立場聲明(資訊性質、不是 CIP 草案)
+- `docs/cip-readiness-posture-zh-TW.md` — 專案層級的 CIP 立場聲明(資訊性質、不是 CIP 草案)
 - `spec/pattern-rationale-*.md` — 五個通用模式 rationale 文件(對應 Appendix A.1)
 - `spec/architecture.md` §9 — 把五個模式對應到 V1 各自 home 的架構層對照表
 - `docs/security-model.md` §9 — 從威脅模型角度把每個模式如何封閉特定攻擊面寫出來(CIP Extraction Opportunities 區段)
