@@ -222,7 +222,7 @@ async function main() {
   const nonce = govDatumFields[8] as bigint;
   console.log(`gov signers: ${signers.length}, threshold: ${threshold}, nonce: ${nonce}, queued: ${queued.length}`);
 
-  // Idempotency (Phase 84 backport from h-emergency-benign): if a matching
+  // Idempotency check: if a matching
   // ActDeregisterStake for this target is already in the queue (e.g. previous
   // run's Queue TX confirmed but this script crashed before state.a2 persist,
   // or state file was lost), skip the Queue submit, read the existing action's

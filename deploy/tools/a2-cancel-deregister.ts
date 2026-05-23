@@ -133,7 +133,7 @@ async function main() {
   const actionIdLower = actionId.toLowerCase();
   const newQueued = queued.filter((q: any) => (q.fields[0] as string).toLowerCase() !== actionIdLower);
   if (newQueued.length === queued.length) {
-    // Idempotency (Phase 84 backport): action not in queue. If state has
+    // Idempotency check: action not in queue. If state has
     // cancelledAtMs set from a prior run → skip silently. Otherwise action
     // was executed or expired; bail with clear error.
     const prior = state.a2?.[args.target]?.cancelledAtMs;

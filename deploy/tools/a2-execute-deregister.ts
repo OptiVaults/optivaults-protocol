@@ -204,7 +204,7 @@ async function main() {
   const actionIdHex = actionId.toLowerCase();
   const newQueued = queued.filter((q: any) => (q.fields[0] as string).toLowerCase() !== actionIdHex);
   if (newQueued.length === queued.length) {
-    // Idempotency (Phase 84 backport from h-emergency-benign): action not in
+    // Idempotency check: action not in
     // queue. Two possible states:
     //   (a) state.a2.<target>.executedAtMs already set → previously executed
     //       successfully; skip silently (idempotent re-run).
