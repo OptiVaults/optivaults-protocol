@@ -155,10 +155,11 @@ pub fn has_no_order_inputs(inputs: List<Input>, order_hash: ByteArray) -> Bool {
 // ─────────────────────────────────────────────────────────────────────
 // Immutable-field preservation (9 datum fields: vault_version + 8 identity
 // anchors). Policy fields (performance_fee_bps / early_withdraw_fee_bps /
-// min_hold_seconds / buffer_target_bps / keeper_fee_bps / gov_fee_bps)
-// are governance-mutable and checked separately by
-// `check_policy_fields_unchanged` — together they guard 15 fields across
-// any non-governance redeemer. See spec/vault-datum.md §2.3.
+// min_hold_seconds / buffer_target_bps / keeper_fee_bps / gov_fee_bps /
+// max_slippage_bps / min_swap_peg_bps) are governance-mutable and checked
+// separately by `check_policy_fields_unchanged` — together they guard 17
+// fields (9 immutable + 8 policy-locked) across any non-governance
+// redeemer. See spec/vault-datum.md §2.3.
 // ─────────────────────────────────────────────────────────────────────
 
 pub fn check_immutable_fields(old: VaultDatum, new: VaultDatum) -> Bool {

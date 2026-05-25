@@ -1,6 +1,6 @@
 # 鏈上對抗性重放：把「合約應該拒」變成「合約確實拒」
 
-*OptiVaults V1 安全設計解說 — 第 2 篇 / 共 4 篇*
+*OptiVaults V1 安全設計解說，第 2 篇 / 共 4 篇*
 
 ---
 
@@ -65,66 +65,66 @@ V1 補上的安全層是**鏈上對抗性重放**：手工構造攻擊 TX、送�
 
 每一筆消耗 vault state UTXO 的 TX 都會先觸發 proxy。已重放的拒絕條件：
 
-- `withdrawal_count == 1` — 每筆主 spend 只能 dispatch 一個 staking validator；同一筆 TX 內塞兩個 staking withdrawal 會被拒。
-- `no_foreign_vault_datum` — 拒絕非 proxy 腳本地址下、卻帶有 InlineDatum-shaped `VaultDatum` 的 UTXO 被當作 vault 用。
-- `is_full_drain` 與 NFT-burn 對應 — 全額提領必須同時 burn vault NFT；少了 burn 會被拒。
-- `vault_count ∈ [2, 5]` — NoDatum-secondary UTXO 數量上下限，超出範圍會被拒。
-- `all_secondary_no_datum` — MergeUtxo 路徑下，所有 secondary UTXO 必須是 NoDatum；任何帶 datum 的 secondary 都會擋下整筆 TX。
+- `withdrawal_count == 1`：每筆主 spend 只能 dispatch 一個 staking validator；同一筆 TX 內塞兩個 staking withdrawal 會被拒。
+- `no_foreign_vault_datum`：拒絕非 proxy 腳本地址下、卻帶有 InlineDatum-shaped `VaultDatum` 的 UTXO 被當作 vault 用。
+- `is_full_drain` 與 NFT-burn 對應：全額提領必須同時 burn vault NFT；少了 burn 會被拒。
+- `vault_count ∈ [2, 5]`：NoDatum-secondary UTXO 數量上下限，超出範圍會被拒。
+- `all_secondary_no_datum`：MergeUtxo 路徑下，所有 secondary UTXO 必須是 NoDatum；任何帶 datum 的 secondary 都會擋下整筆 TX。
 
 ### 用戶路徑（`vault_user.ak`）
 
 純無許可路徑，不需要 keeper 授權。已重放：
 
-- `Deposit` mint-equality（`vUSDCx mint == expected_shares`）— 多鑄 +1 會被拒。
-- `Deposit` `min_deposit` 下限 — 低於合約閘門的存入會被拒。
-- `Withdraw` burn-equality（`vUSDCx burn == -shares`）— 少 burn 一份都會被拒。
-- `verify_receiver_output` 嚴格 pkh 等值檢查 — redeemer 內的 receiver 欄位必須對應實際 output 的收款人，無法把 USDCx 路由到別處。
-- `verify_receiver_output` Script-credential 拒絕 — receiver 必須是 VKey 錢包，不可指向鎖死腳本地址。
-- `CommunitySunset` 90 天時間門檻 — 提前 1 秒呼叫都會被拒。
+- `Deposit` mint-equality（`vUSDCx mint == expected_shares`）：多鑄 +1 會被拒。
+- `Deposit` `min_deposit` 下限：低於合約閘門的存入會被拒。
+- `Withdraw` burn-equality（`vUSDCx burn == -shares`）：少 burn 一份都會被拒。
+- `verify_receiver_output` 嚴格 pkh 等值檢查：redeemer 內的 receiver 欄位必須對應實際 output 的收款人，無法把 USDCx 路由到別處。
+- `verify_receiver_output` Script-credential 拒絕：receiver 必須是 VKey 錢包，不可指向鎖死腳本地址。
+- `CommunitySunset` 90 天時間門檻：提前 1 秒呼叫都會被拒。
 
 ### Keeper 路徑（`vault_keeper_hot.ak` + `vault_swap_ada.ak`）
 
 對應「被入侵的 keeper 想用寬時間窗口或不合理金額擾亂金庫」威脅模型。已重放：
 
-- 所有寫時間欄位的 redeemer 強制 validity-range width cap（`upper - now ≤ 1 hour`）— 聲稱 `upper = now + 10y` 的交易在 ledger 端就會被拒，不需要 validator 介入。
-- `vault_swap_ada` amount-in-range 邊界（每筆 swap 10–50 ADA）— 超出範圍會被拒。
-- `ada_below_threshold` 補充閘門 — vault 還有充足 ADA 時，SwapAda 不應該被啟動。
+- 所有寫時間欄位的 redeemer 強制 validity-range width cap（`upper - now ≤ 1 hour`）：聲稱 `upper = now + 10y` 的交易在 ledger 端就會被拒，不需要 validator 介入。
+- `vault_swap_ada` amount-in-range 邊界（每筆 swap 10–50 ADA）：超出範圍會被拒。
+- `ada_below_threshold` 補充閘門：vault 還有充足 ADA 時，SwapAda 不應該被啟動。
 
 ### 協議路由（`vault_protocol.ak`）
 
 對應「被入侵的 keeper 想把 swap output 改路」威脅模型。已重放：
 
-- `DeployToProtocol` 目的地白名單（`registry.protocol_hashes`）— output 路由到不在白名單的腳本會被拒。
-- SwapAdapter 收款者綁定 — caller 層 + adapter 層共同確認 `expected_recipient_addr`，攻擊者無法在 SwapAdapter 內部把 USDCx swap 結果改送其他地址。
-- Tier 2 peg-floor 對 adapter-committed `min_receive` 的下限 — `min_receive × 10_000 ≥ deploy_amount × min_swap_peg_bps`，擋下 `minReceive = 1` 這類極端滑點攻擊。
+- `DeployToProtocol` 目的地白名單（`registry.protocol_hashes`）：output 路由到不在白名單的腳本會被拒。
+- SwapAdapter 收款者綁定：caller 層 + adapter 層共同確認 `expected_recipient_addr`，攻擊者無法在 SwapAdapter 內部把 USDCx swap 結果改送其他地址。
+- Tier 2 peg-floor 對 adapter-committed `min_receive` 的下限：`min_receive × 10_000 ≥ deploy_amount × min_swap_peg_bps`，擋下 `minReceive = 1` 這類極端滑點攻擊。
 - `min_order_amount` 非存入代幣 swap-out 的金額下限。
 
 ### Mint policies（`vusdcx.ak`、`vault_nft.ak`）
 
-- `vUSDCx` 單一 asset name 紀律 — 同 policy 下的多 asset mint 會被拒。
-- `vault_nft` PlutusV3 UTXO-ref 一次性鑄造 — parameterized UTXO 必須出現在 `tx.inputs`；該 UTXO 被花掉後就無法再 mint，結構上保證只能鑄一次（[第 4 篇](./04-phantom-vault-and-compile-time-anchor-zh-TW.md)深入講）。
+- `vUSDCx` 單一 asset name 紀律：同 policy 下的多 asset mint 會被拒。
+- `vault_nft` PlutusV3 UTXO-ref 一次性鑄造：parameterized UTXO 必須出現在 `tx.inputs`；該 UTXO 被花掉後就無法再 mint，結構上保證只能鑄一次（[第 4 篇](./04-phantom-vault-and-compile-time-anchor-zh-TW.md)深入講）。
 
 ### Order 分支（`order.ak`）
 
 對應「攻擊者想 cancel 別人的 order 或把 expire 退款改路」威脅模型：
 
-- `signed_by_owner` 在 `CancelAction` 上的嚴格簽署者驗證 — fake-owner pkh + caller-sig 不通過。
-- `valid_refund` 在 `ExpireOrder` 上的收款者綁定 — 退款必須給原 `ord.owner`，改成攻擊者地址會被拒。
+- `signed_by_owner` 在 `CancelAction` 上的嚴格簽署者驗證：fake-owner pkh + caller-sig 不通過。
+- `valid_refund` 在 `ExpireOrder` 上的收款者綁定：退款必須給原 `ord.owner`，改成攻擊者地址會被拒。
 
 ### Multisig 治理（`multisig_gov.ak`）
 
-- `valid_signer_set` rotation 下限（`n ≥ 3` 簽署者）— 試圖把 signer 集合縮成 1 或 2 人會被拒。
-- `time_window_ok` `lower_bound ≥ executable_at_ms` — timelock 結束前一秒 Execute 都會被拒。
-- `payload_hash` 綁定 — apply 側 payload 必須 hash 到 queue 紀錄值，無法在 timelock 期間悄悄替換 payload。`RotateSigners` + `UpdateFee` + `UpdateRegistry` + `TreasurySpend` 全部共用同一個模式。
-- `is_gov_authorized` 跨 validator helper — 每個受治理 gating 的 validator 都重算 `expected_payload_hash`，不信任 queue 結構單方面的描述。
+- `valid_signer_set` rotation 下限（`n ≥ 3` 簽署者）：試圖把 signer 集合縮成 1 或 2 人會被拒。
+- `time_window_ok` `lower_bound ≥ executable_at_ms`：timelock 結束前一秒 Execute 都會被拒。
+- `payload_hash` 綁定：apply 側 payload 必須 hash 到 queue 紀錄值，無法在 timelock 期間悄悄替換 payload。`RotateSigners` + `UpdateFee` + `UpdateRegistry` + `TreasurySpend` 全部共用同一個模式。
+- `is_gov_authorized` 跨 validator helper：每個受治理 gating 的 validator 都重算 `expected_payload_hash`，不信任 queue 結構單方面的描述。
 
 ### 緊急 / 費用治理（`vault_gov_emergency.ak`、`vault_gov_policy.ak`）
 
 對應第 1 篇 Layer 1 的論述：
 
-- `validate_emergency_freeze_only`（`loss_amount == 0` 不變式）— `EmergencyWithdraw` 只能切換 `frozen` 旗標，絕不可減少 `total_deposited`。被竊治理金鑰**無法**把 vault 寫崩。
-- `max_performance_fee_bps`（450 bps 上限）— 即使是經完整治理授權的 `UpdateFee` 也擋下高於 4.5% 的設定。
-- 與 `multisig_gov` 共用的 payload-binding 對應層 — Treasury Spend / UpdateFee / RotateSigners 都走同一個 `is_gov_authorized` helper。
+- `validate_emergency_freeze_only`（`loss_amount == 0` 不變式）：`EmergencyWithdraw` 只能切換 `frozen` 旗標，絕不可減少 `total_deposited`。被竊治理金鑰**無法**把 vault 寫崩。
+- `max_performance_fee_bps`（450 bps 上限）：即使是經完整治理授權的 `UpdateFee` 也擋下高於 4.5% 的設定。
+- 與 `multisig_gov` 共用的 payload-binding 對應層：Treasury Spend / UpdateFee / RotateSigners 都走同一個 `is_gov_authorized` helper。
 
 ### CIP-69 purpose 隔離
 
@@ -157,9 +157,9 @@ PlutusV3 每個 validator 明確宣告處理的 purpose（例如 staking validat
 
 誠實說清楚邊界很重要。下列情境不在鏈上重放範圍：
 
-- **外部系統失敗**（Liqwid bad-debt、USDCx redemption 凍結、oracle staleness）— 這些屬於白皮書 §5.3 / §5.2 / §5.4 的風險面，不是合約層防禦。
-- **需要模擬惡意營運者的 keeper 私鑰妥協情境** — 由原碼審查 + 白皮書 §5.4 keeper 風險討論承擔；鏈上重放無法模擬「攻擊者掌握 keeper 私鑰」這個假設前提，因為這已經是 ledger 看不見的條件。
-- **只有特定 Preprod build 狀態才會出現的行為** — 例如金庫已全額配置到 Liqwid 時，部分 Withdraw 路徑必須先 Recall 才能執行；這屬於運維流程，不是安全防禦。
+- **外部系統失敗**（Liqwid bad-debt、USDCx redemption 凍結、oracle staleness）：這些屬於白皮書 §5.3 / §5.2 / §5.4 的風險面，不是合約層防禦。
+- **需要模擬惡意營運者的 keeper 私鑰妥協情境**：由原碼審查 + 白皮書 §5.4 keeper 風險討論承擔；鏈上重放無法模擬「攻擊者掌握 keeper 私鑰」這個假設前提，因為這已經是 ledger 看不見的條件。
+- **只有特定 Preprod build 狀態才會出現的行為**：例如金庫已全額配置到 Liqwid 時，部分 Withdraw 路徑必須先 Recall 才能執行；這屬於運維流程，不是安全防禦。
 
 外部審計仍是主要的安全訊號。鏈上重放補的是「親手構造攻擊 TX → 鏈上拒絕」這條端到端證跡，與單元測試、property 測試、外部審計各自覆蓋不同層級。
 
@@ -167,7 +167,7 @@ PlutusV3 每個 validator 明確宣告處理的 purpose（例如 staking validat
 
 ## 回歸測試可以被獨立重現
 
-這個方法論最重要的一個屬性：**所有 redteam 腳本都是開源版本的一部分**。它們放在 `v1/tests/preprod/` 底下，與專案以同樣的 Apache 2.0 條款一同發佈。
+這個方法論最重要的一個屬性：**所有 redteam 腳本都是開源版本的一部分**。情境目錄與重現方式記錄在 `tests/preprod-e2e-plan.md`，與專案以同樣的 Apache 2.0 條款一同發佈。
 
 這意味著：
 

@@ -1,6 +1,6 @@
 # OptiVaults V1 為什麼有 17 個驗證器：四條正交切割線
 
-*OptiVaults V1 合約架構解說 — 第 3 篇 / 共 4 篇*
+*OptiVaults V1 合約架構解說，第 3 篇 / 共 4 篇*
 
 ---
 
@@ -67,7 +67,7 @@ UpdateFeeSplit 的 21 天 timelock（V1 中所有治理動作裡最長）也有�
 
 ## 切割線 4：純粹的 size 上限
 
-最後一條最不浪漫,「擠不進去」。
+最後一條是最直接的一條,「擠不進去」。
 
 V1 引入 oracle / asset_oracles / Minswap V2 SwapAdapter dispatch 之後，原本的 `vault_protocol`（包含 DeployToProtocol + Recall + MergeUtxo）膨脹到 16.5 KB，**超出 16 KB 上限 116 B**。
 

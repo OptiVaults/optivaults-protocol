@@ -12,12 +12,12 @@ V1 是 vault stack 的全新部署。Cardano 智能合約不可變,V1 **不能**
 
 V1 引入了若干結構性變更,**無法**以 datum 升級表達:
 
-- **兩個新 validator**(`keeper_stake_script`、`treasury`),各自帶 UTXO 與編譯時參數。
+- **兩個新 validator**(`keeper_stake_script`、`treasury`),各自帶 UTXO 與編譯期參數。
 - **前代 datum 欄位被移除**:先前的內部驗證版本直接把 `keeper_pkh`(授權 PKH)與 `fee_collector`(USDCx 收費錢包)放在 `VaultDatum` 裡。V1 把兩者都換掉:
-  - `keeper_pkh` → `vault_user` / `vault_keeper_hot` / `vault_protocol` / `vault_recall` / `vault_liqwid` 上的 `keeper_stake_hash` 編譯時錨點;實際授權 PKH 集合放在 stake-script 自己的 datum(由治理透過 `UpdateKeeperAuth` 可變,輪替時不用重部署 vault)。
-  - `fee_collector` → `vault_keeper_hot`(Phase-77 後 Compound 的新家)上的 `treasury_hash` 編譯時錨點;Compound 的 treasury 份額路由到 script 地址,不是錢包 PKH。
+  - `keeper_pkh` → `vault_user` / `vault_keeper_hot` / `vault_protocol` / `vault_recall` / `vault_liqwid` 上的 `keeper_stake_hash` 編譯期錨點;實際授權 PKH 集合放在 stake-script 自己的 datum(由治理透過 `UpdateKeeperAuth` 可變,輪替時不用重部署 vault)。
+  - `fee_collector` → `vault_keeper_hot`(Phase-77 後 Compound 的新家)上的 `treasury_hash` 編譯期錨點;Compound 的 treasury 份額路由到 script 地址,不是錢包 PKH。
 - **費用拆分改變**(過去 100% 到單一錢包 → 3-way 拆分:40% keeper / 啟動時 0% gov pool / 60% treasury,keeper 份額在 validator 硬上限以支持開源第三方 keeper 經濟可行性),這要求新的 treasury UTxO 與 multisig_gov UTxO 在 Compound 時必須已經存在。
-- **幾乎每個 validator 上都有新的編譯時參數**:每個 validator hash 都變了。
+- **幾乎每個 validator 上都有新的編譯期參數**:每個 validator hash 都變了。
 
 因為 validator hash 變了、script 地址變了,現有 UTxO 不可能被新 validator 消費。唯一安全路徑是:
 1. 在全新地址部署 V1 stack。

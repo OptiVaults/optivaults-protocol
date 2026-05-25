@@ -234,6 +234,6 @@ Each step writes to state immediately after its TX confirms. Re-running the cere
 ## Security notes
 
 1. Never commit `config/<network>.json` (real values). `.gitignore` enforces this. Use the `.example.json` template + local copy.
-2. Mainnet seed phrase should ideally not sit on disk at all — prefer hardware-wallet signing for mainnet deploys (tracked in `docs/runbooks/v1-mainnet-ceremony.md`).
+2. Mainnet seed phrase should ideally not sit on disk at all — prefer hardware-wallet signing for mainnet deploys (tracked in `runbooks/v1-mainnet-ceremony.md`).
 3. Lockup reminder: the **20 ref-script UTxOs** at the deploy wallet address tie up **~962 ADA** (V1 Preprod measured 962.07 ADA exactly — Conway-era `minFeeRefScriptCostPerByte` × deploy script's 1.10× safety multiplier × actual compiled validator sizes 1,327 B–13,482 B), plus **14 staking-credential stake deposits** (2 ADA each = 28 ADA) for **~990 ADA reclaimable**, plus ~22 ADA in non-recoverable network TX fees + ~27 ADA in state-UTXO seed ADA = **~1,039 ADA total ceremony cost** (see whitepaper §8.2). The reclaimable portion: ref scripts via `tools/reclaim-refs.ts` (single TX, ~2.5 ADA fee) + stake deposits via A2 deregister `publish` path (14 Queue + 14 Execute TXs after 14d gov timelock). Budget at least **1,100 ADA** for ceremony with 5-10% headroom.
 4. Pre-ceremony dry-run **should be standard practice** before mainnet — it prints the compiled hashes so governance signers can pre-announce the intended addresses publicly.

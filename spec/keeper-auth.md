@@ -428,7 +428,7 @@ Cardano ledger locks 2 ADA in a deposit every time `keeper_stake_script`'s stake
 `keeper_stake_script` carries a gov-gated `publish` handler (A2) that uses the standard `is_gov_authorized(ActDeregisterStake)` check against its existing compile-time `governance_nft_policy` + `governance_nft_name` params. Flow:
 
 1. Governance queues `ActDeregisterStake` with `target_script = keeper_stake_script_hash` and `payload_hash = blake2b_256(cbor.serialise(keeper_stake_script_hash))`.
-2. 14-day timelock elapses (1-hour on Preprod verification override — see `lib/vault/constants.ak`).
+2. 14-day timelock elapses (1-hour on Preprod verification override — see `contracts/lib/vault/constants.ak`).
 3. Any signer executes a TX that (a) consumes the `multisig_gov` UTxO with `ExecuteAction(action_id)`, (b) includes a Cardano `Deregister` certificate for `keeper_stake_script`'s stake credential, and (c) produces the continuing `multisig_gov` output with the matching state transition.
 
 The Cardano ledger invokes `keeper_stake_script.publish` on the Deregister cert; our handler re-validates the gov authorization and returns True. Ledger accepts the cert + refunds 2 ADA.

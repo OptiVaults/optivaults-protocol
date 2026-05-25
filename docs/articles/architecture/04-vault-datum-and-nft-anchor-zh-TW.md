@@ -1,12 +1,12 @@
 # 單一 UTXO 狀態與編譯期 Vault NFT Anchor
 
-*OptiVaults V1 合約架構解說 — 第 4 篇 / 共 4 篇*
+*OptiVaults V1 合約架構解說，第 4 篇 / 共 4 篇*
 
 ---
 
 [第 1 篇](./01-eutxo-vault-design-constraints-zh-TW.md)講了在 Cardano eUTXO 上做 vault 的四個設計約束。[第 2 篇](./02-withdraw-zero-forwarding-pattern-zh-TW.md)介紹 Withdraw-Zero Forwarding Pattern。[第 3 篇](./03-seventeen-validators-four-cuts-zh-TW.md)解釋 V1 為什麼把 vault 邏輯切成 17 個 validator。
 
-本篇處理最後一塊：**vault state 怎麼存、29 欄位 VaultDatum 的可變/不可變分割、以及編譯期 Vault NFT Anchor 怎麼防 phantom-vault 攻擊**。這是 V1 對第 1 篇約束 4「UTXO identity 沒有原生概念」的回應。
+本篇處理最後一塊：**vault state 怎麼存、29 欄位 VaultDatum 切成 9 不可變 + 8 政策可變 + 12 會計／運營三層、以及編譯期 Vault NFT Anchor 怎麼防 phantom-vault 攻擊**。這是 V1 對第 1 篇約束 4「UTXO identity 沒有原生概念」的回應。
 
 ---
 
@@ -32,41 +32,51 @@ eUTXO 的並行模型是「同一個 UTXO 在同一個 block 只能被花費一�
 
 ## 29 欄位 VaultDatum
 
-VaultDatum 29 個欄位分兩類：14 個可變、15 個不可變。
+VaultDatum 29 個欄位分三層：**9 個不可變**、**8 個政策可變**（在硬性邊界內由治理調整）、**12 個會計／運營**（每次操作可能更新）。
 
-### 14 個可變欄位（每次操作可能更新）
+### 12 個會計／運營欄位（每次操作可能更新）
 
-- `total_deposited` — vault 持有的 USDCx 總本金
-- `total_shares` — vUSDCx 份額代幣總供應量
-- `idle_buffer` — 未部署的 USDCx，可立即提款
-- `non_deposit_value` — vault 中持有的非存入代幣（DJED / USDM / qToken）的 USDCx 等值
-- `strategy_allocations` — 跨 yield 協議的當前資金配置
-- `liqwid_positions` — 各市場的 supplied_value + qtokens_held
-- `last_compound_time` — 最近一次 compound 時戳
-- `last_realloc_time` — 最近一次零收益再分配時戳
-- `frozen` — 緊急凍結旗標
-- `community_sunset_triggered` — Phase 1 dead-man-switch 旗標
-- `keeper_fee_bps` / `gov_fee_bps` — 3-way fee split 的兩個可變組件
-- `max_slippage_bps` / `min_swap_peg_bps` — 治理可調的 slippage 政策
+- `total_deposited`：vault 持有的 USDCx 總本金
+- `total_shares`：vUSDCx 份額代幣總供應量
+- `idle_buffer`：未部署的 USDCx，可立即提款
+- `non_deposit_value`：vault 中持有的非存入代幣（DJED / USDM / qToken）的 USDCx 等值
+- `strategy_allocations`：跨 yield 協議的當前資金配置
+- `liqwid_positions`：各市場的 supplied_value + qtokens_held
+- `last_compound_time`：最近一次 compound 時戳
+- `last_realloc_time`：最近一次零收益再分配時戳
+- `last_fee_update_time`：UpdateFee cooldown 錨點
+- `last_ada_swap_time`：SwapAda cooldown 錨點
+- `frozen`：緊急凍結旗標
+- `community_sunset_triggered`：Phase 1 dead-man-switch 旗標
 
-### 15 個不可變欄位（部署時設定，每次 TX 由 `check_immutable_fields` 強制檢查不變）
+### 8 個政策可變欄位（由治理透過專屬 UpdateFee / UpdateFeeSplit / UpdateStrategy redeemer 在硬性邊界內調整）
 
-- `governance_policy` / `governance_name` — Governance NFT 識別
-- `vault_nft_policy` — Vault NFT 識別（編譯期錨點，見下節）
-- `vusdcx_policy` — 份額代幣鑄造政策雜湊
-- `deposit_token_policy` / `deposit_token_name` — USDCx 識別
-- `keeper_pkh` — 啟動時 keeper 識別
-- `fee_collector` — 手續費接收地址
-- `performance_fee_bps` — 績效費率（**硬上限 4.5%**）
-- `early_withdraw_fee_bps` — 早提款費率（**硬上限 1%**）
-- `min_hold_seconds` — 直接提款冷卻（**硬上限 6 小時**）
-- `buffer_target_bps` — 目標緩衝比率
-- `order_script_hash` / `registry_hash` — 相關合約 hash 識別
-- `vault_version` — 合約版本識別碼
+- `performance_fee_bps`：績效費率（**硬上限 4.5%**）
+- `early_withdraw_fee_bps`：早提款費率（**硬上限 1%**）
+- `min_hold_seconds`：直接提款冷卻（**硬上限 6 小時**）
+- `buffer_target_bps`：目標緩衝比率
+- `keeper_fee_bps`：keeper 在 3-way fee split 的份額（**硬上限 40%**）
+- `gov_fee_bps`：治理池在 3-way fee split 的份額（**硬上限 10%**）
+- `max_slippage_bps`：§5.4 P2 Tier 1 oracle 公允價邊界（**硬上限 5%**）
+- `min_swap_peg_bps`：§5.4 P2 Tier 2 peg-floor 邊界
 
-`check_immutable_fields` 是 V1 安全模型的一個基石：**任何改動以上 15 個欄位的 TX，所有 vault staking validator 都會 reject**。
+政策可變層由 `check_policy_fields_unchanged` 在每一條非治理 redeemer 強制檢查。唯一能動這些值的，就是上述三條治理 redeemer，每條都有自己的 timelock 與 m-of-n 門檻。硬上限在 validator 層強制：治理在任何 redeemer 路徑下都不可能突破。
 
-也就是說，已部署 vault 的這 15 個欄位是**已部署 validator hash 的客觀屬性**，不是「我們承諾不改」，是「合約結構上根本不允許改」。績效費永遠不可能被治理調到 4.5% 以上、min_hold_seconds 永遠不可能拉超過 6 小時、Vault NFT identity 永遠不可能被替換，這些都是任何人可以拿 ledger 資料自己驗證的客觀事實，不需要相信營運方任何承諾。
+### 9 個不可變欄位（部署時設定，每次 TX 由 `check_immutable_fields` 強制檢查不變）
+
+- `vault_version`：合約版本識別碼
+- `governance_policy` / `governance_name`：Governance NFT 識別
+- `vusdcx_policy`：份額代幣鑄造政策雜湊
+- `deposit_token_policy` / `deposit_token_name`：USDCx 識別
+- `order_script_hash`：Order validator hash
+- `registry_hash`：Registry validator hash
+- `registry_auth_policy`：Registry auth NFT policy
+
+V1 刻意**沒有**把 `keeper_pkh` 或 `fee_collector` 放進 datum。Keeper 授權委派給 `keeper_stake_script`（每一條 keeper 觸及的 validator 都以其 stake hash 為編譯期參數的獨立 staking validator）；fee 目的地是 `treasury` script 地址（`vault_keeper_hot` 的編譯期參數）。兩個錨點都放在 validator hash 而非 datum，這在結構上比任何 datum 保證更強，因為控制 datum 的攻擊者都還是換不掉這兩個值。
+
+`check_immutable_fields` 是 V1 安全模型的一個基石：**任何改動以上 9 個欄位的 TX，所有 vault staking validator 都會 reject**。配合 `check_policy_fields_unchanged`（在非治理 redeemer 守住 8 個政策可變欄位），總共 17 個欄位在任何非治理路徑上都結構性鎖死。
+
+也就是說，已部署 vault 的這 9 個欄位是**已部署 validator hash 的客觀屬性**，不是「我們承諾不改」，是「合約結構上根本不允許改」。`vault_version` 永遠不會變、Governance NFT identity 永遠不可能被替換、USDCx identity 永遠不會漂移，這些都是任何人可以拿 ledger 資料自己驗證的客觀事實，不需要相信營運方任何承諾。8 個政策可變欄位加上第二層：可以動，但只能透過專屬治理 redeemer、只能在 validator 強制的硬上限內、只能在各自的 timelock 過後。
 
 ---
 
@@ -167,13 +177,13 @@ validator vault_nft(utxo_ref: OutputReference) {
 V1 對 vault state 的設計是這樣串起來的：
 
 1. **單一 UTXO** 收容所有 vault state（換來並行模型的乾淨）
-2. **29 欄位 VaultDatum**，其中 **15 個不可變**（合約結構上鎖死關鍵保護）
+2. **29 欄位 VaultDatum**，其中 **9 個不可變**、再加 **8 個政策可變**在 validator 強制的硬上限內（合約結構上鎖死關鍵保護）
 3. **Vault NFT** 給單一 UTXO 一個全鏈唯一的 identity
 4. **NFT 的 minting policy 烘進三個 spending validator 的編譯期參數**（vault_proxy / vusdcx / order）
 5. **NFT 本身用 PlutusV3 UTXO-ref one-shot 鑄造**，全鏈唯一、不可再造
 6. **使用者層並行**透過 Order UTXO 跟 BatchProcess 解耦（所有使用者 deposit / withdraw 不爭奪 vault UTXO）
 
-每一層的設計都對應到第 1 篇講的某個約束：單 UTXO 對應約束 1（並行受限），15 個不可變欄位讓很多保護承諾變成「結構上做不到違反」，編譯期 NFT anchor 對應約束 4（identity 沒有原生概念）。
+每一層的設計都對應到第 1 篇講的某個約束：單 UTXO 對應約束 1（並行受限），9 個不可變 + 8 個政策可變欄位讓很多保護承諾變成「結構上做不到違反」，編譯期 NFT anchor 對應約束 4（identity 沒有原生概念）。
 
 ---
 

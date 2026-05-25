@@ -26,7 +26,7 @@ type VaultDatum {
   performance_fee_bps: Int,       // Performance fee in basis points, [0, 450]
   early_withdraw_fee_bps: Int,    // Early withdrawal fee in basis points
   min_hold_seconds: Int,          // Minimum post-Compound hold before Direct Withdraw
-  buffer_target_bps: Int,         // Target buffer ratio (3500 = 35%)
+  buffer_target_bps: Int,         // Target buffer ratio (3000 = 30%)
   keeper_fee_bps: Int,            // Keeper's share of performance fee, [0, 4000]
   gov_fee_bps: Int,               // Governance signers' pool share, [0, 1000]
                                    // Treasury share is derived: 10000 - keeper_fee_bps - gov_fee_bps
@@ -87,7 +87,7 @@ Moving these two anchors to compile-time parameters provides a strictly stronger
 | `performance_fee_bps` | Int | 450 (4.5%) | [0, 450] — 4.5% hard cap enforced in UpdateFee redeemer | `UpdateFee` governance action |
 | `early_withdraw_fee_bps` | Int | 10 (0.1%) | [0, 100] | `UpdateFee` governance action |
 | `min_hold_seconds` | Int | 60 | [0, 21600] (6 hours) — tightened from an earlier 24h cap after whitepaper review (see whitepaper §2.4 + §6.3 for rationale) | `UpdateFee` governance action |
-| `buffer_target_bps` | Int | 3500 (35%) | [0, 10000] — advisory target, not strictly enforced | `UpdateStrategy` governance action (bundled with allocation changes) |
+| `buffer_target_bps` | Int | 3000 (30%) | [0, 10000] — advisory target, not strictly enforced | `UpdateStrategy` governance action (bundled with allocation changes) |
 | `keeper_fee_bps` | Int | 4000 (40%) | [0, 4000] — 40% hard cap; combined with `gov_fee_bps` ≤ 5000 (50%) | `UpdateFeeSplit` governance action (21-day timelock) |
 | `gov_fee_bps` | Int | 0 (disabled at launch) | [0, 1000] — 10% hard cap | `UpdateFeeSplit` governance action (21-day timelock) |
 
@@ -134,7 +134,7 @@ Every fee-split change is a separate `UpdateFeeSplit` governance action with ful
 
 ## 3. Invariants checked on every redeemer
 
-All mutating redeemers must preserve the following invariants (enforced by `lib/vault/validation.ak`):
+All mutating redeemers must preserve the following invariants (enforced by `contracts/lib/vault/validation.ak`):
 
 1. **Immutable-field preservation**: the 9 immutable fields (8 identity anchors + `vault_version`) must be bit-identical between input and output datum.
 2. **Non-negative accounting**: `total_shares >= 0`, `total_deposited >= 0`, `idle_buffer >= 0`, `non_deposit_value >= 0`.
@@ -201,7 +201,7 @@ The 4-tier organisation of `VaultDatum` (Tier 1 identity / Tier 2 policy / Tier 
 
 | Pattern property | V1 enforcement point |
 |---|---|
-| Tier 1 (identity) immutable across every non-deploy redeemer | `check_immutable_fields(old, new)` in `lib/vault/validation.ak` enforces equality on all 9 identity fields. Called from nine call sites — seven in `validation.ak` and two in `helpers.ak`. Every redeemer that produces a continuing vault output reaches one of these call sites |
+| Tier 1 (identity) immutable across every non-deploy redeemer | `check_immutable_fields(old, new)` in `contracts/lib/vault/validation.ak` enforces equality on all 9 identity fields. Called from nine call sites — seven in `validation.ak` and two in `helpers.ak`. Every redeemer that produces a continuing vault output reaches one of these call sites |
 | Tier 2 (policy) mutable only via dedicated governance redeemers | `check_policy_fields_unchanged(old, new)` enforces equality on all 8 policy fields for non-policy-changing redeemers. The four policy-changing redeemers — `UpdateFee`, `UpdateFeeSplit`, `UpdateStrategy`, `UpdateSlippagePolicy` — explicitly enumerate which subset of policy fields they own |
 | Tier 3 (accounting) governed by per-redeemer math invariants | Each redeemer carries explicit deltas (share math, fee math, buffer constraints, allocation conservation, oracle bounds). The state-transition matrix in §4 above is the audit's primary review object |
 | Tier 4 (operational) one-way flags preserved across non-transitioning redeemers | `frozen` and `community_sunset_triggered` are preserved by every redeemer except the small set that explicitly transitions them; the transitions are one-way (0 → 1) for `community_sunset_triggered` (irreversible) and bidirectional only via dedicated governance redeemers for `frozen` |

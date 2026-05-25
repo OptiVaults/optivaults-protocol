@@ -43,7 +43,7 @@ V1 在 Cardano 上以四個不同 UTxO 類別維護狀態。每個類別在任�
 - 會計 datum(`VaultDatum`,29 個欄位,見 `spec/vault-datum.md`)
 - 小量 ADA 餘額,覆蓋 min-UTXO 需求與 DEX order 資金
 
-Vault NFT 提供**編譯時信任錨點**:`vault_proxy`、`vusdcx`、`order` 三個 validator 都把 Vault NFT 的 minting policy 燒進自己的 script hash。在 `vault_proxy` 地址但**沒有** Vault NFT 的 UTxO,**不是**合法 vault、也不可能被任何 validator 誤認。
+Vault NFT 提供**編譯期信任錨點**:`vault_proxy`、`vusdcx`、`order` 三個 validator 都把 Vault NFT 的 minting policy 燒進自己的 script hash。在 `vault_proxy` 地址但**沒有** Vault NFT 的 UTxO,**不是**合法 vault、也不可能被任何 validator 誤認。
 
 ### 3.2 Treasury UTxO
 
@@ -107,10 +107,10 @@ Order UTxO 由 keeper 在批次 TX 中處理,或透過 `Cancel`(owner 簽名)或
 
 - `feeds: List<AssetOracleFeed>`:通常 2 項(一個 Charli3 feed、一個 Orcfax feed),每項以 reference-UTXO `(feed_script_hash, feed_auth_policy, feed_auth_name)` 三元組標定。Auth NFT 防止同 script 地址的誘餌 UTxO。
 - `max_disagreement_bps`:跨 feed 價差上限。超過就讀取失敗。
-- `max_staleness_ms`:各 feed 相對 `tx.validity_range.lower_bound` 的年齡上限。過期 feed 從聚合中被丟棄。
+- `max_staleness_ms`:各 feed 相對 `tx.validity_range.lower_bound` 的年齡上限。過期 feed 從聚合中被丟棄。鏈上 ceiling 為 1 小時（`contracts/lib/vault/validation.ak::valid_asset_oracle_entry`）；啟動建議值為每條目 10 分鐘，可由治理 `UpdateRegistry` 調整。
 - `min_feeds`:返回公平價所需的最低健康 feed 數。V1 dual-feed 條目為 2(兩個 feed 必須在邊界內同意)。
 
-Feed datum 格式(feed UTxO 上的 InlineDatum):`PriceSample { price_bps: Int, timestamp_ms: Int }`。鏈下 oracle operator 把 native Charli3 + Orcfax feed 聚合成這個 canonical 格式,operator 身份是 `spec/security-model.md` 中文件化的外部信任邊界。V1 啟動時 `asset_oracles = []`,隨著每資產的 dual-feed 覆蓋上線(先 DJED + USDM + ADA,再加任何新的 Liqwid market),透過治理 `UpdateRegistry` 填入。
+Feed datum 格式(feed UTxO 上的 InlineDatum):`PriceSample { price_bps: Int, timestamp_ms: Int }`。鏈下 oracle operator 把 native Charli3 + Orcfax feed 聚合成這個 canonical 格式,operator 身份是 `../docs/security-model.md` 中文件化的外部信任邊界。V1 啟動時 `asset_oracles = []`,隨著每資產的 dual-feed 覆蓋上線(先 DJED + USDM + ADA,再加任何新的 Liqwid market),透過治理 `UpdateRegistry` 填入。
 
 ---
 
@@ -120,22 +120,22 @@ V1 出廠時帶 **17 個 logic validator + 4 個 NFT mint policy + `minswap_v2_a
 
 | # | Validator | 角色 | 授權模型 |
 |---|-----------|------|---------|
-| 1 | `vault_proxy` | 持有 vault UTxO 的薄 spending validator;透過 zero-withdraw forward 邏輯到 staking validator | 編譯時參數化:(user、keeper_hot、swap_ada、protocol、recall、liqwid、gov_policy、gov_emergency、admin_deploy、batcher 的 stake_hashes + vault_nft_policy),11 params、10 routes |
-| 2 | `vault_user` | Staking validator:Deposit、Withdraw、CommunitySunset,permissionless 使用者路徑(BatchProcess 由獨立的 `vault_batcher` validator 承擔)。CommunitySunset 是 Phase 1 dead-man-switch;見 `governance.md` §4.4.1。 | 編譯時參數化:(governance_nft_policy、governance_nft_name);`keeper_stake_hash` 不再需要,因為三個 redeemer 都是 permissionless。CommunitySunset 由任何 vUSDCx 持有者觸發,前提是 `max(last_compound_time, last_realloc_time) + 90d ≤ now`。`publish` handler 由 ActDeregisterStake(A2)閘控。 |
-| 3 | `vault_keeper_hot` | Staking validator:Compound、RebalanceBuffer、SwapAda,keeper 熱路徑 | 編譯時參數化:(keeper_stake_hash、treasury_hash、governance_nft_policy、governance_nft_name);三個 redeemer 全走 keeper_stake_script zero-withdraw keeper 授權;`publish` handler 由 ActDeregisterStake(A2)閘控 |
-| 4 | `vault_protocol` | Staking validator:DeployToProtocol(DEX,透過 SwapAdapter 分派) | 編譯時參數化:(keeper_stake_hash、governance_nft_policy、governance_nft_name);僅 keeper 授權;`verify_swap_via_adapter`(來自 `lib/vault/swap_adapter.ak`)整合 adapter 呼叫 + Tier 2 peg-floor + 選用 Tier 1 oracle bound;`publish` handler 由 A2 閘控 |
-| 5 | `vault_recall` | Staking validator:RecallFromProtocol、MergeUtxo | 編譯時參數化:(keeper_stake_hash、governance_nft_policy、governance_nft_name);keeper-with-fallback(keeper 停擺 7 天後治理介入);`publish` handler 由 A2 閘控 |
-| 6 | `vault_gov_policy` | Staking validator:UpdateStrategy(7d)、UpdateFee(14d)、UpdateFeeSplit(21d)、UpdateSlippagePolicy(48h),慢速審慎的政策變更 | 編譯時參數化:(governance_nft_policy、governance_nft_name)供 A2 `publish` handler;`withdraw` 透過 MultisigGov 的 spent input 授權 |
-| 7 | `vault_gov_emergency` | Staking validator:EmergencyWithdraw(0d)、AdminDeployNonDeposit(7d keeper 停擺 + 21d registry 穩定),緊急 / 恢復路徑。其 DEX-swap 分支也接 SwapAdapter 分派。 | 編譯時參數化:(governance_nft_policy、governance_nft_name);透過 MultisigGov 的 spent input 授權 |
-| 8 | `vault_liqwid` | Staking validator:SupplyToLiqwid、RecallFromLiqwid | 編譯時參數化:(keeper_stake_hash、governance_nft_policy、governance_nft_name);keeper-with-fallback;`publish` handler 由 A2 閘控 |
+| 1 | `vault_proxy` | 持有 vault UTxO 的薄 spending validator;透過 zero-withdraw forward 邏輯到 staking validator | 編譯期參數化:(user、keeper_hot、swap_ada、protocol、recall、liqwid、gov_policy、gov_emergency、admin_deploy、batcher 的 stake_hashes + vault_nft_policy),11 params、10 routes |
+| 2 | `vault_user` | Staking validator:Deposit、Withdraw、CommunitySunset,permissionless 使用者路徑(BatchProcess 由獨立的 `vault_batcher` validator 承擔)。CommunitySunset 是 Phase 1 dead-man-switch;見 `governance.md` §4.4.1。 | 編譯期參數化:(governance_nft_policy、governance_nft_name);`keeper_stake_hash` 不再需要,因為三個 redeemer 都是 permissionless。CommunitySunset 由任何 vUSDCx 持有者觸發,前提是 `max(last_compound_time, last_realloc_time) + 90d ≤ now`。`publish` handler 由 ActDeregisterStake(A2)閘控。 |
+| 3 | `vault_keeper_hot` | Staking validator:Compound、RebalanceBuffer、SwapAda,keeper 熱路徑 | 編譯期參數化:(keeper_stake_hash、treasury_hash、governance_nft_policy、governance_nft_name);三個 redeemer 全走 keeper_stake_script zero-withdraw keeper 授權;`publish` handler 由 ActDeregisterStake(A2)閘控 |
+| 4 | `vault_protocol` | Staking validator:DeployToProtocol(DEX,透過 SwapAdapter 分派) | 編譯期參數化:(keeper_stake_hash、governance_nft_policy、governance_nft_name);僅 keeper 授權;`verify_swap_via_adapter`(來自 `contracts/lib/vault/swap_adapter.ak`)整合 adapter 呼叫 + Tier 2 peg-floor + 選用 Tier 1 oracle bound;`publish` handler 由 A2 閘控 |
+| 5 | `vault_recall` | Staking validator:RecallFromProtocol、MergeUtxo | 編譯期參數化:(keeper_stake_hash、governance_nft_policy、governance_nft_name);keeper-with-fallback(keeper 停擺 7 天後治理介入);`publish` handler 由 A2 閘控 |
+| 6 | `vault_gov_policy` | Staking validator:UpdateStrategy(7d)、UpdateFee(14d)、UpdateFeeSplit(21d)、UpdateSlippagePolicy(48h),慢速審慎的政策變更 | 編譯期參數化:(governance_nft_policy、governance_nft_name)供 A2 `publish` handler;`withdraw` 透過 MultisigGov 的 spent input 授權 |
+| 7 | `vault_gov_emergency` | Staking validator:EmergencyWithdraw(0d)、AdminDeployNonDeposit(7d keeper 停擺 + 21d registry 穩定),緊急 / 恢復路徑。其 DEX-swap 分支也接 SwapAdapter 分派。 | 編譯期參數化:(governance_nft_policy、governance_nft_name);透過 MultisigGov 的 spent input 授權 |
+| 8 | `vault_liqwid` | Staking validator:SupplyToLiqwid、RecallFromLiqwid | 編譯期參數化:(keeper_stake_hash、governance_nft_policy、governance_nft_name);keeper-with-fallback;`publish` handler 由 A2 閘控 |
 | 9 | `keeper_stake_script` | 依 mode flag 授權 keeper 動作的 staking validator(GovernanceOnly / PermissionlessWithBond / Mixed) | 透過 MultisigGov 做規則變更;執行用自己的 redeemer 規則 |
-| 10 | `treasury` | 持有 treasury UTxO 的 spending validator;接收 inflow、以類別 + cooldown 閘控 outflow | 編譯時以 deposit token 身份參數化;透過 MultisigGov 的 spent input 授權 |
+| 10 | `treasury` | 持有 treasury UTxO 的 spending validator;接收 inflow、以類別 + cooldown 閘控 outflow | 編譯期以 deposit token 身份參數化;透過 MultisigGov 的 spent input 授權 |
 | 11 | `multisig_gov` | 持有治理 UTxO + queued 提案的 spending validator | 以 GovNFT policy + name 參數化 |
 | 12 | `registry` | 持有協議白名單 + `asset_oracles`(§5.4 P3)+ `swap_adapter_hashes`(§B@launch=1)的 spending validator | 未參數化;治理 + keeper 的 fast-path market toggle |
 | 13 | `order` | 持有使用者 order 的 spending validator;Process / Cancel / Expire redeemer | 以 vault_hash + vault_nft_policy 參數化 |
 | 14 | `vusdcx` | vUSDCx 份額代幣的 minting policy | 以 vault_hash + vault_nft_policy 參數化 |
 | 15 | `vault_nft` | Vault Identity NFT 的 one-shot minting policy,**PlutusV3 validator**,以特定 UTxO 參照參數化。Mint 要求該 UTxO 在 TX input(密碼學 one-shot);burn 無約束(永遠允許)。見 `spec/vault-nft.md`。 |
-| 16 | `minswap_v2_adapter` | **Minswap V2 order 的 SwapAdapter**(§B@launch=1)。Staking validator,由 `vault_protocol.DeployToProtocol` + `vault_gov_emergency.AdminDeployNonDeposit` 透過 zero-withdrawal 呼叫。Decode Minswap V2 order datum(SwapExactIn / SwapMultiRouting)+ 驗證 redeemer 承諾的 min_receive 與 target_asset 與鏈上 datum 一致。未參數化,hash 透過 Registry `swap_adapter_hashes` 白名單化。上線後新增 DEX adapter 走治理 `UpdateRegistry`(14 天 timelock),**不需要** V1 vault 重部署。見 `lib/vault/swap_adapter.ak` + `validators/minswap_v2_adapter.ak`。 |
+| 16 | `minswap_v2_adapter` | **Minswap V2 order 的 SwapAdapter**(§B@launch=1)。Staking validator,由 `vault_protocol.DeployToProtocol` + `vault_gov_emergency.AdminDeployNonDeposit` 透過 zero-withdrawal 呼叫。Decode Minswap V2 order datum(SwapExactIn / SwapMultiRouting)+ 驗證 redeemer 承諾的 min_receive 與 target_asset 與鏈上 datum 一致。未參數化,hash 透過 Registry `swap_adapter_hashes` 白名單化。上線後新增 DEX adapter 走治理 `UpdateRegistry`(14 天 timelock),**不需要** V1 vault 重部署。見 `contracts/lib/vault/swap_adapter.ak` + `contracts/validators/minswap_v2_adapter.ak`。 |
 
 **第二個 DEX adapter:SundaeSwap。** 除了 `minswap_v2_adapter`,V1 的第二個 SwapAdapter 對應 SundaeSwap V3 + Stableswaps。它是兩個 artefact,不是一個:
 
@@ -162,7 +162,7 @@ V1 的 17 個 logic validator(+ 4 NFT mint policy + `minswap_v2_adapter` + 2 個
 - **(3) Bytecode-cost-center 抽取**:當某個 redeemer 帶 4-5 KB 獨有的重機械(oracle reader、decoder、fold suite),且同 validator 中**沒有其他 redeemer 共用**時,把它抽成獨立 validator 能把完整 bytecode 當作 headroom 還給母 validator。例子:`vault_swap_ada`(dual-feed oracle reader + 6-tuple registry read,從 `vault_keeper_hot` 抽出);`vault_admin_deploy`(SwapAdapter dispatch,從 `vault_gov_emergency` 抽出)。
 - **(4) 強迫的 size 修正切分**:當加入必要 feature 把某 validator 推過上限時,沿上述三條軸中成本最低者切分。例子:SwapAdapter dispatch + Tier 1 oracle wiring 把 `vault_protocol` 合計大小推到 16,500 B 後,把 `vault_recall`(RecallFromProtocol + MergeUtxo)從其中抽出。
 
-所有切分之後,`vault_proxy` 帶 **11 個編譯時參數**(10 個 staking validator hash + `vault_nft_policy`),routing **10 條 Withdraw-Zero 路徑**(`UseUser` / `UseKeeperHot` / `UseSwapAda` / `UseProtocol` / `UseRecall` / `UseLiqwid` / `UseGovPolicy` / `UseGovEmergency` / `UseAdminDeploy` / `UseBatcher`)。Withdrawal-count 不變量(每 TX 恰好一個 vault staking validator)隨 route 數縮放。Post-split 最緊的 headroom 是 `vault_liqwid` 13,392 B(剩 2,992 B、距上限 18.3%)。14 個 staking validator 每個都帶 A2 `publish` handler:每個的 2 ADA Cardano stake 押金在治理通過 14 天 timelock 後都能回收,關閉了 pre-split monolithic validator 年代的「2 ADA 永久鎖死」trap。
+所有切分之後,`vault_proxy` 帶 **11 個編譯期參數**(10 個 staking validator hash + `vault_nft_policy`),routing **10 條 Withdraw-Zero 路徑**(`UseUser` / `UseKeeperHot` / `UseSwapAda` / `UseProtocol` / `UseRecall` / `UseLiqwid` / `UseGovPolicy` / `UseGovEmergency` / `UseAdminDeploy` / `UseBatcher`)。Withdrawal-count 不變量(每 TX 恰好一個 vault staking validator)隨 route 數縮放。Post-split 最緊的 headroom 是 `vault_liqwid` 13,392 B(剩 2,992 B、距上限 18.3%)。14 個 staking validator 每個都帶 A2 `publish` handler:每個的 2 ADA Cardano stake 押金在治理通過 14 天 timelock 後都能回收,關閉了 pre-split monolithic validator 年代的「2 ADA 永久鎖死」trap。
 
 ---
 
@@ -298,7 +298,7 @@ V1 用 Withdraw-Zero forwarding 模式,讓主 vault UTxO 保持在單一地址,�
 **好處**:
 
 - 每個 staking validator 較小、可獨立審計
-- Staking validator 集合可以演進(為新功能加新 staking validator)**而不重部署** `vault_proxy` 合約,**前提是新 stake credential 被加進 `vault_proxy` 的編譯時參數集**,而那本身就要 vault 重部署。這是部分彈性、不是無限彈性。
+- Staking validator 集合可以演進(為新功能加新 staking validator)**而不重部署** `vault_proxy` 合約,**前提是新 stake credential 被加進 `vault_proxy` 的編譯期參數集**,而那本身就要 vault 重部署。這是部分彈性、不是無限彈性。
 - `keeper_stake_script` 特別利用了這個模式:keeper 授權規則可以**完全在 stake validator 自己的 datum + redeemer 邏輯內**演進,不用動 `vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid` 或 `vault_proxy`。
 
 ---
@@ -322,7 +322,7 @@ V1 依賴三個外部 Cardano 原生協議。**沒有任何一個合約性地承
 - **使用的市場**:DJED、USDM
 - **Vault 依賴**:`SupplyToLiqwid` 在 Liqwid action validator 地址鑄 qToken;`RecallFromLiqwid` 燒它們。`strategy_allocations` 與 `liqwid_positions` 追蹤 supplied vs held 數量。
 - **失敗模式**:Liqwid 協議 exploit / 壞帳 / 市場 sunset / action-validator 遷移 → qToken 可能無法按票面值贖回
-- **OptiVaults 緩解**:35% 閒置 buffer 作為第一層流動性絕緣;`EmergencyWithdraw` 治理壞帳 write-off 路徑;`AdminDeployNonDeposit` Minswap V2 恢復路徑(獨立於 Liqwid);per-market `LiqwidPosition` 隔離。完整分析見 `docs/security-model.md`。
+- **OptiVaults 緩解**:30% 閒置 buffer 作為第一層流動性絕緣;`EmergencyWithdraw` 治理壞帳 write-off 路徑;`AdminDeployNonDeposit` Minswap V2 恢復路徑(獨立於 Liqwid);per-market `LiqwidPosition` 隔離。完整分析見 `../docs/security-model.md`。
 
 ### 7.3 Minswap V2(DEX routing)
 
@@ -343,7 +343,7 @@ Vault UTxO 帶 ADA 有兩個並存目的:
 
 ### 7.5.1 合約強制的邊界(`max_deploy_ada`、`min_vault_ada`)
 
-`vault_protocol.ak::DeployToProtocol` 強制兩個編譯時參數,限制 vault ADA 下降幅度:
+`vault_protocol.ak::DeployToProtocol` 強制兩個編譯期參數,限制 vault ADA 下降幅度:
 
 | 參數 | V1 啟動值 | 語意 |
 |------|-----------|------|
@@ -369,8 +369,8 @@ Vault ADA 隨時間下降,因為每筆 `DeployToProtocol` TX 淨貢獻約 2 ADA 
 
 V1 透過 `SwapAda` redeemer 把這個迴圈在鏈上關起來(完整 spec:`spec/ada-swap.md`)。機制:
 
-1. **觸發條件**:keeper 只在 `vault.lovelace < ada_swap_threshold`(編譯時常數 15 ADA)時呼叫 `SwapAda`。
-2. **原子等值交換**:keeper 貢獻 `amount_ada`(範圍 10–50 ADA,編譯時 bounded)到 vault。Vault 用 reference oracle 匯率(Charli3 + Orcfax 共識;validator 讀 `ada_price_oracle_source` reference inputs)把等值 USDCx 送回。
+1. **觸發條件**:keeper 只在 `vault.lovelace < ada_swap_threshold`(編譯期常數 15 ADA)時呼叫 `SwapAda`。
+2. **原子等值交換**:keeper 貢獻 `amount_ada`(範圍 10–50 ADA,編譯期 bounded)到 vault。Vault 用 reference oracle 匯率(Charli3 + Orcfax 共識;validator 讀 `ada_price_oracle_source` reference inputs)把等值 USDCx 送回。
 3. **Cooldown + 寬度上限**:SwapAda TX 之間 `ada_swap_cooldown_ms = 1 h`;`tx.validity_range.upper - now <= 1 h`(內部驗證的寬度上限模式),防止 stale-oracle 利用。
 4. **會計不變量**:vault 的 `own_lovelace` 剛好增加 `amount_ada`;vault 的 USDCx 餘額減少 `amount_ada × ada_price_bps / 10^7`;`total_deposited` **不變**(swap 不改變 vault TVL、只改資產組成)。
 5. **`last_ada_swap_time` datum 欄位**:每次 SwapAda 時更新;納入 1 小時寬度上限不變量(`vault-datum.md §3` 第 11 項)。

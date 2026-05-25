@@ -2,7 +2,7 @@
 
 **Scope**: how money flows through the protocol, who pays for what, and when the protocol becomes self-sustaining.
 
-**Layer scoping (important)**: all fee figures in this document describe **the OptiVaults-operated vault instance** running at `optivaults.app` — specifically the interaction between depositors and the operator layer ([`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)). The **protocol layer** ([`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol)) is zero-fee: forks of the Aiken contracts owe OptiVaults nothing regardless of their operational choices. When governance sets `performance_fee_bps`, it sets the rate **for that specific vault instance**; the 4.5% hard cap in the contract is a protocol-level constraint on *any* vault running those validators, not a flow of funds to OptiVaults itself. See `whitepaper §3.5` for the full two-layer framing.
+**Layer scoping (important)**: all fee figures in this document describe **the OptiVaults-operated vault instance** running at `optivaults.app` — specifically the interaction between depositors and the operator layer ([`optivaults-reference`](../../optivaults-reference)). The **protocol layer** ([`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol)) is zero-fee: forks of the Aiken contracts owe OptiVaults nothing regardless of their operational choices. When governance sets `performance_fee_bps`, it sets the rate **for that specific vault instance**; the 4.5% hard cap in the contract is a protocol-level constraint on *any* vault running those validators, not a flow of funds to OptiVaults itself. See `whitepaper §3.5` for the full two-layer framing.
 
 ---
 

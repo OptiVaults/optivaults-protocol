@@ -182,7 +182,7 @@ The trade made by the pattern: pay one NFT-check per read in exchange for runtim
 
 ## 6. OptiVaults V1 Case Study
 
-V1's Registry is at `contracts/validators/registry.ak`, anchored by `registry_auth_nft.ak` (one of three Pattern-1 instantiations). The Registry datum (`RegistryDatum` in `lib/vault/types.ak`) carries 9 fields:
+V1's Registry is at `contracts/validators/registry.ak`, anchored by `registry_auth_nft.ak` (one of three Pattern-1 instantiations). The Registry datum (`RegistryDatum` in `contracts/lib/vault/types.ak`) carries 9 fields:
 
 | Field | Mutability | Purpose |
 |---|---|---|
@@ -202,7 +202,7 @@ Three redeemers (per `RegistryRedeemer`):
 - **`KeeperToggleMarket`** — keeper unilateral pause. Single-direction one-way: any `liqwid_markets[i].active` may flip `True → False`, never the reverse. Used as a fast circuit-breaker if a Liqwid market becomes problematic.
 - **`FastUpdateMarkets`** — short governance path (1-hour timelock + 1-hour cooldown). Only `action_addr_hash` + `active` are mutable per market. Used for Liqwid action-validator migration events where the slow path would force the protocol to deploy in a broken state during the migration window.
 
-The authenticated read is `helpers.read_registry_datum` in `lib/vault/helpers.ak`. Every consumer (`vault_protocol.DeployToProtocol`, `vault_admin_deploy.AdminDeployNonDeposit`, the keeper-side router) calls into this helper rather than reading the reference input directly.
+The authenticated read is `helpers.read_registry_datum` in `contracts/lib/vault/helpers.ak`. Every consumer (`vault_protocol.DeployToProtocol`, `vault_admin_deploy.AdminDeployNonDeposit`, the keeper-side router) calls into this helper rather than reading the reference input directly.
 
 Internal verification confirmed that all current consumer call sites route through the authenticated read; defence-in-depth audit checks for this invariant are part of the standing regression suite (`audit-scope.md` Coverage area C — V1 Integration Flows).
 

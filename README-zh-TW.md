@@ -19,7 +19,7 @@
 OptiVaults V1 **刻意被拆成兩個 repo**,反映兩個**根本不同**的東西:
 
 - **`optivaults-protocol`**(本 repo):**協議層**。Aiken validators、協議規格、白皮書、部署流程。**本層零費用**;任何團隊都可以 fork 並啟動自己的 vault,完全不用付錢。**純 Cardano DeFi commons 貢獻**。
-- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)**:**operator 參考實作**。TypeScript keeper、API server、frontend、CLI 工具。跑 `optivaults.app` 的 live vault 實例。由合約強制的 4.5% 績效費支撐(啟動 40% keeper / 60% treasury,keeper 份額推到合約硬上限以支持開源第三方 keeper 經濟可行性;**無創辦人 dividend、無投資人 return、無 token**)。以 Apache 2.0 授權,歡迎 fork。
+- **[`optivaults-reference`](../optivaults-reference)**:**operator 參考實作**。TypeScript keeper、API server、frontend、CLI 工具。跑 `optivaults.app` 的 live vault 實例。由合約強制的 4.5% 績效費支撐(啟動 40% keeper / 60% treasury,keeper 份額推到合約硬上限以支持開源第三方 keeper 經濟可行性;**無創辦人 dividend、無投資人 return、無 token**)。以 Apache 2.0 授權,歡迎 fork。
 
 **4.5% fee 只發生在 operator 層**。**協議本身免費**:你跑自己實例就不需要付。完整費用拆分見 `docs/economics-zh-TW.md`;跨兩層的信任模型見 `docs/security-model-zh-TW.md §2`。
 
@@ -46,7 +46,7 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 6. **keeper 費率分成 40%**：執行該筆 Compound 的 keeper 拿 40% 績效費作為營運補償(validator 硬上限);其餘 60% 進 treasury。設在硬上限是為了在公共財定位下支持 post-audit Phase 2+ 第三方 keeper 經濟可行性。
 7. **使用者自訂 batch tip**：Order UTxO 帶有使用者自訂的 tip 上限;keeper 在處理 batched order 時只能在此上限內收取。
 8. **Withdraw-Zero forwarding pattern**：單一 vault UTxO 透過 `vault_proxy` 委派給 10 個 staking validator(`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`),以滿足大小限制並做乾淨的角色分離。切分理由(四條正交軸線:授權邊界、治理反應延遲、bytecode 成本集中點、size 修正)整理於 `spec/architecture.md §4.1`。每個 stake credential(10 個 Withdraw-Zero 委派的 validator + `keeper_stake_script` + `minswap_v2_adapter` SwapAdapter + `sundaeswap_adapter` + `sundaeswap_cancel_guard`,共 14 個)都各自帶有自己的 A2 `publish` handler,所以這 14 份 stake-registration 押金都可以在 sunset 時透過治理回收。
-9. **編譯時信任錨點**：Vault Identity NFT、governance NFT policy、treasury script、keeper stake script 都在部署時燒進 validator script hash,而不是放在 datum 欄位。
+9. **編譯期信任錨點**：Vault Identity NFT、governance NFT policy、treasury script、keeper stake script 都在部署時燒進 validator script hash,而不是放在 datum 欄位。
 10. **Pre-audit TVL 上限**：Operator 自律執行的 100K USDCx 上限,一直到 Q2-Q3 2027 第三方審計完成為止;post-audit 的上限調整計畫會與審計報告一併公開。
 11. **公共財定位**：V1 被定位為**非商業**的公共財參考實作。4.5% 績效費用於覆蓋營運 + audit reserve + 長期 runway,不是創辦人或投資人的收益。Apache 2.0 授權讓 fork 與特化變得可行(不同穩定幣組合、不同風險姿態、區域變體)。V1 可能就是最終狀態,也可能是其他 Cardano DeFi 團隊改造的基礎,這兩個結局都是可接受的。存入者參與時應抱持的心態是「**貢獻公共財 + 擔任早期驗證者**」,不是購買商業服務。完整含意見白皮書 §12 免責聲明。
 
@@ -54,7 +54,7 @@ OptiVaults V1 由以下架構決策構成。每一項在本資料夾的對應文
 
 ## 延伸閱讀
 
-V1 另外為它實作的五個反覆出現的 Cardano DeFi 模式發布了**模式 rationale 筆記**:Validator Identity NFT、MultiSig Governance + Timelock、Withdraw-Zero Forwarding、Registry + Auth NFT Whitelist、VaultDatum Tiered Immutability。每份筆記都用通用詞彙描述模式本身,並把 V1 的實例化當作具體案例引用。專案對 Cardano Improvement Proposal 流程的整體立場見 [`docs/cip-readiness-posture-zh-TW.md`](docs/cip-readiness-posture-zh-TW.md) — V1 準備模式文件、但在 V1 release 階段不會撰寫任何 CIP 提案 — 五份逐模式筆記見 [`spec/pattern-rationale-*.md`](spec/)。
+V1 另外為它實作的五個反覆出現的 Cardano DeFi 模式發布了**模式 rationale 筆記**:Validator Identity NFT、MultiSig Governance + Timelock、Withdraw-Zero Forwarding、Registry + Auth NFT Whitelist、VaultDatum Tiered Immutability。每份筆記都用通用詞彙描述模式本身,並把 V1 的實例化當作具體案例引用。專案對 Cardano Improvement Proposal 流程的整體立場見 [`docs/cip-readiness-posture-zh-TW.md`](docs/cip-readiness-posture-zh-TW.md)（V1 準備模式文件、但在 V1 release 階段不會撰寫任何 CIP 提案）;五份逐模式筆記見 [`spec/pattern-rationale-*.md`](spec/)。
 
 ---
 
@@ -80,14 +80,14 @@ V1 另外為它實作的五個反覆出現的 Cardano DeFi 模式發布了**模�
 │   ├── pattern-rationale-withdraw-zero-forwarding-zh-TW.md   通用 Withdraw-Zero Forwarding 模式(size + per-TX-fee 切分)
 │   ├── pattern-rationale-registry-auth-nft-zh-TW.md          通用 governance-mutable whitelist + auth NFT 模式
 │   └── pattern-rationale-vault-datum-tiered-zh-TW.md         通用 tiered-immutability datum 模式
-├── contracts/                  V1 Aiken PlutusV3 原始碼——17 個 logic validator + 4 個 NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact;`aiken check` 全綠（對應部署 commit 跑可取得當前 test summary）
+├── contracts/                  V1 Aiken PlutusV3 原始碼（17 個 logic validator + 4 個 NFT mint policy + `minswap_v2_adapter` + 2 個 SundaeSwap artefact）;`aiken check` 全綠（對應部署 commit 跑可取得當前 test summary）
 ├── deploy/                     部署流程
 │   ├── README.md               Deploy pipeline 總覽 + checklist
 │   ├── deploy.ts               單指令 ceremony 指揮(冪等 + 可續跑)
 │   ├── compile.ts              離線 hash 推導(跨 24 個 artefact 做 applyParams)
 │   ├── lib/                    blockfrostProvider + 設定載入 + 狀態檔 + datum 建構 + ref-script 部署 + 階段助手
 │   ├── config/                 preprod.example.json + mainnet.example.json(樣板)+ preprod-mock.json(operator 自備的實用設定為 gitignored)
-│   ├── state/                  Ceremony 狀態 checkpoint(gitignored——依 releaseTag 分 JSON)
+│   ├── state/                  Ceremony 狀態 checkpoint(gitignored，依 releaseTag 分 JSON)
 │   ├── tools/                  Operator CLI
 │   │   ├── deregister-stakes.ts        舊版(pre-A2)
 │   │   ├── derive-gov-signers.ts       PKH 推導助手
@@ -105,7 +105,7 @@ V1 另外為它實作的五個反覆出現的 Cardano DeFi 模式發布了**模�
 │   └── runbooks/
 │       └── v1-mainnet-ceremony.md      V1 mainnet 部署 runbook(pre-flight + 階段 + 失敗處理 + sunset)
 ├── docs/
-│   ├── product-overview.md     給使用者看的實務總覽(EN)——你存什麼、拿什麼、風險用一般用語寫
+│   ├── product-overview.md     給使用者看的實務總覽(EN)：你存什麼、拿什麼、風險用一般用語寫
 │   ├── product-overview-zh-TW.md  繁體中文產品總覽
 │   ├── migration.md            internal-verification 停運 → V1 存入者過渡
 │   ├── economics.md            費用結構、treasury 資金流、永續性數學
@@ -164,7 +164,7 @@ Stake-registration 押金（每次 14 × 2 ADA = 28 ADA）+ ref-script min-ADA �
 
 ## 授權
 
-OptiVaults V1 以 **Apache License 2.0** 釋出。本 repo(`optivaults-protocol`)涵蓋協議層:智能合約、部署流程、CLI 工具、以及文件。Operator 層(keeper 參考實作、API server、frontend、preprod E2E 腳本)放在姊妹 repo [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference),同樣以 Apache 2.0 授權。任何團隊都可以在 Apache 2.0 條款範圍內 fork、特化或把 V1 架構整合進衍生產品(見 [LICENSE](../LICENSE))。
+OptiVaults V1 以 **Apache License 2.0** 釋出。本 repo(`optivaults-protocol`)涵蓋協議層:智能合約、部署流程、CLI 工具、以及文件。Operator 層(keeper 參考實作、API server、frontend、preprod E2E 腳本)放在姊妹 repo [`optivaults-reference`](../optivaults-reference),同樣以 Apache 2.0 授權。任何團隊都可以在 Apache 2.0 條款範圍內 fork、特化或把 V1 架構整合進衍生產品(見 [LICENSE](../LICENSE))。
 
 選這麼寬鬆的授權是刻意的:V1 的成功指標明確包含「架構被其他 Cardano 團隊 fork + 特化」這一條(見白皮書 §1「我們為什麼要做這件事」)。在 pre-audit 的驗證期做重用限制,會跟這個貢獻導向的姿態互相矛盾。
 
@@ -174,6 +174,6 @@ OptiVaults V1 以 **Apache License 2.0** 釋出。本 repo(`optivaults-protocol`
 
 - 網站:[optivaults.app](https://optivaults.app)
 - 協議 repo(本 repo):[github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol)(分支 `v1`)
-- Operator 參考 repo:[github.com/OptiVaults/optivaults-reference](https://github.com/OptiVaults/optivaults-reference)(分支 `v1`)
+- Operator 參考 repo:[../optivaults-reference](../optivaults-reference)(分支 `v1`)
 - 安全通報(協議層):optivaults@gmail.com,見 `SECURITY.md`
-- 安全通報(operator 層):見 [`optivaults-reference/SECURITY.md`](https://github.com/OptiVaults/optivaults-reference/blob/v1/SECURITY.md)
+- 安全通報(operator 層):見 [`optivaults-reference/SECURITY.md`](../optivaults-reference/SECURITY.md)

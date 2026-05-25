@@ -1,22 +1,22 @@
-# Pattern Rationale — Validator Identity NFT
+# Pattern Rationale：Validator Identity NFT
 
 **狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture-zh-TW.md`。
 
-**範圍**：一個反覆出現的模式 — 用一個由「被消耗 UTXO 參考」參數化的 one-shot mint policy，在整個協議生命週期裡把一顆單一的標準 UTXO 與某個特定的鏈上 script 綁定起來。這個模式是通用的；OptiVaults V1 在三個地方用到它，案例研究見 §5。
+**範圍**：一個反覆出現的模式，用一個由「被消耗 UTXO 參考」參數化的 one-shot mint policy，在整個協議生命週期裡把一顆單一的標準 UTXO 與某個特定的鏈上 script 綁定起來。這個模式是通用的；OptiVaults V1 在三個地方用到它，案例研究見 §5。
 
 ---
 
 ## 1. 問題
 
-許多鏈上協議會指定剛好一顆 UTXO 當作協議的「自己」 — 也就是 validator 每筆交易都會讀或改的 singleton 狀態 UTXO。例子包含：收益型協議裡那顆標準的 vault UTXO、攜帶 signer 與 queued action 的 singleton governance 狀態 UTXO、或是其他 validator 為了 routing whitelist 而參考的單一 configuration UTXO。
+許多鏈上協議會指定剛好一顆 UTXO 當作協議的「自己」，也就是 validator 每筆交易都會讀或改的 singleton 狀態 UTXO。例子包含：收益型協議裡那顆標準的 vault UTXO、攜帶 signer 與 queued action 的 singleton governance 狀態 UTXO、或是其他 validator 為了 routing whitelist 而參考的單一 configuration UTXO。
 
-協議的 validator 接下來需要一個方法去辨識「這顆 UTXO 才是真的」 — 把標準 UTXO 從任何剛好也坐落在同一個 script address 的其他 UTXO 區分開來（script address 是公開的；任何人都可以送 token 或 ADA 到那裡，也可以在那邊用自己想要的 inline datum 偽造一顆 UTXO）。
+協議的 validator 接下來需要一個方法去辨識「這顆 UTXO 才是真的」，把標準 UTXO 從任何剛好也坐落在同一個 script address 的其他 UTXO 區分開來（script address 是公開的；任何人都可以送 token 或 ADA 到那裡，也可以在那邊用自己想要的 inline datum 偽造一顆 UTXO）。
 
 常見的做法有三種：
 
 1. **信任 address**。讀出現在 script address 上的任何 UTXO。這是錯的：攻擊者可以送一顆帶有偽造 inline datum 的 UTXO 到同一個 address，協議分辨不出來。Cardano DeFi 近年的事故史裡就有這種樸素做法被攻擊的案例。
 2. **信任一把 key**。標準 UTXO 在被建立的時候由協議運維方的 key 簽名，每次讀 UTXO 時就檢查那個簽名。這種做法在操作上很重（要求運維方在 UTXO 被花掉再被產生時都在線上），並且會繼承所有 key 被盜用的風險。
-3. **由 NFT 錨定**。鑄造一顆唯一的 token、把它鎖在標準 UTXO 裡，並讓每個 validator 在讀 UTXO 時都檢查那顆 token 是否存在。協議的身份就變成那顆 NFT 的 policy ID — 一個被烘到 validator 編譯期參數裡的密碼學值。
+3. **由 NFT 錨定**。鑄造一顆唯一的 token、把它鎖在標準 UTXO 裡，並讓每個 validator 在讀 UTXO 時都檢查那顆 token 是否存在。協議的身份就變成那顆 NFT 的 policy ID：一個被烘到 validator 編譯期參數裡的密碼學值。
 
 本文件談的是第三種做法。Validator Identity NFT 模式就是 (3) 在 Plutus V3 上被嚴謹實作的版本。
 

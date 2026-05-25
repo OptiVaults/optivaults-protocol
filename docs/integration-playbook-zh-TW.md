@@ -66,7 +66,7 @@ V1 繼承了 pre-V1 內部驗證期的整合失敗教訓。代表性的損失(�
 
 **輸出**:
 
-1. 目標操作(Deposit/Swap/Supply/Withdraw/Cancel)的 5-10 筆真實 mainnet TX。每筆的 decoded CBOR 存進 `contracts/integrations/<protocol>/traces/`。
+1. 目標操作(Deposit/Swap/Supply/Withdraw/Cancel)的 5-10 筆真實 mainnet TX。每筆的 decoded CBOR 與對應 adapter 原始碼放在一起(規劃位置：合約樹下每個協議自己的 `traces/` 子目錄，於該協議首個 adapter 落地時建立)。
 2. Datum schema:**byte-level 精準**,從這些 trace 推導。**不准用猜的**。若 3 筆獨立 TX 對得上,schema 視為「鎖定」;若對不上,先查清楚再往下。
 3. Redeemer schema:包含 **cancel** 與 **expire** redeemer。這兩個往往與主執行 redeemer 不同、很容易漏掉。
 4. Stake credential 編碼:`Constr(0, [...])` vs `Constr(1, [...])`,從真實 TX 驗證,**不准用假設**。(這就是 2026-03-31 的教訓。)
@@ -129,7 +129,7 @@ Step 3 到 Step 7 的每個動作,都必須同時遵守**以下全部六條**。
 
 ### 規則 1:一定要有真實使用者在該協議的官方 frontend 完成過該操作。
 
-V1 不整合那些**主流程在野外沒被測過**的協議。若沒有使用者成功在 mainnet 上跑過該協議的 Deposit / Swap / Supply 流程,V1 就不是首位整合者。**我們從別人的生產經驗學教訓,而不是用存入者資金當白老鼠。**
+V1 不整合那些**主流程在野外沒被測過**的協議。若沒有使用者成功在 mainnet 上跑過該協議的 Deposit / Swap / Supply 流程,V1 就不是首位整合者。**我們從別人的生產經驗學教訓,而不是用存入者資金當實驗對象。**
 
 ### 規則 2:Datum 格式必須由 ≥ 3 筆真實 mainnet TX 逆向而來。
 
@@ -284,4 +284,4 @@ Rollback 是正常運作模式,不是失敗事件。V1 的 registry 刻意設計
 - `spec/governance.md §4.6 UpdateRegistry` — 鏈上授權機制
 - `spec/governance.md §4.8 FastUpdateMarkets` — 協議遷移的 1 小時快速路徑
 - `docs/security-model.md §3` — 整合相關的攻擊面與威脅模型
-- GitHub repo:`contracts/integrations/`(每個協議的 trace 保存與 schema lock)
+- GitHub repo：每個協議的 trace 保存與 schema lock 與其 adapter 原始碼同在合約樹下——V1 目前在 `contracts/validators/` 放 Minswap V2 + SundaeSwap adapter；後續整合依此目錄結構擴充。

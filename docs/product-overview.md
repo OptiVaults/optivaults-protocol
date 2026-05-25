@@ -18,7 +18,7 @@ OptiVaults V1 is a non-custodial smart-contract vault on Cardano. You deposit US
 **Where the code lives (two repos).** You can read every line of V1's source on GitHub. It's split across two public Apache-2.0 repositories:
 
 - **Protocol layer** — [`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol): the Aiken smart contracts that actually control your funds, the whitepaper, and the deploy pipeline. This is what your vUSDCx are minted by and what enforces the 4.5% fee cap + no-admin-drain invariant + 7-day keeper-inactive waiver. Zero-fee to fork and run yourself.
-- **Operator layer** — [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference): the TypeScript code that runs `optivaults.app` (keeper, API, frontend, recovery CLIs). This layer is what the 4.5% fee funds. Forks welcome; fork operators run their own instance with their own fee.
+- **Operator layer** — [`optivaults-reference`](../../optivaults-reference): the TypeScript code that runs `optivaults.app` (keeper, API, frontend, recovery CLIs). This layer is what the 4.5% fee funds. Forks welcome; fork operators run their own instance with their own fee.
 
 **When your USDCx is in the vault, the smart contracts are what protect it — not OptiVaults as a company.** This distinction matters because if OptiVaults the organisation disappeared tomorrow, your deposit is still recoverable via self-serve tools (`withdraw-cli` / `emergency-withdraw`) without needing our infrastructure. See `whitepaper §3.5` for the full two-layer architecture detail.
 
@@ -79,7 +79,7 @@ The five distinct features listed in §1.1 don't rely on "we promise we'll do th
    - **Your wallet is out of ADA for network fees**
 2. **Principal cannot be taken by admin.** No admin redeemer exists in the contract that can move `idle_buffer` to a non-depositor address. `EmergencyWithdraw` (governance m-of-n) can mark a loss (proportionally lowering all shareholders' share price) but cannot move funds out of the vault. Validator-layer hard caps (whitepaper §6.3) also preclude governance from setting fees above 4.5% or allocating more than 100% to any market.
 3. **4.5% fee cap is immutable.** Hard-capped by `vault_gov_policy.ak`'s UpdateFee redeemer (via the shared `validate_update_fee` helper). Governance cannot raise it under any redeemer.
-4. **All governance actions have timelock + 1-of-n cancel.** Every action is publicly visible at QueueAction time, with a minimum 1-hour wait before execution (sensitive actions like fee, signer, or strategy changes carry longer timelocks of 7-21 days). You can observe the queue, compute the payload hash, and — if you disagree — withdraw before execution. Any single signer can 1-of-n cancel to veto the entire action.
+4. **All governance actions have timelock + 1-of-n cancel.** Every action is publicly visible at QueueAction time, with the wait bounded per `ActionKind` from 0 (emergency) and 48h (slippage / per-market liveness toggles) up to 21 days (longest, `UpdateFeeSplit`). You can observe the queue, compute the payload hash, and — if you disagree — withdraw before execution. Any single signer can 1-of-n cancel to veto the entire action.
 5. **You can self-exit if the team stops operating.** `withdraw-cli` is an open-source tool that lets you construct and sign a withdrawal TX without our coordination; tested with every release. If we go silent for 7+ days, the contract auto-waives the early-withdraw fee so self-serve exit is economically rational.
 
 ---
@@ -232,7 +232,7 @@ A: 10 USDCx (contract-enforced). Anything below is rejected to keep the vault's 
 A: No per-wallet cap. The overall vault cap is 100K USDCx during pre-audit; once that's hit, new deposits are rejected at the API layer (the cap is operator-enforced, not contract-enforced — see whitepaper §9.4).
 
 **Q: I see governance has queued an action I don't like. What do I do?**
-A: Withdraw during the timelock window (7-21 days depending on action type). You have ample time — this is the point of timelocks.
+A: Withdraw during the timelock window — bounded per `ActionKind` from 0 (emergency) and 48h (slippage / per-market liveness toggles) up to 21 days (longest, `UpdateFeeSplit`). Substantive policy changes sit at the longer end, so you have ample time — this is the point of timelocks.
 
 **Q: Where do I ask questions?**
 A: Discord link at optivaults.app. Security issues: `optivaults@gmail.com`.

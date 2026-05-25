@@ -1,4 +1,4 @@
-# 安全政策 — OptiVaults V1
+# 安全政策：OptiVaults V1
 
 ## 漏洞通報
 
@@ -22,7 +22,7 @@
 
 ## 範圍
 
-**本 repo 的安全範圍是協議層**:Aiken validators、部署流程、協議規格 artefact。鏈下 operator 程式(keeper runtime、API server、frontend、CLI 工具)另有獨立 repo [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference),有自己的 [`SECURITY.md`](https://github.com/OptiVaults/optivaults-reference/blob/v1/SECURITY.md)。
+**本 repo 的安全範圍是協議層**:Aiken validators、部署流程、協議規格 artefact。鏈下 operator 程式(keeper runtime、API server、frontend、CLI 工具)另有獨立 repo [`optivaults-reference`](../optivaults-reference),有自己的 [`SECURITY.md`](../optivaults-reference/SECURITY.md)。
 
 **不確定時,預設走本 repo 的通報管道**;若是 operator 層發現,分流時會轉派到 `optivaults-reference`。
 
@@ -51,7 +51,7 @@
   - `sundaeswap_cancel_guard.ak`:SundaeSwap order 的 drain-proof cancel 授權(與 `sundaeswap_adapter` 一同部署)
 
 - **NFT mint policy**:
-  - `vault_nft.ak`:one-shot Vault Identity NFT(proxy / vusdcx / order 的編譯時錨點)
+  - `vault_nft.ak`:one-shot Vault Identity NFT(proxy / vusdcx / order 的編譯期錨點)
   - `governance_nft.ak`:one-shot 治理 NFT(`is_gov_authorized` 的錨點)
   - `gov_signer_nft.ak`:soul-bound 簽名者肯定 NFT
   - `registry_auth_nft.ak`:one-shot Registry Auth NFT
@@ -84,7 +84,7 @@
 以下三條保證在已部署的 V1 Aiken validator 中**無條件成立**,與 operator 的任何行動無關:
 
 1. **沒有 admin-drain redeemer。** 沒有任何 redeemer 會把金庫本金送到非存入者的地址。緊急路徑一律走 `vault_gov_emergency.EmergencyWithdraw`,需要治理多簽 + 公開揭露。
-2. **4.5% 績效費上限不可變。** `constants.ak` 中的 `max_performance_fee_bps = 450` 在編譯時由共用的 `validate_update_fee` helper 錨定,於 `vault_gov_policy.UpdateFee` 呼叫。治理**可以**在 `[0, 450]` 內調整 `performance_fee_bps`,但**不能**在任何情況下突破上限。
+2. **4.5% 績效費上限不可變。** `constants.ak` 中的 `max_performance_fee_bps = 450` 在編譯期由共用的 `validate_update_fee` helper 錨定,於 `vault_gov_policy.UpdateFee` 呼叫。治理**可以**在 `[0, 450]` 內調整 `performance_fee_bps`,但**不能**在任何情況下突破上限。
 3. **keeper 失聯 7 天的免除機制。** 當 `now > last_compound_time + 7 days`,`vault_user.Withdraw` 會依 `keeper_inactive_ms` 檢查自動免除 `early_withdraw_fee_bps`。如果 keeper 永久停擺,存入者可以不扣 early fee 退場。
 
 其他鏈上強制的不變量(不完整,詳見 `docs/audit-scope.md §1`):
@@ -96,8 +96,8 @@
 - **防雙重兌現。** `vault_user.Withdraw` 強制 `receiver_output_idx` 綁定。BatchProcess 強制多個 order 的 `payout_output_index` 互不重複。
 - **無 vUSDCx 外漏。** BatchProcess 拒絕任何將 vUSDCx 鑄到 `(order_owner ∪ proxy_hash)` 以外地址的 TX。
 - **延後收益(deferred-yield)的 Withdraw。** `withdraw_amount = base_withdraw − early_fee`;early fee 物理上留在金庫 → share price 上升 `(early_fee / total_shares)` → 其餘存入者受益。先前在此路徑上的一處會計漂移已關閉。
-- **Vault NFT 的編譯時錨點。** `vault_proxy` / `vusdcx` / `order` 都在部署時以 `vault_nft_policy` 作參數化,而非透過 datum,藉此關閉 phantom-vUSDCx 自我引用 datum 攻擊。
-- **15 個不可變 VaultDatum 欄位。** `governance_policy` / `governance_name` / `keeper_pkh` / `fee_collector` / `vault_version` / `performance_fee_bps` / `early_withdraw_fee_bps` / `min_hold_seconds` / `buffer_target_bps` / `vusdcx_policy` / `deposit_token_policy` / `deposit_token_name` / `order_script_hash` / `registry_hash` / `registry_auth_policy`。第 16 個錨點(`vault_nft_policy`)更強,是編譯時錨點,不是 datum 欄位。注意:`performance_fee_bps` 的「不可變」指的是**欄位結構位置**固定;值會透過治理 `UpdateFee` 在 `[0, 450]` 範圍內調整。完整欄位語意見 `contracts/docs/vault-state-machine.md`(或 V1 的 `spec/vault-datum.md`)。
+- **Vault NFT 的編譯期錨點。** `vault_proxy` / `vusdcx` / `order` 都在部署時以 `vault_nft_policy` 作參數化,而非透過 datum,藉此關閉 phantom-vUSDCx 自我引用 datum 攻擊。
+- **9 個不可變 + 8 個政策可變 VaultDatum 欄位，外加編譯期的 Vault NFT 錨點。** 不可變(9，部署後永不變)：`vault_version` 加 8 個身份錨點 `governance_policy` / `governance_name` / `deposit_token_policy` / `deposit_token_name` / `vusdcx_policy` / `order_script_hash` / `registry_hash` / `registry_auth_policy`。政策可變(8，由治理透過專屬 UpdateFee / UpdateFeeSplit / UpdateStrategy redeemer 在硬性邊界內調整)：`performance_fee_bps`(`[0, 450]`)/ `early_withdraw_fee_bps` / `min_hold_seconds` / `buffer_target_bps` / `keeper_fee_bps` / `gov_fee_bps` / `max_slippage_bps` / `min_swap_peg_bps`。Vault NFT policy 本身比任何 datum 欄位更強：它是 `vault_proxy` / `vusdcx` / `order` 的編譯期參數，部署時錨定，不重部署就改不了。完整欄位語意見 `spec/vault-datum.md`。
 - **治理 cancel 否決。** 每筆 `QueueAction` 都有 1-of-n `CancelAction` 否決窗口;執行需要**同時**滿足 m-of-n 簽名**與**在 timelock 期間沒被取消。
 - **Validity-range 寬度上限。** 所有會寫時間的 redeemer(Compound / UpdateFee / RotateSigners / UpdateStrategy / SwapAda / RebalanceBuffer)都強制 `upper - now ≤ 1 小時`,限縮時間戳操弄面。
 - **治理簽名者下限。** `valid_signer_set` 要求 `signers ≥ 3, threshold ≥ 2, threshold ≤ n, 唯一`(縱深防禦)。
@@ -118,8 +118,8 @@
 | 類別 | 覆蓋面 | 狀態 |
 |-----|--------|------|
 | Aiken 單元測試 | 全部 24 個 artefact 的確定性案例 + 跨 validator 整合流程；含 `minswap_v2_adapter` 內的 inline test。實際數可在部署 commit 跑 `cd contracts && aiken check` 取得。 | 全過 |
-| Aiken property-based fuzz（`aiken/fuzz` v2.2.0） | `lib/vault/tests/property_test.ak` 內 property test，使用 iteration cap 紀律（預設每 property 100 iter，首次失敗 early-exit）。實際 property 數可在 `aiken check` 取得。 | 全過 |
-| Preprod E2E 腳本（`tests/preprod/`） | 多階段覆蓋：ceremony health、用戶流程（Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw）、zero-yield Compound、MergeUtxo 捐贈路徑（含負測路徑）、治理狀態機（Queue / Execute / Cancel）、oracle E2E（Tier 1 + Tier 2 + stale / disagreement / no-entry 拒絕）、SwapAdapter dispatch（攻擊接收方鏈上重演）、以及 mock-Liqwid Supply / Recall / Compound / Distribute 端對端。 | 全部已在對應 ceremony 鏈上驗證 |
+| Aiken property-based fuzz（`aiken/fuzz` v2.2.0） | `contracts/lib/vault/tests/property_test.ak` 內 property test，使用 iteration cap 紀律（預設每 property 100 iter，首次失敗 early-exit）。實際 property 數可在 `aiken check` 取得。 | 全過 |
+| Preprod E2E 腳本（`tests/preprod-e2e-plan.md`） | 多階段覆蓋：ceremony health、用戶流程（Deposit / Withdraw / Queue / Batch / Order Cancel+Expire / Queued-Withdraw）、zero-yield Compound、MergeUtxo 捐贈路徑（含負測路徑）、治理狀態機（Queue / Execute / Cancel）、oracle E2E（Tier 1 + Tier 2 + stale / disagreement / no-entry 拒絕）、SwapAdapter dispatch（攻擊接收方鏈上重演）、以及 mock-Liqwid Supply / Recall / Compound / Distribute 端對端。 | 全部已在對應 ceremony 鏈上驗證 |
 | Keeper vitest | 參考 keeper 實作位於 operator repo，測試套件設於該 repo。 | — |
 | API vitest | 不在 V1 scope（V1 只涵蓋協議層，見 `README.md` 雙層架構）。 | — |
 | Frontend vitest | 不在 V1 scope（V1 只涵蓋協議層，見 `README.md` 雙層架構）。 | — |
@@ -140,16 +140,16 @@ V1 的合約程式碼已經過多輪內部對抗性審計,以涵蓋區(A–F 區
 
 ### 涵蓋區狀態(待外部審計)
 
-區域定義對齊 `docs/audit-scope.md §4` —— V1 內部審計計畫的權威來源。每一區都有明確的出口條件(A–C 與 E 區為 0 CRIT / 0 HIGH / 0 MEDIUM;D 區為結構性通過;F 區為 0 CRIT)。
+區域定義對齊 `docs/audit-scope.md §4`，V1 內部審計計畫的權威來源。每一區都有明確的出口條件(A–C 與 E 區為 0 CRIT / 0 HIGH / 0 MEDIUM;D 區為結構性通過;F 區為 0 CRIT)。
 
 | 區域 | 範圍 | 狀態 |
 |------|------|------|
-| A | Treasury —— `treasury.ak`(透過 `multisig_gov` 的 TreasurySpend / UpdateTreasuryParams / ReceiveGovForfeit) | 尚未開始 |
-| B | Keeper Stake Script —— `keeper_stake_script.ak`(UpdateKeeperAuth / 每週輪替 / 保證金生命週期) | 尚未開始 |
-| C | V1 整合流程 —— 跨 validator(Compound 3 路費用拆分 / m-of-n 下的 TreasurySpend / DistributeSignerCompensation + ReceiveGovForfeit 的綁定 / 三層治理安全設計) | 尚未開始 |
-| D | V1 Regression —— 把 heritage regression 測試重跑一遍 V1 validators(標記新編譯時參數帶來的 cascade 影響) | 尚未開始 |
-| E | V1 鏈下程式 —— keeper / API / frontend / CLI 在 [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference);詳見該 repo 的 `SECURITY.md` | 尚未開始 |
-| F | V1 部署流程 —— 部署儀式狀態機新增的 treasury UTXO init + keeper_stake_script UTXO init | 尚未開始 |
+| A | Treasury：`treasury.ak`(透過 `multisig_gov` 的 TreasurySpend / UpdateTreasuryParams / ReceiveGovForfeit) | 尚未開始 |
+| B | Keeper Stake Script：`keeper_stake_script.ak`(UpdateKeeperAuth / 每週輪替 / 保證金生命週期) | 尚未開始 |
+| C | V1 整合流程：跨 validator(Compound 3 路費用拆分 / m-of-n 下的 TreasurySpend / DistributeSignerCompensation + ReceiveGovForfeit 的綁定 / 三層治理安全設計) | 尚未開始 |
+| D | V1 Regression：把 heritage regression 測試重跑一遍 V1 validators(標記新編譯期參數帶來的 cascade 影響) | 尚未開始 |
+| E | V1 鏈下程式：keeper / API / frontend / CLI 在 [`optivaults-reference`](../optivaults-reference);詳見該 repo 的 `SECURITY.md` | 尚未開始 |
+| F | V1 部署流程：部署儀式狀態機新增的 treasury UTXO init + keeper_stake_script UTXO init | 尚未開始 |
 
 ### 外部審計
 
@@ -177,7 +177,7 @@ _目前內部審計沒有任何 LOW 以上嚴重性的開放發現。_
 
 會有這個選項是因為 `target_tx_hash` 對治理 UTXO 存在無法避免的循環依賴(TX body 包含 queued 的 datum、datum 裡包含 target_tx_hash;對那些「執行 TX body 還沒建構出來」的 action 來說,queue 當下無法得知執行 TX 的 hash)。
 
-**執行窗口期間仍保留的鏈上防禦**:`CancelAction`(1-of-n 否決)、`action_ttl_ms` 37 天絕對上限、`GovNFT == 1` 唯一性、target script 必須是 spent input、ADA 保留、全部 15 個不可變 VaultDatum 欄位。
+**執行窗口期間仍保留的鏈上防禦**:`CancelAction`(1-of-n 否決)、`action_ttl_ms` 37 天絕對上限、`GovNFT == 1` 唯一性、target script 必須是 spent input、ADA 保留、完整 VaultDatum 不可變 + 政策可變封套(9 不可變 + 8 政策可變欄位，見上方「Hard guarantees」段)，加上編譯期 Vault NFT 錨點。
 
 **鏈下 operator 義務**:
 - Empty-hash 的 `QueueAction` 必須在 1 小時內公開廣播。

@@ -1,6 +1,6 @@
 # Reference Implementation Mode：低 TVL 下的公共財運作
 
-*OptiVaults V1 經濟模型解說 — 第 3 篇 / 共 4 篇*
+*OptiVaults V1 經濟模型解說，第 3 篇 / 共 4 篇*
 
 ---
 

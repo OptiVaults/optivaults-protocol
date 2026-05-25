@@ -1,6 +1,6 @@
-# audit-scope.md — V1 審計計畫
+# audit-scope.md：V1 審計計畫
 
-V1 新增了 validator(`keeper_stake_script`、`treasury`、`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_recall`、`vault_admin_deploy`、`minswap_v2_adapter`),並調整了若干既有 validator(`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_proxy`、`vusdcx`、`order` 的編譯時參數變更)。V1 審計計畫以**涵蓋區方法論**(A–F 區,見 §4)覆蓋完整合約集合,並以「所有 heritage regression test 必須通過」作為前置條件。
+V1 新增了 validator(`keeper_stake_script`、`treasury`、`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_recall`、`vault_admin_deploy`、`minswap_v2_adapter`),並調整了若干既有 validator(`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_proxy`、`vusdcx`、`order` 的編譯期參數變更)。V1 審計計畫以**涵蓋區方法論**(A–F 區,見 §4)覆蓋完整合約集合,並以「所有 heritage regression test 必須通過」作為前置條件。
 
 ---
 
@@ -15,7 +15,7 @@ V1 validator 集合從內部驗證期設計繼承下列架構不變量,作為 V1
 | Buffer 下限 + 非空配置 | UpdateStrategy 強制 `buffer_target_bps >= 500`;`strategy_allocations` 非空檢查 |
 | Multisig 治理架構 | `multisig_gov.ak` 的 m-of-n 狀態機,每個 action 各自有 timelock |
 | 治理 empty-hash 模式 + timelock 下限 | `QueueAction` 的 timelock 下限 + TTL 上限;1-of-n cancel 否決 |
-| Vault NFT 編譯時錨點 | `vault_proxy` / `vusdcx` / `order` 在部署時都以 `vault_nft_policy` 參數化;datum 不再保留這個欄位 |
+| Vault NFT 編譯期錨點 | `vault_proxy` / `vusdcx` / `order` 在部署時都以 `vault_nft_policy` 參數化;datum 不再保留這個欄位 |
 | Withdraw 防雙重兌現 | Direct Withdraw 強制 `receiver_output_idx` |
 | 延後收益(deferred-yield)的 Withdraw 語意 | `withdraw_amount = base_withdraw − early_fee`;early fee 物理上留在金庫內 |
 | 治理安全模型 | `multisig_gov.ak` 的檔頭註解 + `spec/governance.md` 的設計論述 |
@@ -24,7 +24,7 @@ V1 validator 集合從內部驗證期設計繼承下列架構不變量,作為 V1
 | 邊界案例掃過(token 白名單、NDV 下限) | MergeUtxo secondary 白名單;Supply/Recall/AdminDeployNonDeposit 的 `idle_buffer >= 0` + `non_deposit_value >= 0` 下限 |
 | 時間欄位 validity-range 寬度上限 | 所有會寫時間的 redeemer(Compound、UpdateFee、UpdateStrategy、RotateSigners、SwapAda)都強制 upper 上限 1 小時 |
 | Allocation 不變量 + 首位存入者下限 | 全域 `valid_deposited > 0`;`alloc_sum + idle_buffer <= total_deposited + NDV + Σ liqwid_principal` |
-| 鏈下編譯時參數同步 | Keeper / API / CLI 設定透過 `VAULT_NFT_POLICY` + `EXPECTED_PROXY_HASH` env 閘控,與鏈上 validator hash 鎖在同步 |
+| 鏈下編譯期參數同步 | Keeper / API / CLI 設定透過 `VAULT_NFT_POLICY` + `EXPECTED_PROXY_HASH` env 閘控,與鏈上 validator hash 鎖在同步 |
 | 部署流程狀態隔離 | `RELEASE_TAG` 閘 + 逐腳本 flushState + 延長的 NFT deadline |
 | Registry 身份欄位不可變 | `RegistryDatum.keeper_pkh`(身份參照,**不是**目前授權 keeper 集合)、`deposit_token_policy`、`deposit_token_name`、ref-script hash 一經設定即鎖定。注意:**目前的 keeper rotation** 路徑是 **`keeper_stake_script.authorized_pkhs`**(透過 `UpdateKeeperAuth` 治理,見 `spec/keeper-auth.md`),那才是 keeper 被新增 / 輪替 / 移除時會改動、且不需要重部署 vault 的欄位。兩者用途不同:`RegistryDatum.keeper_pkh` 是部署時鎖定的身份參照,供 indexer / 查詢用;`keeper_stake_script.authorized_pkhs` 則是 validator 實際授權檢查時讀的 runtime 列表。|
 
@@ -36,14 +36,14 @@ V1 validator 集合從內部驗證期設計繼承下列架構不變量,作為 V1
 
 下列文件是專案發布的散文,而非鏈上合約邏輯。它們會在審計時被一起讀,但本身不構成審計目標:
 
-- `docs/cip-readiness-posture-zh-TW.md` — V1 對 Cardano Improvement Proposal 流程的立場。
+- `docs/cip-readiness-posture-zh-TW.md`：V1 對 Cardano Improvement Proposal 流程的立場。
 - `spec/pattern-rationale-validator-identity-nft-zh-TW.md`
 - `spec/pattern-rationale-multisig-gov-timelock-zh-TW.md`
 - `spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md`
 - `spec/pattern-rationale-registry-auth-nft-zh-TW.md`
 - `spec/pattern-rationale-vault-datum-tiered-zh-TW.md`
 
-每份 pattern-rationale 文件都用通用詞彙描述一個反覆出現的 Cardano DeFi 模式,並把 V1 的實例化當作具體案例引用。V1 的實例本身 — 實際的 `vault_nft.ak` mint policy、實際的 `multisig_gov.ak` 狀態機、實際的 `vault_proxy.ak` router、實際的 `registry.ak` validator、實際的 29 欄位 VaultDatum + `check_immutable_fields` helper — **屬於** §4 各 coverage area 下的審計範圍。圍繞它們的散文不屬於。
+每份 pattern-rationale 文件都用通用詞彙描述一個反覆出現的 Cardano DeFi 模式,並把 V1 的實例化當作具體案例引用。V1 的實例本身（實際的 `vault_nft.ak` mint policy、實際的 `multisig_gov.ak` 狀態機、實際的 `vault_proxy.ak` router、實際的 `registry.ak` validator、實際的 29 欄位 VaultDatum + `check_immutable_fields` helper）**屬於** §4 各 coverage area 下的審計範圍。圍繞它們的散文不屬於。
 
 審計者發現 pattern-rationale 文件與實際 V1 合約程式碼之間有出入時,應該把它當作對應 rationale 文件的文件 bug 回報,而不是針對合約的審計 finding;合約程式碼是權威來源。
 
@@ -83,7 +83,7 @@ V1 validator 集合從內部驗證期設計繼承下列架構不變量,作為 V1
 ### 2.3 修改過的 validator
 
 **`vault_user.ak` + `vault_keeper_hot.ak` + `vault_batcher.ak` + `vault_swap_ada.ak`:**
-- 編譯時參數:`keeper_stake_hash`(透過 `keeper_stake_script` zero-withdraw 授權,輪替時不用重部署)套在 `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada` 上;`vault_keeper_hot` 與 `vault_swap_ada` 另外加 `treasury_hash`(USDCx 費用 + ADA 換 USDCx 的收益路由到 script 地址,不是錢包 PKH)。`vault_user` 是純 permissionless 路徑(不需要 `keeper_stake_hash`)。
+- 編譯期參數:`keeper_stake_hash`(透過 `keeper_stake_script` zero-withdraw 授權,輪替時不用重部署)套在 `vault_keeper_hot` / `vault_batcher` / `vault_swap_ada` 上;`vault_keeper_hot` 與 `vault_swap_ada` 另外加 `treasury_hash`(USDCx 費用 + ADA 換 USDCx 的收益路由到 script 地址,不是錢包 PKH)。`vault_user` 是純 permissionless 路徑(不需要 `keeper_stake_hash`)。
 - 授權模型:`vault_user` 放 Deposit + Withdraw(permissionless,使用者簽名)。`vault_keeper_hot` 放 Compound + RebalanceBuffer(keeper 授權)。`vault_batcher` 放 BatchProcess(keeper 授權,多筆 order 的 vUSDCx mint/burn 指揮)。`vault_swap_ada` 放 SwapAda(keeper 授權、ADA→USDCx swap、搭配雙源預言機,見 `spec/ada-swap.md`)。
 - Compound redeemer(放在 `vault_keeper_hot`)把費用做 **3-way 拆分**,依照 `keeper_fee_bps` + `gov_fee_bps` 分給 keeper / gov pool / treasury(上線值 4000 / 0 / 6000;上限由 UpdateFeeSplit 管,見 `spec/vault-datum.md` §2.2)。
 - 驗證費用拆分正確(rounding 不得被 skim)。
@@ -95,12 +95,12 @@ V1 validator 集合從內部驗證期設計繼承下列架構不變量,作為 V1
 **`vault_protocol.ak` + `vault_recall.ak`:**
 - `vault_protocol` 只放 DeployToProtocol(加 A2 `publish`)。DEX swap 透過 SwapAdapter 介面分派(見 `spec/swap-adapter.md`);`minswap_v2_adapter` 是啟動時的 adapter。
 - `vault_recall` 放 RecallFromProtocol + MergeUtxo(加 A2 `publish`)。
-- 編譯時參數變更會 cascade 到 `vault_proxy`(11 個參數、10 條 Withdraw-Zero route)。
+- 編譯期參數變更會 cascade 到 `vault_proxy`(11 個參數、10 條 Withdraw-Zero route)。
 - 驗證 `UpdateKeeperAuth` 與 `keeper_stake_script` 的互動。
 - 驗證 `UpdateTreasuryParams` 與 `TreasurySpend` 不會繞過既有不變量。
 
 **`vault_proxy.ak`、`vusdcx.ak`、`order.ak`:**
-- 編譯時參數變更(core/protocol/liqwid/treasury/keeper_stake 的新 hash)
+- 編譯期參數變更(core/protocol/liqwid/treasury/keeper_stake 的新 hash)
 - 驗證 applied form 的 hash 與預期相符
 - 預期**沒有邏輯變更**,這輪審計是 cascade 驗證
 
@@ -152,24 +152,24 @@ Fuzz 總跑量從 2,500 → 3,000(每次 build)。
 
 V1 特有的內部審計依**涵蓋區**組織,而不是用輪次編號。每個區域獨立追蹤;輪次數要看複審時的發現密度與範圍調整而定。
 
-**層級界定**:涵蓋區 A-D + F 覆蓋**協議層**([`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol)):Aiken validators + 部署流程。區 E 覆蓋 **operator 層**([`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)):TypeScript keeper + API + frontend + CLI。Q2-Q3 2027 的外部審計(§5)明確針對協議層;operator 層依自己時程審、scope 宣告於 `optivaults-reference/SECURITY.md`。Fork 協議層的團隊**繼承 A-D/F 的覆蓋歷史**(相同 validator hash);fork operator 層的團隊**繼承 E 方法論但要自己對他們特定的 TypeScript delta 做 E 審計**。
+**層級界定**:涵蓋區 A-D + F 覆蓋**協議層**([`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol)):Aiken validators + 部署流程。區 E 覆蓋 **operator 層**([`optivaults-reference`](../../optivaults-reference)):TypeScript keeper + API + frontend + CLI。Q2-Q3 2027 的外部審計(§5)明確針對協議層;operator 層依自己時程審、scope 宣告於 `optivaults-reference/SECURITY.md`。Fork 協議層的團隊**繼承 A-D/F 的覆蓋歷史**(相同 validator hash);fork operator 層的團隊**繼承 E 方法論但要自己對他們特定的 TypeScript delta 做 E 審計**。
 
-**涵蓋區 A — Treasury**
+**涵蓋區 A：Treasury**
 聚焦:`treasury.ak` 整個 validator、透過 `multisig_gov` 的 `TreasurySpend` + `UpdateTreasuryParams` + `ReceiveGovForfeit`。出口:0 CRIT / 0 HIGH / 0 MEDIUM。
 
-**涵蓋區 B — Keeper Stake Script**
+**涵蓋區 B：Keeper Stake Script**
 聚焦:`keeper_stake_script.ak` 整個 validator、透過 `multisig_gov` 的 `UpdateKeeperAuth`、每週輪替機制、保證金生命週期。出口:0 CRIT / 0 HIGH / 0 MEDIUM。
 
-**涵蓋區 C — V1 整合流程**
+**涵蓋區 C：V1 整合流程**
 聚焦:跨 validator 的流程,Compound 的 3 個 fee output(keeper + gov pool + treasury)、`UpdateKeeperAuth` 觸發 keeper_auth 狀態變化、m-of-n 下的 `TreasurySpend`、`DistributeSignerCompensation` + `ReceiveGovForfeit` 的跨 validator binding、**三層治理安全設計**(Layer 1 `vault_gov_emergency.EmergencyWithdraw` freeze-only / Layer 2 `vault_protocol.DeployToProtocol` 在 `frozen = 1` 下開放 USDCx swap-out / Layer 3 `vault_user.CommunitySunset` 90 天 permissionless dead-man-switch,見 `spec/governance.md §4.4` + `docs/security-model.md §5.4`)。出口:0 CRIT / 0 HIGH / 0 MEDIUM。
 
-**涵蓋區 D — V1 Regression**
-把所有 heritage regression test 重跑一遍 V1 validator。標記新編譯時參數帶來的任何 cascade 影響。出口:V1 重構後所有既有測試仍通過。
+**涵蓋區 D：V1 Regression**
+把所有 heritage regression test 重跑一遍 V1 validator。標記新編譯期參數帶來的任何 cascade 影響。出口:V1 重構後所有既有測試仍通過。
 
-**涵蓋區 E — V1 鏈下程式**
+**涵蓋區 E：V1 鏈下程式**
 Keeper、API、frontend、CLI 全部為 V1 stack 更新過。具體面向:keeper 的 slippage policy 範圍(跨 validator 對 `vault_gov_policy.UpdateSlippagePolicy`)、API 的 JWT 簽名驗證流程、withdraw-cli + emergency-withdraw 的 HTML 不變量(不依賴 frontend 的自助退場路徑)、TVL 上限在 frontend 存款閘控 + 鏈下 TVL 監控 alert 的執行。**嚴重性層級**:CRITICAL = 直接造成使用者資金損失 / 未授權的資金移動;HIGH = 鏈下與鏈上間的靜默狀態失步;MEDIUM = liveness 退化,需要 operator 介入;LOW = 外觀 / 可觀測性缺口。**出口**:keeper 0 CRIT / 0 HIGH;API + CLI 0 CRIT。(鏈下程式與鏈上 validator 不在同一個爆炸半徑內,存入者資金的保護來自鏈上檢查,與鏈下 bug 無關,但鏈下 CRIT/HIGH 仍值得在上線前修,因為它們可能把使用者面的體驗降到「沒有 operator 協助就退不了場」的程度。)
 
-**涵蓋區 F — V1 部署流程**
+**涵蓋區 F：V1 部署流程**
 V1 的部署 ceremony 多了 treasury UTXO init + keeper_stake_script UTXO init。部署流程審計方法論套用到這些新步驟。出口:狀態機 0 CRIT;runbook 已文件化。
 
 ---
@@ -184,7 +184,7 @@ V1 的部署 ceremony 多了 treasury UTXO init + keeper_stake_script UTXO init�
 - V1 validator 完整 Aiken 原始碼審視。
 - 所有 redeemer 的不變量保留。
 - 核心不變量的形式化驗證(延後收益 Withdraw 語意、BatchProcess mint-ratio 等式、MergeUtxo secondary-source 白名單),如果可行的話。
-- 編譯時參數審計(確認所有錨點在部署時就設定好)。
+- 編譯期參數審計(確認所有錨點在部署時就設定好)。
 - 鏈下的 keeper、API、CLI 審計為「選項」,但傾向納入。
 - 部署 ceremony 乾跑審計。
 
@@ -295,10 +295,10 @@ V1 定位為 Cardano DeFi **非商業公共財**參考實作。審計接洽資�
 
 ## 9. 延伸閱讀
 
-- `docs/security-model.md` — V1 威脅模型
-- `spec/architecture.md` — V1 validator 目錄
-- `spec/governance.md` — timelock 下限與 action payload
-- `spec/treasury.md` — TreasuryDatum 不變量
-- `spec/keeper-auth.md` — keeper_stake_script 與保證金生命週期
-- `docs/cip-readiness-posture-zh-TW.md` — V1 對 Cardano Improvement Proposal 流程的立場(資訊性質,見 §1.5)
-- `spec/pattern-rationale-*.md` — 五個 V1 模式的通用模式文件(資訊性質,見 §1.5)
+- `docs/security-model.md`：V1 威脅模型
+- `spec/architecture.md`：V1 validator 目錄
+- `spec/governance.md`：timelock 下限與 action payload
+- `spec/treasury.md`：TreasuryDatum 不變量
+- `spec/keeper-auth.md`：keeper_stake_script 與保證金生命週期
+- `docs/cip-readiness-posture-zh-TW.md`：V1 對 Cardano Improvement Proposal 流程的立場(資訊性質,見 §1.5)
+- `spec/pattern-rationale-*.md`：五個 V1 模式的通用模式文件(資訊性質,見 §1.5)

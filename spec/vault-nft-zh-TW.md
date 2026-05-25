@@ -2,7 +2,7 @@
 
 *Validator Identity NFT 模式的實作(通用模式、與 native-script 替代方案的取捨、待答 CIP 設計問題見 [`pattern-rationale-validator-identity-nft-zh-TW.md`](./pattern-rationale-validator-identity-nft-zh-TW.md))。V1 把同一個模式實例化了三次 — Vault NFT(本檔)、Governance NFT(見 `gov-nft.md`)、Registry Auth NFT(見 `pattern-rationale-registry-auth-nft-zh-TW.md`)。本檔是針對 Vault-NFT 實例化的 V1 案例研究。*
 
-**範圍**:one-shot Vault Identity NFT 的 minting policy,以及它作為編譯時信任錨點的角色。
+**範圍**:one-shot Vault Identity NFT 的 minting policy,以及它作為編譯期信任錨點的角色。
 
 ---
 
@@ -11,7 +11,7 @@
 Vault Identity NFT 是鏈上用來區分**這個** V1 vault UTxO 與任何其他可能共用 `vault_proxy` script 地址的 UTxO 的 marker。設計上它承擔三件事:
 
 1. **唯一鑄造**:整個 V1 生命週期內恰好只有一個 NFT(**無法重鑄**)。
-2. **編譯時錨點**:NFT 的 minting policy 是 `vault_proxy`、`vusdcx`、`order` 的編譯時參數。在 vault 地址但缺 NFT 的 UTxO,對這三個 validator 而言不被視為 vault,這關閉了內部驗證期辨識出的「phantom vault」攻擊類別。
+2. **編譯期錨點**:NFT 的 minting policy 是 `vault_proxy`、`vusdcx`、`order` 的編譯期參數。在 vault 地址但缺 NFT 的 UTxO,對這三個 validator 而言不被視為 vault,這關閉了內部驗證期辨識出的「phantom vault」攻擊類別。
 3. **burn 路徑永遠可用**:當 vault 最終 sunset(TVL drain、`total_shares == 0`)時,NFT 必須可以 burn,好讓最後的 vault UTxO 被銷毀、min-ADA 被回收。V1 設計明確要求「**burn 沒有任何時間截止限制**」(這也是 V1 不採用內部驗證期繼承的 native-script 截止模式的原因,見 §5「為什麼不用 native script」)。
 
 ---
@@ -25,7 +25,7 @@ use aiken/crypto.{ScriptHash}
 use cardano/transaction.{Transaction, OutputReference, flatten}
 use aiken/collection/list
 
-// 編譯時參數:消費此 UTXO 參照 → 授權鑄造。
+// 編譯期參數:消費此 UTXO 參照 → 授權鑄造。
 // 部署時選擇:部署者控制的、過去未被 spent 的任一 UTXO 都行。
 validator vault_nft(utxo_ref: OutputReference) {
   mint(_redeemer: Data, policy_id: ScriptHash, tx: Transaction) {
@@ -79,7 +79,7 @@ fn expect_one_opti_vault_mint(entries: List<(ByteArray, ByteArray, Int)>) -> Boo
 }
 ```
 
-**部署時選 `utxo_ref`**:V1 mainnet 部署 ceremony 期間,operator 挑一個自己控制、尚未被 spent 的特定 UTxO。這個 UTxO 成為編譯時參數,第一筆 mint TX 會消費它。消費之後,沒有任何未來 TX 能 replay 這次 mint(該 UTxO 已從 ledger 消失)。
+**部署時選 `utxo_ref`**:V1 mainnet 部署 ceremony 期間,operator 挑一個自己控制、尚未被 spent 的特定 UTxO。這個 UTxO 成為編譯期參數,第一筆 mint TX 會消費它。消費之後,沒有任何未來 TX 能 replay 這次 mint(該 UTxO 已從 ledger 消失)。
 
 ---
 
@@ -117,7 +117,7 @@ Mint 分支強制 `quantity == 1` + `asset_name == "OptiVault"`。企圖多鑄�
 
 ### 3.4 防 rogue-policy 注入
 
-即使攻擊者部署自己的 `vault_nft` validator、用自己控制的另一個 UTxO 做參數、鑄出一個他叫做 "OptiVault" 的 token,因為 UTxO ref 參數不同、編譯出的 script hash 也不同,policy ID 就跟 V1 的不同。`vault_proxy` / `vusdcx` / `order` validator 把 V1 特定的 `vault_nft_policy` 燒進自己的編譯時參數,所以會拒絕任何**在 vault 地址但不帶 V1 特定 NFT policy token** 的 UTxO。**Phantom vault 攻擊在 validator 錨點層就被關閉,不是靠 policy 名字匹配。**
+即使攻擊者部署自己的 `vault_nft` validator、用自己控制的另一個 UTxO 做參數、鑄出一個他叫做 "OptiVault" 的 token,因為 UTxO ref 參數不同、編譯出的 script hash 也不同,policy ID 就跟 V1 的不同。`vault_proxy` / `vusdcx` / `order` validator 把 V1 特定的 `vault_nft_policy` 燒進自己的編譯期參數,所以會拒絕任何**在 vault 地址但不帶 V1 特定 NFT policy token** 的 UTxO。**Phantom vault 攻擊在 validator 錨點層就被關閉,不是靠 policy 名字匹配。**
 
 ---
 
@@ -125,11 +125,11 @@ Mint 分支強制 `quantity == 1` + `asset_name == "OptiVault"`。企圖多鑄�
 
 ### 4.1 Mint(部署)
 
-V1 mainnet 部署 ceremony(`docs/runbooks/v1-mainnet-ceremony.md`)期間:
+V1 mainnet 部署 ceremony(`../deploy/runbooks/v1-mainnet-ceremony.md`)期間:
 
-1. Operator 挑一個自己控制的 unspent UTxO 作為編譯時參數
+1. Operator 挑一個自己控制的 unspent UTxO 作為編譯期參數
 2. Operator 用該 UTxO ref 編譯 `vault_nft` validator → 產出 `vault_nft_policy`
-3. Operator 以 `vault_nft_policy` 作編譯時參數,編譯 `vault_proxy`、`vusdcx`、`order`
+3. Operator 以 `vault_nft_policy` 作編譯期參數,編譯 `vault_proxy`、`vusdcx`、`order`
 4. Operator 建 vault-init TX,消費 `utxo_ref` 並鑄 1 × "OptiVault" token
 5. Mint TX 把 token 輸出到 `vault_proxy` 地址的 vault UTxO(連同初始 vault datum + 任何 seed USDCx)
 6. Mint 之後,`utxo_ref` 已不在 ledger 上 → 未來任何 mint 都不可能
@@ -181,23 +181,23 @@ Vault NFT 是 V1 對 [`pattern-rationale-validator-identity-nft-zh-TW.md`](./pat
 
 | 模式性質 | V1 Vault NFT 強制 |
 |---|---|
-| 編譯時 UTXO-ref 錨點 | `vault_nft` validator 以 `utxo_ref: OutputReference` 參數化;該參數由 V1 mainnet 部署 ceremony 選定 |
+| 編譯期 UTXO-ref 錨點 | `vault_nft` validator 以 `utxo_ref: OutputReference` 參數化;該參數由 V1 mainnet 部署 ceremony 選定 |
 | 密碼學 one-shot(整條鏈歷史最多 mint 一次) | mint 分支的前提條件 `list.any(tx.inputs, fn(i) { i.output_reference == utxo_ref })` — UTXO 在第一次 mint 時被消耗、之後再也無法被消耗 |
 | burn 永遠可用(無時間限制) | burn 分支無條件 — 只驗證 `asset_name` 與 `quantity == -1`。守著「裝有 NFT 的 UTXO」的 spending validator 決定 burn *什麼時候*可以發生 |
 | mint quantity 安全性 | mint 分支採用 `pair.2nd == 1` 嚴格相等(不是 `> 0`) |
-| 對 rogue-policy 注入的防禦 | `vault_proxy`、`vusdcx`、`order` validator 把 V1 特定的 `vault_nft_policy` 烘進自己的編譯時參數;攻擊者用不同 UTXO-ref 部署的 validator 副本會編出不同的 policy ID,通不過消費端的檢查 |
+| 對 rogue-policy 注入的防禦 | `vault_proxy`、`vusdcx`、`order` validator 把 V1 特定的 `vault_nft_policy` 烘進自己的編譯期參數;攻擊者用不同 UTXO-ref 部署的 validator 副本會編出不同的 policy ID,通不過消費端的檢查 |
 
 §3.1–§3.4 提供 V1 特定的安全性論證;rationale 文件中通用模式的安全性推理原樣適用。
 
 ### 6.2 V1 特定的設計選擇
 
-`asset_name` 被寫死為常數 `vault_nft_token_name = "OptiVault"`,沒有暴露為編譯時參數。模式文件允許兩種形式(見其 §7 待答問題 1)。V1 選擇寫死的形式,因為這個部署是單實例 — V1 階段並不打算支援 fork 客製;validator 程式碼在任何符合 V1 的部署上都是相同的。如果另一個部署想在同一份程式碼下支援多個不同 vault 實例,就會把 `asset_name` 暴露為第二個參數,跟 V1 的 `governance_nft.ak` 與 `registry_auth_nft.ak` 一樣(那兩個之所以暴露 `gov_name` / `asset_name`,是因為它們的重用 profile 不同)。
+`asset_name` 被寫死為常數 `vault_nft_token_name = "OptiVault"`,沒有暴露為編譯期參數。模式文件允許兩種形式(見其 §7 待答問題 1)。V1 選擇寫死的形式,因為這個部署是單實例 — V1 階段並不打算支援 fork 客製;validator 程式碼在任何符合 V1 的部署上都是相同的。如果另一個部署想在同一份程式碼下支援多個不同 vault 實例,就會把 `asset_name` 暴露為第二個參數,跟 V1 的 `governance_nft.ak` 與 `registry_auth_nft.ak` 一樣(那兩個之所以暴露 `gov_name` / `asset_name`,是因為它們的重用 profile 不同)。
 
 ### 6.3 相關 pattern-rationale 文件
 
 - [`pattern-rationale-validator-identity-nft-zh-TW.md`](./pattern-rationale-validator-identity-nft-zh-TW.md) — 通用模式(本檔 Vault NFT 的主要 rationale)
 - [`pattern-rationale-withdraw-zero-forwarding-zh-TW.md`](./pattern-rationale-withdraw-zero-forwarding-zh-TW.md) §4.3 — singleton 強制的組合:Withdraw-Zero 本身並不會約束 vault address 上有幾顆 UTXO,Vault NFT 把這個縫合上
-- [`pattern-rationale-vault-datum-tiered-zh-TW.md`](./pattern-rationale-vault-datum-tiered-zh-TW.md) — VaultDatum 的 identity tier 欄位包含依賴這顆 NFT 真實性的編譯時錨定 token 參考
+- [`pattern-rationale-vault-datum-tiered-zh-TW.md`](./pattern-rationale-vault-datum-tiered-zh-TW.md) — VaultDatum 的 identity tier 欄位包含依賴這顆 NFT 真實性的編譯期錨定 token 參考
 - [`cip-readiness-posture-zh-TW.md`](../docs/cip-readiness-posture-zh-TW.md) — V1 對 Cardano Improvement Proposals 的整體立場
 
 ---
@@ -205,5 +205,5 @@ Vault NFT 是 V1 對 [`pattern-rationale-validator-identity-nft-zh-TW.md`](./pat
 ## 7. 相關 spec
 
 - `spec/architecture.md §4` — validator #11 摘要列
-- `spec/vault-datum.md §2.3` — `vault_nft_policy` 如何作為 `vault_proxy`、`vusdcx`、`order` 的編譯時錨點使用
+- `spec/vault-datum.md §2.3` — `vault_nft_policy` 如何作為 `vault_proxy`、`vusdcx`、`order` 的編譯期錨點使用
 - `docs/security-model.md` — phantom vault 攻擊分析與內部驗證期的修補史

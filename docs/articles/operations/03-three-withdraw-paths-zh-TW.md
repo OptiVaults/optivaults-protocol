@@ -1,6 +1,6 @@
 # 三條 Withdraw 路徑：Direct / Queue / Emergency 怎麼選
 
-*OptiVaults V1 營運機制解說 — 第 3 篇 / 共 3 篇*
+*OptiVaults V1 營運機制解說，第 3 篇 / 共 3 篇*
 
 ---
 

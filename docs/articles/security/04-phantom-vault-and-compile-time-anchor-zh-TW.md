@@ -1,6 +1,6 @@
 # Phantom-vault 攻擊向量：為什麼編譯期錨點比 runtime 檢查強
 
-*OptiVaults V1 安全設計解說 — 第 4 篇 / 共 4 篇*
+*OptiVaults V1 安全設計解說，第 4 篇 / 共 4 篇*
 
 ---
 

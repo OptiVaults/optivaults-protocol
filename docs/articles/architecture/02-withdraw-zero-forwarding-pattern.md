@@ -147,7 +147,7 @@ Validation flow:
    - The fee split matches `keeper_fee_bps` / `gov_fee_bps` / treasury ratios
    - The keeper output is correctly placed at `tx.outputs[keeper_output_idx]`, with an address corresponding to the keeper signer's PKH
    - The treasury output is sent to the `treasury_hash` address
-   - All 15 immutable VaultDatum fields are unchanged
+   - All 9 immutable + 8 policy-locked VaultDatum fields are unchanged (the policy-locked tier may only move via the dedicated UpdateFee / UpdateFeeSplit / UpdateStrategy redeemers)
    - `last_compound_time` advances to the validity range's lower bound
 3. **`keeper_stake_script` triggered** (via zero-withdraw): check that the TX is signed by the keeper PKH, and that the PKH appears in `authorized_pkhs` (in GovernanceOnly mode).
 

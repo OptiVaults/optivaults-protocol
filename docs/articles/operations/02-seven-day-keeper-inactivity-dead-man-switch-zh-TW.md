@@ -1,6 +1,6 @@
 # 7 天 keeper-inactivity dead-man-switch：讓存入者不必信任 keeper
 
-*OptiVaults V1 營運機制解說 — 第 2 篇 / 共 3 篇*
+*OptiVaults V1 營運機制解說，第 2 篇 / 共 3 篇*
 
 ---
 

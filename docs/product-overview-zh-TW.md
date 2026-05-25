@@ -18,7 +18,7 @@ OptiVaults V1 是 Cardano 上的非託管智能合約 vault。使用者存入 US
 **程式住在哪(兩個 repo)**。你可以在 GitHub 讀到 V1 的每一行原始碼,它拆在兩個 Apache-2.0 公 repo:
 
 - **協議層**:[`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol):實際控制你資金的 Aiken 智能合約、白皮書、部署流程。**你的 vUSDCx 由這一層鑄造;4.5% fee 上限、no-admin-drain 不變量、keeper 停擺 7 天免費提領**,這些都由這層強制。Fork 跑自己的完全免費。
-- **Operator 層**:[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference):運營 `optivaults.app` 的 TypeScript 程式(keeper、API、frontend、恢復 CLI)。這層就是 4.5% fee 支撐的對象。歡迎 fork;fork 運營者跑自己的實例、自訂費率。
+- **Operator 層**:[`optivaults-reference`](../../optivaults-reference):運營 `optivaults.app` 的 TypeScript 程式(keeper、API、frontend、恢復 CLI)。這層就是 4.5% fee 支撐的對象。歡迎 fork;fork 運營者跑自己的實例、自訂費率。
 
 **你的 USDCx 在金庫裡時,保護它的是智能合約,不是 OptiVaults 這家機構**。這個區分很重要,因為**若 OptiVaults 明天消失,你的存款仍可透過 self-serve 工具(`withdraw-cli` / `emergency-withdraw`)取回,不需要我們的基礎設施**。完整兩層架構見白皮書 §3.5。
 
@@ -79,7 +79,7 @@ V1 §1.1 列的 5 條獨特之處，沒有一項依賴「我們承諾會做」�
    - **錢包沒有 ADA 付網路費**
 2. **本金不可能被 admin 拿走。** 合約中不存在任何 admin redeemer 能把 `idle_buffer` 送到非存款人地址。`EmergencyWithdraw`（治理 m-of-n）可以標記損失（等比例下調所有持有人的份額價格），但不能把資金轉出 vault。Validator 層硬編碼的上限（白皮書 §6.3）也排除了治理把費率設超過 4.5% 或任一市場配置突破 100% 的可能。
 3. **4.5% 費用上限 immutable。** 這由 `vault_gov_policy.ak` 的 UpdateFee redeemer（透過共用的 `validate_update_fee` helper）硬鎖，治理動不了。
-4. **所有治理動作有 timelock + 1-of-n cancel。** 每個治理動作在 QueueAction 時就公開，最少間隔 1 小時才能執行（費用、簽名者、策略等敏感動作 timelock 更長，7-21 天）。你可以觀察佇列、計算 payload hash，若不同意，有足夠時間在執行前提款。任一簽名者可 1-of-n cancel 否決整個動作。
+4. **所有治理動作有 timelock + 1-of-n cancel。** 每個治理動作在 QueueAction 時就公開，timelock 依 `ActionKind` 分檔——從 0（緊急）與 48h（滑點／每市場 liveness 切換）一路到 21 天（最長，`UpdateFeeSplit`）。你可以觀察佇列、計算 payload hash，若不同意，有足夠時間在執行前提款。任一簽名者可 1-of-n cancel 否決整個動作。
 5. **團隊停止營運時，你仍能自助退場。** `withdraw-cli` 是開源工具，讓你不用我們配合也能自行組建並簽署提款 TX；每次版本發布都會測試。若我們靜默 7 天以上，合約自動免除早提款費，讓自助提款在經濟上也划算。
 
 ---
@@ -232,7 +232,7 @@ A：10 USDCx（合約強制下限）。低於這個金額會被拒絕，目的�
 A：沒有單一錢包上限。整個 vault 的審計前上限是 100K USDCx；達到上限後，新存款在 API 層被擋下（上限是營運層強制，不是合約層強制，見白皮書 §9.4）。
 
 **Q：看到治理佇列裡有我不喜歡的動作，該怎麼辦？**
-A：在 timelock 窗口內（依動作類型 7-21 天）提款。時間相當充裕，這正是 timelock 機制存在的目的。
+A：在 timelock 窗口內提款，視 `ActionKind` 而定——從 0（緊急）與 48h（滑點／每市場 liveness 切換）一路到 21 天（最長，`UpdateFeeSplit`）。實質政策變更落在較長那端，時間相當充裕，這正是 timelock 機制存在的目的。
 
 **Q：問問題要找誰？**
 A：Discord 邀請連結在 optivaults.app 首頁。安全相關問題：`optivaults@gmail.com`。

@@ -145,7 +145,7 @@ payload_hash = blake2b_256(cbor.serialise(payload))
 
 Payload types per ActionKind (matches `governance.md` §4):
 
-| ActionKind | Canonical payload tuple (must match `lib/vault/helpers.ak:payload_hash_*`) |
+| ActionKind | Canonical payload tuple (must match `contracts/lib/vault/helpers.ak:payload_hash_*`) |
 |------------|----------------------------------------------------------------------------|
 | UpdateStrategy | `(new_allocations, new_buffer_target_bps)` |
 | UpdateFee | `(new_performance_fee_bps, new_early_withdraw_fee_bps, new_min_hold_seconds)` |
@@ -338,7 +338,7 @@ DistributeSignerCompensation { triggering_signer: VerificationKeyHash }
 
 ## 7. Cross-validator authorization helper
 
-**Implemented** in `lib/vault/helpers.ak::is_gov_authorized` (added in the V1 internal audit fix). Every governance-gated redeemer in `vault_admin`, `registry`, `treasury`, and `keeper_stake_script` calls this helper. The canonical implementation:
+**Implemented** in `contracts/lib/vault/helpers.ak::is_gov_authorized` (added in the V1 internal audit fix). Every governance-gated redeemer in `vault_admin`, `registry`, `treasury`, and `keeper_stake_script` calls this helper. The canonical implementation:
 
 ```aiken
 pub fn is_gov_authorized(

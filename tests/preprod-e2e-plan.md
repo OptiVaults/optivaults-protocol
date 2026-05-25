@@ -13,9 +13,9 @@
 This plan covers **on-chain Preprod transaction submission and verification** for every V1 redeemer. Off-chain unit tests live in `contracts/lib/vault/tests/*.ak` (validation predicates) and `keeper/test/` (keeper engine TS tests, future).
 
 **Out of scope** for this plan:
-- Mainnet operations (covered by `docs/runbooks/v1-mainnet-ceremony.md` once written)
+- Mainnet operations (covered by `../deploy/runbooks/v1-mainnet-ceremony.md` once written)
 - Off-chain unit tests
-- Property-based / fuzz tests (planned `lib/vault/tests/property_test.ak`)
+- Property-based / fuzz tests (planned `contracts/lib/vault/tests/property_test.ak`)
 - Long-running stability tests (e.g., 90-day quarterly distribution cycle)
 
 ---
@@ -315,8 +315,8 @@ These exercise the full TX patterns where multiple validators must succeed toget
 
 ## 5. Test execution conventions
 
-- Each test script lives at `tests/preprod/<id>.test.ts` (TypeScript w/ Lucid Evolution or CML).
-- Test reads/writes deploy state from `tests/preprod/state/v1-r0-preprod.json` (single-source canonical state file, atomic-write pattern; matches the ceremony state-tracking pattern from prior pre-V1 deployments).
+- Each test script will land at `tests/preprod/<id>.test.ts` once the runtime tree is published (TypeScript w/ Lucid Evolution or CML). Until then this plan is the canonical reference for the scenario set.
+- Test reads/writes deploy state from a single-source `state/v1-r0-preprod.json` (atomic-write pattern; matches the ceremony state-tracking pattern from prior pre-V1 deployments), co-located with the test scripts when published.
 - Each test asserts on TX confirmation + on-chain datum/balance after `awaitTx`.
 - Failing assertions throw with a clear message; successful runs print the TX hash + a one-line summary.
 - A wrapper script `npm run e2e:v1` runs all tests in dependency order (NFT-1 first, then proxy/vusdcx/order, then redeemer-specific, then INT-*).

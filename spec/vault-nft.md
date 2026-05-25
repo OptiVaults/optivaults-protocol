@@ -127,7 +127,7 @@ Even if an attacker deploys their own `vault_nft` validator parameterised by a d
 
 ### 4.1 Mint (deploy)
 
-During the V1 mainnet deploy ceremony (`docs/runbooks/v1-mainnet-ceremony.md`):
+During the V1 mainnet deploy ceremony (`../deploy/runbooks/v1-mainnet-ceremony.md`):
 
 1. Operator selects an unspent UTXO they control as the compile-time parameter
 2. Operator compiles `vault_nft` validator with that UTXO ref → produces `vault_nft_policy`

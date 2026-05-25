@@ -9,7 +9,7 @@ This doc covers: how to set up the dev environment, what kinds of contributions 
 OptiVaults V1 is split across two repositories (see `README.md` §"Two-layer architecture"):
 
 - **This repo (`optivaults-protocol`)** — protocol layer: Aiken validators, protocol spec, whitepaper, deploy pipeline. Use this repo for contract changes, spec corrections, whitepaper edits, deploy script improvements.
-- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)** — operator reference implementation: TypeScript keeper, API server, frontend, CLI tools. Use that repo for keeper runtime bugs, frontend UX, API improvements, CLI polish.
+- **[`optivaults-reference`](../optivaults-reference)** — operator reference implementation: TypeScript keeper, API server, frontend, CLI tools. Use that repo for keeper runtime bugs, frontend UX, API improvements, CLI polish.
 
 When in doubt, open the PR here — maintainers will move it if it's in the wrong repo.
 
@@ -19,7 +19,7 @@ When in doubt, open the PR here — maintainers will move it if it's in the wron
 
 1. Read `README.md` + `whitepaper/whitepaper.md` (or `whitepaper-zh-TW.md`) for positioning and trust model.
 2. `aiken check` in `contracts/` must pass (194 tests / 689 randomized checks / 0 errors).
-3. For contract changes, include a regression test in `lib/vault/tests/`.
+3. For contract changes, include a regression test in `contracts/lib/vault/tests/`.
 4. For spec / doc changes, ensure internal cross-references still work (validator names, redeemer tags, field counts).
 5. Don't commit secrets, mainnet signer PKHs, or real Blockfrost keys. They belong in operator `.env` (gitignored), never in the repo.
 6. **Security-sensitive findings go to `optivaults@gmail.com` (PGP on optivaults.app/security), NOT a public issue.** See §Security disclosure below.
@@ -44,7 +44,7 @@ aiken build                       # regenerates plutus.json
 aiken check                       # runs 194 tests + 689 randomized checks
 ```
 
-`aiken check` must be clean on the branch before a PR is opened. If you add new tests, put them under `lib/vault/tests/` and ensure they fit the existing naming pattern (`<feature>_test.ak`).
+`aiken check` must be clean on the branch before a PR is opened. If you add new tests, put them under `contracts/lib/vault/tests/` and ensure they fit the existing naming pattern (`<feature>_test.ak`).
 
 **Run the Preprod deploy ceremony dry-run** (optional, for deploy/* contributors):
 
@@ -61,7 +61,7 @@ Dry-run validates config parsing + compile step without submitting TXs.
 ### Welcome without prior discussion
 
 - **Bug fixes** in Aiken validators (must include a regression test demonstrating the prior failure + the fix).
-- **Test coverage increases** — more property-based tests (`aiken/fuzz`), more edge-case unit tests, more Preprod E2E scenarios in `tests/preprod/`.
+- **Test coverage increases** — more property-based tests (`aiken/fuzz`), more edge-case unit tests, more Preprod E2E scenarios tracked in `tests/preprod-e2e-plan.md`.
 - **Documentation clarity** — typo fixes, wording improvements in specs + docs + whitepaper + inline Aiken comments.
 - **Deploy tooling polish** — idempotency improvements, better error messages, observability.
 - **i18n** — product-overview / whitepaper translations beyond the existing EN + 繁體中文.
@@ -127,7 +127,7 @@ Use `aiken/fuzz v2.2.0` for adversarial coverage. Refer to `property_test.ak` an
 
 ### Preprod E2E tests
 
-When adding a redeemer path or changing redeemer semantics, add a corresponding Preprod E2E script under `tests/preprod/`. See existing `10-deposit-direct.ts` / `11-withdraw-direct-partial.ts` for the canonical shape (ceremony state file loader + Blockfrost provider + key daemon → build TX → submit → assert post-state).
+When adding a redeemer path or changing redeemer semantics, add a corresponding Preprod E2E scenario to `tests/preprod-e2e-plan.md` and its associated runtime script. See existing `10-deposit-direct.ts` / `11-withdraw-direct-partial.ts` patterns referenced in that plan for the canonical shape (ceremony state file loader + Blockfrost provider + key daemon → build TX → submit → assert post-state).
 
 Scripts are numbered by phase: `0X-ceremony-health`, `1X-user-flow`, `2X-compound`, `3X-merge-utxo`, `4X-protocol`, `5X-governance`, `6X-sunset`. Follow the convention when adding new scripts.
 

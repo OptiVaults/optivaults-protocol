@@ -203,9 +203,9 @@ type StrategyPayload {
 **硬上限(validator 層強制、治理無法改)**:
 - `performance_fee_bps <= 450`(4.5% 絕對上限,內部驗證期政策鎖)
 - `early_withdraw_fee_bps <= 100`(1% 上限)
-- `min_hold_seconds >= 0` 且 `<= 21600`(最多 6 小時,依白皮書 review 從較早的 24h 上限收緊;合約常數在 `lib/vault/constants.ak` 的 `max_min_hold_seconds`)
+- `min_hold_seconds >= 0` 且 `<= 21600`(最多 6 小時,依白皮書 review 從較早的 24h 上限收緊;合約常數在 `contracts/lib/vault/constants.ak` 的 `max_min_hold_seconds`)
 
-治理**不能**提高這些上限,它們是 `lib/vault/constants.ak` 中的協議常數,由 `vault_gov_policy.ak` 的 UpdateFee redeemer 呼叫的共用 `validate_update_fee` helper 檢查。
+治理**不能**提高這些上限,它們是 `contracts/lib/vault/constants.ak` 中的協議常數,由 `vault_gov_policy.ak` 的 UpdateFee redeemer 呼叫的共用 `validate_update_fee` helper 檢查。
 
 ### 4.3 UpdateFeeSplit
 
@@ -238,13 +238,13 @@ type StrategyPayload {
 
 **範圍**:`max_slippage_bps`、`min_swap_peg_bps`。其他 VaultDatum 欄位**不得變更**。
 
-**硬上限(validator 層強制,定義在 `lib/vault/constants.ak`)**:
+**硬上限(validator 層強制,定義在 `contracts/lib/vault/constants.ak`)**:
 - `0 <= new_max_slippage_bps <= max_slippage_bps_cap`(`max_slippage_bps_cap = 500` → 絕對上限 5%)
 - `min_swap_peg_bps_floor <= new_min_swap_peg_bps <= min_swap_peg_bps_ceiling`(9_300..9_950 → 介於 93% 與 99.5% peg)
 
 **Timelock**:48 小時(`timelock_update_slippage_policy_ms`)。比費用類動作短,理由:(a) 這個變更**加強**或**放鬆**安全邊界,而非重導資金流;(b) 市場狀況(例如短暫 depeg)可能需要即時調整。
 
-**Payload-hash 綁定**:`payload_hash_update_slippage_policy(new_max_slippage_bps, new_min_swap_peg_bps)`(見 `lib/vault/helpers.ak`)。Payload 在 queue 時即固定,execute 不能換值。
+**Payload-hash 綁定**:`payload_hash_update_slippage_policy(new_max_slippage_bps, new_min_swap_peg_bps)`(見 `contracts/lib/vault/helpers.ak`)。Payload 在 queue 時即固定,execute 不能換值。
 
 **與 `vault_protocol.DeployToProtocol` 的組合**:每次 `DeployToProtocol` 都會檢查 `max_slippage_bps`(Tier 1,當 `registry.asset_oracles` 有 deploy 資產時)+ `min_swap_peg_bps`(Tier 2,從 Minswap V2 route datum 的 `min_receive` 解出)。任一邊界收緊後,於新 datum 落鏈後的下一筆 deploy 起生效。
 
@@ -390,11 +390,11 @@ publish(_redeemer, credential, tx) {
 }
 ```
 
-`governance_nft_policy` + `governance_nft_name` 是四個 staking validator 的**編譯時參數**(keeper_stake_script 在 A2 之前就有;vault_protocol / vault_liqwid / vault_admin 各自新加入這一對)。在編譯時錨定(而不是透過 `find_vault_utxo` 從 vault datum 讀),讓 deregister 順序解耦:operator 可以在 vault full-drain 之後(vault UTxO 已不存在時)做 deregister,也可以在之前,順序任意。
+`governance_nft_policy` + `governance_nft_name` 是四個 staking validator 的**編譯期參數**(keeper_stake_script 在 A2 之前就有;vault_protocol / vault_liqwid / vault_admin 各自新加入這一對)。在編譯期錨定(而不是透過 `find_vault_utxo` 從 vault datum 讀),讓 deregister 順序解耦:operator 可以在 vault full-drain 之後(vault UTxO 已不存在時)做 deregister,也可以在之前,順序任意。
 
 **Payload**:`payload_hash_deregister_stake(target_hash) = blake2b_256(cbor.serialise(target_hash))`。Off-chain 工具排入時計算同樣的 hash。
 
-**Timelock**:14 天(production)。與 `UpdateKeeperAuth` 同,同屬「operator credential 變更」層級。**Preprod build 覆寫**:當 `lib/vault/constants.ak` 中 `preprod_fast_timelocks: Bool = True` 時,所有 gated timelock(包含此項)解析為 60 秒,供 E2E 快速測試輪次使用。Mainnet build 將 flag 設為 `False`,並透過 `deploy/tools/verify-mainnet-build.sh` 驗證 active branch 無 60 秒字面值殘留。
+**Timelock**:14 天(production)。與 `UpdateKeeperAuth` 同,同屬「operator credential 變更」層級。**Preprod build 覆寫**:當 `contracts/lib/vault/constants.ak` 中 `preprod_fast_timelocks: Bool = True` 時,所有 gated timelock(包含此項)解析為 60 秒,供 E2E 快速測試輪次使用。Mainnet build 將 flag 設為 `False`,並透過 `deploy/tools/verify-mainnet-build.sh` 驗證 active branch 無 60 秒字面值殘留。
 
 **攻擊面分析**:
 - AT-1(grief):被入侵的 m-of-n gov queue ActDeregisterStake → 14d timelock + 1-of-n cancel 否決。與其他 Act* 的防禦 profile 相同。

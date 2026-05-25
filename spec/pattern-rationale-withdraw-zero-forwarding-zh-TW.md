@@ -1,8 +1,8 @@
-# Pattern Rationale — Withdraw-Zero Forwarding
+# Pattern Rationale：Withdraw-Zero Forwarding
 
 **狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture-zh-TW.md`。
 
-**範圍**：一個反覆出現的模式 — 把鏈上業務邏輯從 spending validator 移出去、放進一個或多個 staking validator，並用 zero-amount withdrawal 來觸發。這個模式是通用的；OptiVaults V1 把它當作整個 vault 的結構骨幹來用（1 個 proxy validator + 10 個被路由的 staking validator），案例研究見 §6。
+**範圍**：一個反覆出現的模式，把鏈上業務邏輯從 spending validator 移出去、放進一個或多個 staking validator，並用 zero-amount withdrawal 來觸發。這個模式是通用的；OptiVaults V1 把它當作整個 vault 的結構骨幹來用（1 個 proxy validator + 10 個被路由的 staking validator），案例研究見 §6。
 
 ---
 

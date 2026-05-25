@@ -1,6 +1,6 @@
-# security-model.md — V1 威脅模型
+# security-model.md：V1 威脅模型
 
-V1 的安全故事建立在三層:(1) 部署時燒進 validator hash 的編譯時信任錨點、(2) 每筆 TX 都會驗證的 redeemer 層級不變量、(3) 限縮鏈下代理人信任範圍的明確 operator 義務。本文件列出對手分類、各自能觸及的攻擊面、鏈上防禦,以及我們對存入者揭露的殘餘風險。
+V1 的安全故事建立在三層:(1) 部署時燒進 validator hash 的編譯期信任錨點、(2) 每筆 TX 都會驗證的 redeemer 層級不變量、(3) 限縮鏈下代理人信任範圍的明確 operator 義務。本文件列出對手分類、各自能觸及的攻擊面、鏈上防禦,以及我們對存入者揭露的殘餘風險。
 
 ---
 
@@ -28,7 +28,7 @@ V1 把權責拆在六個不同的密鑰控制身份。依政策,**沒有任何�
 
 | # | 身份 | 層 | 角色 | 鏈上表徵 | 輪替路徑 |
 |---|------|----|------|---------|---------|
-| 1 | **Keeper** | Operator | Compound、rebalance、batch、swap、Liqwid supply / recall | 透過 `keeper_stake_script` zero-withdraw 模式授權:`keeper_stake_hash` 是 `vault_user` / `vault_keeper_hot` / `vault_protocol` / `vault_recall` / `vault_liqwid` 的編譯時參數;實際授權 PKH 集合放在 stake-script 自己的 datum(治理可變) | `UpdateKeeperAuth` 透過治理(14 天 timelock)更新 stake-script datum |
+| 1 | **Keeper** | Operator | Compound、rebalance、batch、swap、Liqwid supply / recall | 透過 `keeper_stake_script` zero-withdraw 模式授權:`keeper_stake_hash` 是 `vault_user` / `vault_keeper_hot` / `vault_protocol` / `vault_recall` / `vault_liqwid` 的編譯期參數;實際授權 PKH 集合放在 stake-script 自己的 datum(治理可變) | `UpdateKeeperAuth` 透過治理(14 天 timelock)更新 stake-script datum |
 | 2 | **治理簽名者 A** | Instance 治理 | 3-of-3 quorum 成員 | `GovDatum.signers` 中的 pubkey | `RotateSigners` 14 天 timelock |
 | 3 | **治理簽名者 B** | Instance 治理 | 3-of-3 quorum 成員 | `GovDatum.signers` 中的 pubkey | `RotateSigners` 14 天 timelock |
 | 4 | **治理簽名者 C** | Instance 治理 | 3-of-3 quorum 成員 | `GovDatum.signers` 中的 pubkey | `RotateSigners` 14 天 timelock |
@@ -47,7 +47,7 @@ V1 把權責拆在六個不同的密鑰控制身份。依政策,**沒有任何�
 
 **攻擊**:攻擊者部署自己的 `vault_nft` validator,鑄 `(attacker_policy, "OptiVault")`,造一份宣稱 `vault_nft_policy = attacker_policy` 的假 VaultDatum,把這個 UTxO 送到真實的 proxy 地址。在舊版 validator 中,所有 NFT 檢查都是自引用的(從 datum 讀 policy、驗證 policy 在 UTxO 內)→ 假 UTxO 通過所有檢查 → 首位存入者的 multiplier 從假 datum 鑄出 10^13 個真實 vUSDCx → 燒回真實金庫把 TVL 抽乾。
 
-**V1 防禦**:Vault NFT policy 成為 `vault_proxy`、`vusdcx`、`order` 的**編譯時參數**。每個 NFT 檢查都錨在編譯時值上,偽造這個值就等於打破 validator hash。送到真實 proxy 地址的假 datum UTxO 會被忽略,因為 validator 根本不讀它自稱的 `vault_nft_policy`。
+**V1 防禦**:Vault NFT policy 成為 `vault_proxy`、`vusdcx`、`order` 的**編譯期參數**。每個 NFT 檢查都錨在編譯期值上,偽造這個值就等於打破 validator hash。送到真實 proxy 地址的假 datum UTxO 會被忽略,因為 validator 根本不讀它自稱的 `vault_nft_policy`。
 
 **狀態**:V1 中結構上不可能。
 
@@ -59,7 +59,7 @@ V1 把權責拆在六個不同的密鑰控制身份。依政策,**沒有任何�
 
 **常見的錯誤描述要特別注意**:「14 天後任何 1-of-n 簽名者都可以執行任意 admin」**是錯的**。Validator 沒有 1-of-n execute 路徑。攻擊面是 m-of-n 共謀,不是 1-of-n 委派。
 
-**歷史上已關閉的變體(內部驗證期)**:一個涉及 `timelock = 0` + 1-signer `CancelAction` 的 grief 路徑在內部 review 時已關閉。目前 `QueueAction` 強制 `timelock_ms >= min_timelock_ms(action_kind)`(governance.md §3),所以每個 queue 的動作都 ≥ 文件化的最小值(實質動作 7-21 天,`EmergencyWithdraw` / `FastUpdateMarkets` 為 0-1 小時)。
+**歷史上已關閉的變體(內部驗證期)**:一個涉及 `timelock = 0` + 1-signer `CancelAction` 的 grief 路徑在內部 review 時已關閉。目前 `QueueAction` 強制 `timelock_ms >= min_timelock_ms(action_kind)`(governance.md §3),所以每個 queue 的動作都 ≥ 文件化的最小值（按 `ActionKind` 分檔，從 0（緊急）與 48h（滑點／每市場 liveness 切換）一路到 21 天（最長，`UpdateFeeSplit`），`EmergencyWithdraw` / `FastUpdateMarkets` 落在 0-1 小時下限）。
 
 **V1 殘餘風險(如實描述)**:
 
@@ -183,7 +183,7 @@ V1 明確把信任委派給以下各方。存入者在存入之前應該逐一�
 
 ## 5. 縱深防禦分層
 
-### 5.1 編譯時錨點(不重部署就不能改)
+### 5.1 編譯期錨點(不重部署就不能改)
 
 Validator hash + 基礎身份。任何一個變動都會強制新部署(新地址、要遷移)。
 
@@ -196,7 +196,7 @@ Validator hash + 基礎身份。任何一個變動都會強制新部署(新地�
 - `vusdcx_policy`:vUSDCx 份額 token 的 policy(以 `vault_hash` + `vault_nft_policy` 參數化的 minting policy 部署)
 - `registry_hash`、`order_script_hash`、`vault_hash`:跨 validator 依賴錨點
 
-關於 keeper 身份的備註:V1 **不**在編譯時錨定特定的 `keeper_pkh`。授權 keeper 集合是**治理可變**的(透過 `UpdateKeeperAuth`,14 天 timelock),改動的是 `keeper_stake_script` 的內部 datum。編譯時錨點是 stake-script **hash**,不是 PKH,讓輪替不必重部署。
+關於 keeper 身份的備註:V1 **不**在編譯期錨定特定的 `keeper_pkh`。授權 keeper 集合是**治理可變**的(透過 `UpdateKeeperAuth`,14 天 timelock),改動的是 `keeper_stake_script` 的內部 datum。編譯期錨點是 stake-script **hash**,不是 PKH,讓輪替不必重部署。
 
 ### 5.2 Runtime 不變量(每筆 TX 強制)
 
@@ -215,19 +215,19 @@ Validator hash + 基礎身份。任何一個變動都會強制新部署(新地�
 - 有序停運協議(白皮書 §9.2)
 - 放寬上限的閘門是第三方審計
 
-### 5.4 Phase 1 治理安全 — 三層 founder-only-acceptable 設計
+### 5.4 Phase 1 治理安全：三層 founder-only-acceptable 設計
 
 不論簽名者組成為何(3-of-3 with SPOs vs 單一簽名者 founder fallback),V1 上線時就帶有三個 **validator 層**的安全防護,在最壞單一簽名者失能情境下界定存入者損失。設計目標是讓 **founder-only Phase 1 治理成為合理的上線 fallback**:SPO 招募變成可信度加分項,而不是上線阻礙。
 
-#### Layer 1 — `EmergencyWithdraw` 改為 freeze-only
+#### Layer 1：`EmergencyWithdraw` 改為 freeze-only
 
-`vault_gov_emergency.EmergencyWithdraw` 不能減少 `total_deposited`、不能移除或修改 `liqwid_positions`、不能接受 `loss_amount > 0`。它唯一能做的就是切換 `frozen` flag(0 ↔ 1)。實際損失帳務被限制在 `vault_liqwid.RecallFromLiqwid` 的治理 fallback 路徑:透過實體 Recall underlying USDCx 並只寫入實際實現的損失(`supplied_value − underlying_received`)。qToken 變孤兒攻擊面,被入侵的治理金鑰可以用「只動 datum 寫掉部位」讓 `share_price` 歸零,在 validator 層被根除(`validate_emergency_freeze_only` 在 `lib/vault/validation.ak`)。
+`vault_gov_emergency.EmergencyWithdraw` 不能減少 `total_deposited`、不能移除或修改 `liqwid_positions`、不能接受 `loss_amount > 0`。它唯一能做的就是切換 `frozen` flag(0 ↔ 1)。實際損失帳務被限制在 `vault_liqwid.RecallFromLiqwid` 的治理 fallback 路徑:透過實體 Recall underlying USDCx 並只寫入實際實現的損失(`supplied_value − underlying_received`)。qToken 變孤兒攻擊面,被入侵的治理金鑰可以用「只動 datum 寫掉部位」讓 `share_price` 歸零,在 validator 層被根除(`validate_emergency_freeze_only` 在 `contracts/lib/vault/validation.ak`)。
 
-#### Layer 2 — `DeployToProtocol` 在 freeze 下對 USDCx 例外
+#### Layer 2：`DeployToProtocol` 在 freeze 下對 USDCx 例外
 
-當 `frozen == 1` 且 redeemer 的 `deploy_token != deposit_token`,`vault_protocol.DeployToProtocol` 允許 swap-out。Keeper 可透過 registry 白名單的 SwapAdapter 把 NDV stable token(DJED、USDM)換回 USDCx,使 user `Withdraw` 在緊急 freeze 期間仍能完整支付按比例的份額。SwapAdapter validator 強制目的地 = vault 自己的地址,所以即使攻擊者掌握 keeper key 也無法把 output 改路;最壞情況只能逼出 Tier 2 peg-floor 邊界內的 slippage(≤ 5-7%),且 USDCx 仍然落到 vault 給 user 提領。沒有這層例外,freeze 一啟動 NDV 部分就會卡到 21 天後的 `AdminDeployNonDeposit` 治理 fallback 才能脫困,Layer 2 把這 21 天窗口縮短。Spec:`validate_deploy_frozen_gate` 在 `lib/vault/validation.ak`。
+當 `frozen == 1` 且 redeemer 的 `deploy_token != deposit_token`,`vault_protocol.DeployToProtocol` 允許 swap-out。Keeper 可透過 registry 白名單的 SwapAdapter 把 NDV stable token(DJED、USDM)換回 USDCx,使 user `Withdraw` 在緊急 freeze 期間仍能完整支付按比例的份額。SwapAdapter validator 強制目的地 = vault 自己的地址,所以即使攻擊者掌握 keeper key 也無法把 output 改路;最壞情況只能逼出 Tier 2 peg-floor 邊界內的 slippage(≤ 5-7%),且 USDCx 仍然落到 vault 給 user 提領。沒有這層例外,freeze 一啟動 NDV 部分就會卡到 21 天後的 `AdminDeployNonDeposit` 治理 fallback 才能脫困,Layer 2 把這 21 天窗口縮短。Spec:`validate_deploy_frozen_gate` 在 `contracts/lib/vault/validation.ak`。
 
-#### Layer 3 — `CommunitySunset` dead-man-switch
+#### Layer 3：`CommunitySunset` dead-man-switch
 
 當 vault 連續 90 天無操作(`max(last_compound_time, last_realloc_time) + 90 天 ≤ now`),任何 vUSDCx 持有者都可呼叫 `vault_user` 中的 `CommunitySunset` permissionless redeemer。它原子性地把 `frozen` 設為 1、`community_sunset_triggered` 設為 1(單向不可逆)。一旦觸發:
 
@@ -240,37 +240,37 @@ Validator hash + 基礎身份。任何一個變動都會強制新部署(新地�
 
 三層設計的目的就是在實際單一簽名者治理失能情境下界定存入者損失。每個情境描述攻擊者能做什麼、validator 怎麼回應、存入者最終結果、時間範圍。
 
-**情境 A — Founder 誠實,vault 正常運作**
+**情境 A：Founder 誠實,vault 正常運作**
 - 沒有偵測到異常。Compound + Recall + Supply + Withdraw 照常規節奏跑。
 - 存入者結果:yield 完整累積,任何時候 Withdraw 立即結算 USDCx。
 - 時間範圍:無限期。
 
-**情境 B — Liqwid 真的出壞帳(沒有 key 失陷)**
+**情境 B：Liqwid 真的出壞帳(沒有 key 失陷)**
 - Liqwid 市場發生協議級損失(qToken rate 跌破 supplied basis)。
 - 運營反應:治理 queue `EmergencyWithdraw(loss_amount=0, freeze=1)`。Frozen = 1 立即生效(0d timelock;multisig 還是要簽)。
 - 存入者 `Withdraw` 繼續可用(Layer 1 沒改這個)。Idle-buffer 部分按未變的 `share_price` 立即支付。
 - Liqwid 部分:keeper 驅動 `RecallFromLiqwid`(freeze 下仍允許)→ underlying 收回 vault NDV。短缺(`supplied_value − underlying_received`)在這時被寫入,`share_price` 按比例調整。然後 keeper 驅動 `DeployToProtocol` Layer 2 swap → USDCx 落到 `idle_buffer` → 存入者可提領回收的部分。
 - 時間範圍:從事件偵測到完整結算 hours-to-days。
 
-**情境 C — Founder key 被盜,攻擊者嘗試 grief-freeze**
+**情境 C：Founder key 被盜,攻擊者嘗試 grief-freeze**
 - 攻擊者用偷來的治理 key 觸發 `EmergencyWithdraw`,試圖透過 datum 把 Liqwid 部分寫掉(pre-Layer-1 攻擊鏈)。
 - Validator 反應:Layer 1 拒絕任何非零 `loss_amount` 與任何 `liqwid_positions` 變動。攻擊者只能設 `frozen = 1`,純 freeze 沒有價值影響。
 - 存入者結果:`Withdraw` 繼續可用,立刻按比例支付 `idle_buffer`。Liqwid 部分,keeper(可能是同一個被入侵的對象,也可能不是)仍可驅動 `RecallFromLiqwid` + `DeployToProtocol` Layer 2 swap 把 NDV 換回 USDCx,產生的 USDCx 落到 vault 支付存入者。即使攻擊者也控制 keeper key,SwapAdapter validator 強制目的地 = vault address,攻擊者拿不走;最壞只能逼出每次 swap 最大 slippage drain NDV(每次 ≤ 7%,peg-floor 邊界)。
 - 時間範圍:存入者 hours-to-days 內完整回收。最大損失:NDV 耗盡前每 cycle ≤ 7%。
 
-**情境 D — Founder key 被盜,攻擊者連鎖 UpdateRegistry + AdminDeployNonDeposit**
+**情境 D：Founder key 被盜,攻擊者連鎖 UpdateRegistry + AdminDeployNonDeposit**
 - 攻擊者 queue `UpdateRegistry` 加入惡意 SwapAdapter(14 天 timelock)。
 - 存入者透過 1 小時廣播義務看到 queued action,在 14 天窗口內 self-Withdraw 退場。14 天後 `AdminDeployNonDeposit` 還需要額外 7 天 keeper-inactive 窗口,攻擊者透過惡意 adapter 提取的總曝險窗口 ≥ 21 天。
 - 存入者結果:任何留心的存入者在 14 天內退場、不受影響。漠不關心的存入者每 cycle 損失最多 ~7%(per-swap slippage cap)。
 - 時間範圍:14-21 天 self-exit window。
 
-**情境 E — Founder 失能、沒 SPO 共簽者、≥ 90 天無動靜**
+**情境 E：Founder 失能、沒 SPO 共簽者、≥ 90 天無動靜**
 - 創辦人聯絡不上 / 過世 / 失去 key。Keeper 停跑。90+ 天沒有任何治理動作 queue。
 - 存入者反應:任何 vUSDCx 持有者呼叫 `CommunitySunset`。Frozen + sunset_triggered 設定。然後任何持有者 fire `RecallFromLiqwid` per market → underlying 收回。然後任何持有者 fire `DeployToProtocol` Layer 2 swap → USDCx 落到 vault。然後每位持有者 fire `Withdraw` → 拿回按比例的 USDCx。
 - 存入者結果:完整按比例回收 USDCx。範圍外損失:~962 ADA reference-script 鎖定(創辦人部署錢包)、~28 ADA stake-credential 押金(治理 A2 路徑),這兩部分作為單一簽名者治理的殘留成本被接受。
 - 時間範圍:90 天門檻達到後,社群驅動回收 hours-to-days。90 天門檻本身就是觸發條件,從事件到回收啟動的總時間取決於運營失能偵測窗口。
 
-**情境 F — Founder key 被盜 + 攻擊者也控制 keeper + 90 天過去**
+**情境 F：Founder key 被盜 + 攻擊者也控制 keeper + 90 天過去**
 - 攻擊者掌握所有 key 但拿不到任何價值(Layer 1+2+3 + 硬上限覆蓋所有路徑)。最終攻擊者 grief 慢慢停下,或存入者觸發 CommunitySunset。
 - 存入者結果:透過 Scenario E 路徑完整按比例回收 USDCx。
 - 時間範圍:同 Scenario E。
@@ -341,15 +341,15 @@ V1 定位為非商業 Cardano DeFi 公共財參考實作:**不是投資產品、
 
 ---
 
-## 9. V1 之中的通用模式 — CIP 萃取機會
+## 9. V1 之中的通用模式：CIP 萃取機會
 
-V1 的安全性論證部分建立在 `spec/pattern-rationale-*.md` 中所述五個反覆出現的模式之上。這些模式在 Cardano DeFi 協議中以非正式形式出現過;V1 把每一個都實例化成一份有文件、有審計軌跡的實作。沒有一個是 V1 自創的 — 在其他正在運行的協議都看得到變體 — 但 V1 的實例可以當作未來 Cardano Improvement Proposal 討論的具體參考點。V1 在 V1 release 階段不會撰寫 CIP;V1 是否未來才考慮撰寫的四個 gate 見 [`cip-readiness-posture-zh-TW.md`](./cip-readiness-posture-zh-TW.md)。
+V1 的安全性論證部分建立在 `spec/pattern-rationale-*.md` 中所述五個反覆出現的模式之上。這些模式在 Cardano DeFi 協議中以非正式形式出現過;V1 把每一個都實例化成一份有文件、有審計軌跡的實作。沒有一個是 V1 自創的（在其他正在運行的協議都看得到變體），但 V1 的實例可以當作未來 Cardano Improvement Proposal 討論的具體參考點。V1 在 V1 release 階段不會撰寫 CIP;V1 是否未來才考慮撰寫的四個 gate 見 [`cip-readiness-posture-zh-TW.md`](./cip-readiness-posture-zh-TW.md)。
 
 每個模式的安全性論證有一部分獨立於 V1 的具體實作選擇。讀本威脅模型的審查者與整合者,如果關心跨實作的論證部分,應該參照對應的 rationale 文件。
 
 | 模式 | Rationale 文件 | 這層防禦對應本檔目錄中的哪個威脅面 |
 |---|---|---|
-| Validator Identity NFT | [`pattern-rationale-validator-identity-nft-zh-TW.md`](../spec/pattern-rationale-validator-identity-nft-zh-TW.md) | 「在標準 script address 上偽造狀態 UTXO」 — §3.1.1 phantom-vault 類、§3.3.1 phantom-Governance-UTXO 類、§3.6.1 phantom-Registry-UTXO 類。防禦是密碼學的(透過編譯時 UTXO-ref 錨點),不是 key-trust 型 |
+| Validator Identity NFT | [`pattern-rationale-validator-identity-nft-zh-TW.md`](../spec/pattern-rationale-validator-identity-nft-zh-TW.md) | 「在標準 script address 上偽造狀態 UTXO」 — §3.1.1 phantom-vault 類、§3.3.1 phantom-Governance-UTXO 類、§3.6.1 phantom-Registry-UTXO 類。防禦是密碼學的(透過編譯期 UTXO-ref 錨點),不是 key-trust 型 |
 | MultiSig Governance + Timelock | [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](../spec/pattern-rationale-multisig-gov-timelock-zh-TW.md) | 「被入侵的治理 quorum」 — §1 對手類別。模式組合了 m-of-n 門檻 + 每動作 timelock + 1-of-n cancel veto + nonce 綁定 action_id + payload-hash 綁定 + TTL 上限;防禦建立在偵測時間 + 不對稱的 veto 上。被入侵 quorum 的殘餘風險仍然非零(§7) — 模式約束的是利用的*速度*與*範圍*,不是權限本身的存在 |
 | Withdraw-Zero Forwarding | [`pattern-rationale-withdraw-zero-forwarding-zh-TW.md`](../spec/pattern-rationale-withdraw-zero-forwarding-zh-TW.md) | 「單體 validator 的授權混淆」 — 是讓 V1 把使用者可呼叫 / keeper 可呼叫 / governance 可呼叫的 redeemer 切散在不同 staking validator(各自有自己的授權規則)的架構基底。模式本身不新增防禦;它讓既有授權規則可以乾淨地依 route 被審計 |
 | Registry + Auth NFT Whitelist | [`pattern-rationale-registry-auth-nft-zh-TW.md`](../spec/pattern-rationale-registry-auth-nft-zh-TW.md) | 「鏈下 config 注入」 — §3.4 攻擊面(目的地白名單偽造)。防禦是 Auth NFT 錨定 + per-redeemer 變更包絡 + 上限 cap + 時間 cooldown。Authenticated-read helper(`helpers.read_registry_datum`)是每個消費端都會經過的集中化扼制點 |

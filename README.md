@@ -19,7 +19,7 @@ This directory contains the V1 design, specification, implementation, and migrat
 OptiVaults V1 is intentionally split across **two repositories**, reflecting two fundamentally different things:
 
 - **`optivaults-protocol`** (this repo) — the **protocol layer**. Aiken validators, protocol specification, whitepaper, deploy pipeline. **Zero fee** at this layer; any team may fork and launch their own vault without paying anything. Pure Cardano DeFi commons contribution.
-- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)** — the **operator reference implementation**. TypeScript keeper, API server, frontend, CLI tools. Runs the `optivaults.app` live vault instance. Funded by the contract-enforced 4.5% performance fee (40% keeper / 60% treasury at launch — keeper share at the validator hard cap to support open-source third-party keeper viability; no founder dividend, no investor return, no token). Apache 2.0 — forks welcome.
+- **[`optivaults-reference`](../optivaults-reference)** — the **operator reference implementation**. TypeScript keeper, API server, frontend, CLI tools. Runs the `optivaults.app` live vault instance. Funded by the contract-enforced 4.5% performance fee (40% keeper / 60% treasury at launch — keeper share at the validator hard cap to support open-source third-party keeper viability; no founder dividend, no investor return, no token). Apache 2.0 — forks welcome.
 
 The **4.5% fee happens only at the operator layer**. The protocol itself costs nothing to use if you run your own instance. See `docs/economics.md` for the full fee breakdown and `docs/security-model.md §2` for the trust model across the two layers.
 
@@ -169,7 +169,7 @@ See [docs/audit-scope.md](docs/audit-scope.md) for the development / audit / lau
 
 ## License
 
-OptiVaults V1 is released under the **Apache License, Version 2.0**. This repo (`optivaults-protocol`) covers the protocol layer — smart contracts, deploy pipeline, CLI tools, and documentation. The operator layer (keeper reference implementation, API server, frontend, preprod E2E scripts) lives in the sibling repo [`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference) under the same Apache 2.0 license. Any team may fork, specialize, or integrate V1's architecture into derivative products consistent with the Apache 2.0 terms (see [LICENSE](../LICENSE)).
+OptiVaults V1 is released under the **Apache License, Version 2.0**. This repo (`optivaults-protocol`) covers the protocol layer — smart contracts, deploy pipeline, CLI tools, and documentation. The operator layer (keeper reference implementation, API server, frontend, preprod E2E scripts) lives in the sibling repo [`optivaults-reference`](../optivaults-reference) under the same Apache 2.0 license. Any team may fork, specialize, or integrate V1's architecture into derivative products consistent with the Apache 2.0 terms (see [LICENSE](../LICENSE)).
 
 The permissive license choice is deliberate: V1's success metric explicitly includes the architecture being forked and specialized by other Cardano teams (see whitepaper §1 "Why we do this"). Restricting reuse during a pre-audit validation phase would contradict that contribution-oriented posture.
 
@@ -179,6 +179,6 @@ The permissive license choice is deliberate: V1's success metric explicitly incl
 
 - Website: [optivaults.app](https://optivaults.app)
 - Protocol repo (this repo): [github.com/OptiVaults/optivaults-protocol](https://github.com/OptiVaults/optivaults-protocol) (branch `v1`)
-- Operator reference repo: [github.com/OptiVaults/optivaults-reference](https://github.com/OptiVaults/optivaults-reference) (branch `v1`)
+- Operator reference repo: [../optivaults-reference](../optivaults-reference) (branch `v1`)
 - Security (protocol-layer): optivaults@gmail.com — see `SECURITY.md`
-- Security (operator-layer): see [`optivaults-reference/SECURITY.md`](https://github.com/OptiVaults/optivaults-reference/blob/v1/SECURITY.md)
+- Security (operator-layer): see [`optivaults-reference/SECURITY.md`](../optivaults-reference/SECURITY.md)

@@ -109,7 +109,7 @@ The next three parts each go deep:
 
 - **Part 2**: How the Withdraw-Zero Forwarding Pattern works, what benefits it gives, and what a Compound TX looks like end-to-end.
 - **Part 3**: How V1's 17 logic validators are partitioned along four orthogonal cuts, and what each validator owns.
-- **Part 4**: The single-UTXO state model (29-field VaultDatum, 15 immutable + 14 mutable) and the compile-time Vault NFT anchor.
+- **Part 4**: The single-UTXO state model (29-field VaultDatum: 9 immutable + 8 policy-locked + 12 accounting/operational) and the compile-time Vault NFT anchor.
 
 ---
 

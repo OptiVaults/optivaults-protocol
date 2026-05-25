@@ -18,7 +18,7 @@ V1 啟動時(以及 Phase 2-3 擴張期間)的治理簽名者**沒有**顯著的
 
 ## 2. Policy 設計
 
-### 2.1 編譯時參數
+### 2.1 編譯期參數
 
 ```aiken
 validator gov_signer_nft(
@@ -29,7 +29,7 @@ validator gov_signer_nft(
 }
 ```
 
-把治理 NFT policy + name 作為編譯時參數,把這個 minting policy 密碼學地綁到**這個特定 MultisigGov 實例**。Gov Signer NFT 只有在同一筆 TX 中 MultisigGov UTxO 被 spend 時才可 mint,兩個 NFT 互相依存。
+把治理 NFT policy + name 作為編譯期參數,把這個 minting policy 密碼學地綁到**這個特定 MultisigGov 實例**。Gov Signer NFT 只有在同一筆 TX 中 MultisigGov UTxO 被 spend 時才可 mint,兩個 NFT 互相依存。
 
 ### 2.2 Asset-name schema
 

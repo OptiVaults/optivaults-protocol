@@ -53,7 +53,7 @@ SwapAdapter 模式把 DEX datum 解析拆成每個 DEX 各自的 validator,由�
 
 ## 3. SwapAdapterRedeemer
 
-定義於 `lib/vault/swap_adapter.ak`:
+定義於 `contracts/lib/vault/swap_adapter.ak`:
 
 ```aiken
 pub type SwapAdapterRedeemer {
@@ -206,7 +206,7 @@ Mainnet 部署前必做(納入 V1 外部審計範圍追蹤):
 
 ## 12. 參考
 
-- 程式:`lib/vault/swap_adapter.ak`、`validators/minswap_v2_adapter.ak`、`validators/sundaeswap_adapter.ak`、`validators/sundaeswap_cancel_guard.ak`、`lib/vault/sundaeswap.ak`
+- 程式:`contracts/lib/vault/swap_adapter.ak`、`contracts/validators/minswap_v2_adapter.ak`、`contracts/validators/sundaeswap_adapter.ak`、`contracts/validators/sundaeswap_cancel_guard.ak`、`contracts/lib/vault/sundaeswap.ak`
 - 白皮書:§3.4 外部依賴(多 DEX 擴充性)、§5.3 DEX 滑點保護(Tier 2 peg-floor + Tier 1 oracle)
 - Spec:`spec/architecture.md §3.6`(Registry 結構)、§4(validator 目錄)
-- 相關:`spec/oracle.md`(adapter caller 使用的 Tier 1 oracle 讀取器)
+- 相關:`spec/ada-swap.md`(adapter caller 使用的 Tier 1 oracle 讀取器)

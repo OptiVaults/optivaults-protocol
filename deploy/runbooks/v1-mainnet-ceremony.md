@@ -51,7 +51,7 @@ aiken build                      # plain build — NO --trace-level / --trace-fi
 aiken check                      # all tests pass / 0 failed
 ```
 
-**Pre-build constants audit** — partial-patch defence. Before `aiken build`, confirm the Preprod-vs-mainnet timelock posture via three greps against `lib/vault/constants.ak`:
+**Pre-build constants audit** — partial-patch defence. Before `aiken build`, confirm the Preprod-vs-mainnet timelock posture via three greps against `contracts/lib/vault/constants.ak`:
 
 ```bash
 # 1. Single-flag gate must resolve False on mainnet builds
@@ -86,7 +86,7 @@ Copy `deploy/config/mainnet.example.json` → `deploy/config/mainnet.json`. Fill
 - `vaultInitialParams.performanceFeeBps = 450` (4.5% hard cap per constants; NEVER higher).
 - `vaultInitialParams.earlyWithdrawFeeBps = 10` (0.1%) or 100 max.
 - `vaultInitialParams.minHoldSeconds = 21_600` (6h cap). Consider 3600 (1h) or 0 at launch if you want frictionless early-exit UX; revisit in first governance UpdateFee cycle.
-- `vaultInitialParams.bufferTargetBps = 3500` (35% idle buffer target, per whitepaper §5.2 — 45% DJED + 25% USDM + 30% USDCx; the 30/35 pick is a governance choice).
+- `vaultInitialParams.bufferTargetBps = 3000` (30% idle buffer target, per whitepaper §5.2 — 45% DJED + 25% USDM + 30% USDCx).
 - `vaultInitialParams.maxSlippageBps = 200` (2%), `minSwapPegBps = 9900` (99%).
 - `treasuryInitialParams` — audit/ops/rd/buffer bps ratios + monthly caps. Whitepaper §4.3 baseline.
 
@@ -110,7 +110,7 @@ Empty or archive `deploy/state/mainnet-<releaseTag>.json` if any stale residue e
 
 Production timelocks are 7d / 14d / 21d / 48h. A full Preprod E2E running real timelocks would take 21+ days of wall-clock time, which is impractical. The pre-flight validation strategy combines two complementary techniques:
 
-**Toggle pattern** — `lib/vault/constants.ak` exposes a single `pub const preprod_fast_timelocks: Bool` flag at the top of the file. Every `timelock_*_ms` / `*_cooldown_ms` / `*_period_ms` constant below is a conditional `if preprod_fast_timelocks { 60_000 } else { production_value }`. This replaces an earlier layout with 14 individual `pub const` overrides, which had a partial-patch failure mode where editing one of several related constants while missing a sibling silently broke a Preprod test until manual reverse-engineering surfaced the gap.
+**Toggle pattern** — `contracts/lib/vault/constants.ak` exposes a single `pub const preprod_fast_timelocks: Bool` flag at the top of the file. Every `timelock_*_ms` / `*_cooldown_ms` / `*_period_ms` constant below is a conditional `if preprod_fast_timelocks { 60_000 } else { production_value }`. This replaces an earlier layout with 14 individual `pub const` overrides, which had a partial-patch failure mode where editing one of several related constants while missing a sibling silently broke a Preprod test until manual reverse-engineering surfaced the gap.
 
 - Preprod fast E2E run: set `preprod_fast_timelocks = True` (60s for everything), `aiken build`, deploy a Preprod ceremony, run the full test matrix in under a few hours of wall-clock time.
 - Mainnet pre-flight + actual mainnet build: flip back to `preprod_fast_timelocks = False`, `aiken build`, all `timelock_*_ms` resolve to production values; `mainnet-hash-preview.txt` is captured from this build. **One flip, all timelocks consistent. No partial-patch bug class.**

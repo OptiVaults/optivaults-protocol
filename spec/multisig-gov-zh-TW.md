@@ -1,4 +1,4 @@
-# OptiVaults V1 — MultisigGov Validator 規格
+# OptiVaults V1：MultisigGov Validator 規格
 
 *MultiSig Governance + Timelock Pattern 的實作(通用模式、與替代方案的取捨討論、待答 CIP 問題見 [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md))。*
 
@@ -10,7 +10,7 @@
 
 ## 1. Validator 結構
 
-`multisig_gov` 是**spending validator**(單一 UTxO 狀態機),在編譯時以下列參數參數化:
+`multisig_gov` 是**spending validator**(單一 UTxO 狀態機),在編譯期以下列參數參數化:
 
 ```aiken
 validator multisig_gov(
@@ -145,7 +145,7 @@ payload_hash = blake2b_256(cbor.serialise(payload))
 
 各 ActionKind 的 Payload 型別(對應 `governance.md §4`):
 
-| ActionKind | Canonical payload tuple(必須與 `lib/vault/helpers.ak:payload_hash_*` 一致) |
+| ActionKind | Canonical payload tuple(必須與 `contracts/lib/vault/helpers.ak:payload_hash_*` 一致) |
 |------------|-----------------------------------------------------------------------|
 | UpdateStrategy | `(new_allocations, new_buffer_target_bps)` |
 | UpdateFee | `(new_performance_fee_bps, new_early_withdraw_fee_bps, new_min_hold_seconds)` |
@@ -338,7 +338,7 @@ DistributeSignerCompensation { triggering_signer: VerificationKeyHash }
 
 ## 7. 跨 validator 授權 helper
 
-**實作在** `lib/vault/helpers.ak::is_gov_authorized`(V1 內部審計修補中加入)。`vault_admin`、`registry`、`treasury`、`keeper_stake_script` 中每個治理閘控的 redeemer 都呼叫這個 helper。Canonical 實作:
+**實作在** `contracts/lib/vault/helpers.ak::is_gov_authorized`(V1 內部審計修補中加入)。`vault_admin`、`registry`、`treasury`、`keeper_stake_script` 中每個治理閘控的 redeemer 都呼叫這個 helper。Canonical 實作:
 
 ```aiken
 pub fn is_gov_authorized(
@@ -467,20 +467,20 @@ V1 在通用模式之上多加了三層結構性延伸。沒有任何一層是�
 
 ### 10.4 相關 pattern-rationale 文件
 
-- [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md) — 通用模式(本 validator 的主要 rationale)
-- [`pattern-rationale-validator-identity-nft-zh-TW.md`](./pattern-rationale-validator-identity-nft-zh-TW.md) — Governance NFT(one-shot mint anchor),本 validator 依賴它做標準 UTXO 認證;V1 Governance NFT 實例化見該文件 §3.2
-- [`pattern-rationale-registry-auth-nft-zh-TW.md`](./pattern-rationale-registry-auth-nft-zh-TW.md) — Registry validator 的 `UpdateRegistry` redeemer 是 14 種 ActionKind 之中受本模式守的動作之一
-- [`pattern-rationale-vault-datum-tiered-zh-TW.md`](./pattern-rationale-vault-datum-tiered-zh-TW.md) — VaultDatum Tier 2(policy)變更需要透過本 validator 走治理動作
-- [`pattern-rationale-withdraw-zero-forwarding-zh-TW.md`](./pattern-rationale-withdraw-zero-forwarding-zh-TW.md) — vault 端的治理 redeemer(在 `vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`)透過 Withdraw-Zero 模式被觸發,且其 payload 經由 `payload_hash` 綁回此處所 queue 的 action
-- [`cip-readiness-posture-zh-TW.md`](../docs/cip-readiness-posture-zh-TW.md) — V1 對 Cardano Improvement Proposals 的整體立場
+- [`pattern-rationale-multisig-gov-timelock-zh-TW.md`](./pattern-rationale-multisig-gov-timelock-zh-TW.md)：通用模式(本 validator 的主要 rationale)
+- [`pattern-rationale-validator-identity-nft-zh-TW.md`](./pattern-rationale-validator-identity-nft-zh-TW.md)：Governance NFT(one-shot mint anchor),本 validator 依賴它做標準 UTXO 認證;V1 Governance NFT 實例化見該文件 §3.2
+- [`pattern-rationale-registry-auth-nft-zh-TW.md`](./pattern-rationale-registry-auth-nft-zh-TW.md)：Registry validator 的 `UpdateRegistry` redeemer 是 14 種 ActionKind 之中受本模式守的動作之一
+- [`pattern-rationale-vault-datum-tiered-zh-TW.md`](./pattern-rationale-vault-datum-tiered-zh-TW.md)：VaultDatum Tier 2(policy)變更需要透過本 validator 走治理動作
+- [`pattern-rationale-withdraw-zero-forwarding-zh-TW.md`](./pattern-rationale-withdraw-zero-forwarding-zh-TW.md)：vault 端的治理 redeemer(在 `vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`)透過 Withdraw-Zero 模式被觸發,且其 payload 經由 `payload_hash` 綁回此處所 queue 的 action
+- [`cip-readiness-posture-zh-TW.md`](../docs/cip-readiness-posture-zh-TW.md)：V1 對 Cardano Improvement Proposals 的整體立場
 
 ---
 
 ## 11. 延伸閱讀
 
-- `spec/governance.md` — 公開動作目錄、timelock 規則、簽名者生命週期
-- `spec/gov-nft.md` — 與簽名者輪替同時鑄造的 Gov Signer NFT
-- `spec/treasury.md §3.3` — `ReceiveGovForfeit` redeemer 跨 validator 對應
-- `spec/architecture.md §4` validator 表 — multisig_gov 在 12-validator V1 stack 中的位置(+3 個輔助 NFT policy)
-- `docs/audit-scope.md §2.4` — multisig_gov 屬於 V1 特有內部審計範圍
-- `docs/security-model.md §3.2、§3.5` — 治理被入侵的威脅模型
+- `spec/governance.md`：公開動作目錄、timelock 規則、簽名者生命週期
+- `spec/gov-nft.md`：與簽名者輪替同時鑄造的 Gov Signer NFT
+- `spec/treasury.md §3.3`：`ReceiveGovForfeit` redeemer 跨 validator 對應
+- `spec/architecture.md §4` validator 表：multisig_gov 在 12-validator V1 stack 中的位置(+3 個輔助 NFT policy)
+- `docs/audit-scope.md §2.4`：multisig_gov 屬於 V1 特有內部審計範圍
+- `docs/security-model.md §3.2、§3.5`：治理被入侵的威脅模型

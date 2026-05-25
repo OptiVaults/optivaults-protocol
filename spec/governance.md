@@ -203,9 +203,9 @@ type StrategyPayload {
 **Hard caps (enforced at validator level, cannot be changed by governance):**
 - `performance_fee_bps <= 450` (4.5% absolute ceiling, internal-verification policy lock)
 - `early_withdraw_fee_bps <= 100` (1% ceiling)
-- `min_hold_seconds >= 0` and `<= 21600` (max 6 hours — tightened from an earlier 24h cap after whitepaper review; contract constant `max_min_hold_seconds` in `lib/vault/constants.ak`)
+- `min_hold_seconds >= 0` and `<= 21600` (max 6 hours — tightened from an earlier 24h cap after whitepaper review; contract constant `max_min_hold_seconds` in `contracts/lib/vault/constants.ak`)
 
-Governance cannot raise these caps — they are protocol constants in `lib/vault/constants.ak`, checked by the shared `validate_update_fee` helper that `vault_gov_policy.ak`'s `UpdateFee` redeemer calls.
+Governance cannot raise these caps — they are protocol constants in `contracts/lib/vault/constants.ak`, checked by the shared `validate_update_fee` helper that `vault_gov_policy.ak`'s `UpdateFee` redeemer calls.
 
 ### 4.3 UpdateFeeSplit
 
@@ -238,13 +238,13 @@ Governance cannot raise these caps — they are protocol constants in `lib/vault
 
 **Scope:** `max_slippage_bps`, `min_swap_peg_bps`. No other VaultDatum field may change.
 
-**Hard caps (validator-enforced via `lib/vault/constants.ak`):**
+**Hard caps (validator-enforced via `contracts/lib/vault/constants.ak`):**
 - `0 <= new_max_slippage_bps <= max_slippage_bps_cap` (`max_slippage_bps_cap = 500` → 5% absolute ceiling)
 - `min_swap_peg_bps_floor <= new_min_swap_peg_bps <= min_swap_peg_bps_ceiling` (9_300..9_950 → between 93% and 99.5% peg)
 
 **Timelock:** 48 hours (`timelock_update_slippage_policy_ms`). Set short relative to fee actions because (a) the change strengthens or relaxes a safety bound rather than redirecting funds, and (b) market conditions (e.g., a brief depeg event) may require timely re-tuning.
 
-**Payload-hash binding:** `payload_hash_update_slippage_policy(new_max_slippage_bps, new_min_swap_peg_bps)` (see `lib/vault/helpers.ak`). Payload bound at queue time; execute cannot swap the values.
+**Payload-hash binding:** `payload_hash_update_slippage_policy(new_max_slippage_bps, new_min_swap_peg_bps)` (see `contracts/lib/vault/helpers.ak`). Payload bound at queue time; execute cannot swap the values.
 
 **Composes with `vault_protocol.DeployToProtocol`:** every `DeployToProtocol` checks both `max_slippage_bps` (Tier 1, when `registry.asset_oracles` has the deploy asset) and `min_swap_peg_bps` (Tier 2, decoded from Minswap V2 route datum's `min_receive`). Tightening either bound takes effect on the next deploy after the new datum lands.
 
@@ -394,7 +394,7 @@ publish(_redeemer, credential, tx) {
 
 **Payload:** `payload_hash_deregister_stake(target_hash) = blake2b_256(cbor.serialise(target_hash))`. Off-chain tooling computes the same hash when queueing.
 
-**Timelock:** 14 days (production). Matches `UpdateKeeperAuth` — same operator-credential-change tier. **Preprod build override:** when `preprod_fast_timelocks: Bool = True` in `lib/vault/constants.ak`, all gated timelocks (including this one) resolve to 60 s for end-to-end test turnaround. Mainnet build sets the flag to `False`; verifier `deploy/tools/verify-mainnet-build.sh` confirms no 60 s literal sneaks through to the active branch.
+**Timelock:** 14 days (production). Matches `UpdateKeeperAuth` — same operator-credential-change tier. **Preprod build override:** when `preprod_fast_timelocks: Bool = True` in `contracts/lib/vault/constants.ak`, all gated timelocks (including this one) resolve to 60 s for end-to-end test turnaround. Mainnet build sets the flag to `False`; verifier `deploy/tools/verify-mainnet-build.sh` confirms no 60 s literal sneaks through to the active branch.
 
 **Attack-surface analysis:**
 - AT-1 (griefing): compromised m-of-n gov queues ActDeregisterStake → 14d timelock + 1-of-n cancel veto. Same defense profile as every other Act*.

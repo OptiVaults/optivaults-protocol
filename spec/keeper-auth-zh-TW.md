@@ -52,7 +52,7 @@ type KeeperAuthDatum {
   last_successful_tx_at: Int,                    // 每筆 WithdrawAsAuthorized TX 更新
   nonce: Int,                                    // 嚴格單調的 anti-replay counter
 
-  // --- 編譯時治理錨點 ---
+  // --- 編譯期治理錨點 ---
   governance_policy: ByteArray,                  // GovNFT policy(治理動作的不可變錨點)
   governance_name: ByteArray,
 }
@@ -424,10 +424,10 @@ License NFT 層可以在 V2+ 作為 stake script 之上的補充憑證檢查加�
 
 每次 `keeper_stake_script` 的 stake credential 被註冊(V1 每次部署一次,在 ceremony PHASE 4a),Cardano ledger 鎖 2 ADA 押金。將 credential 取消註冊時,2 ADA 退還給取消註冊的 TX 提交者。
 
-`keeper_stake_script` 帶一個 gov-gated `publish` handler(A2),用標準 `is_gov_authorized(ActDeregisterStake)` 檢查、對自己既有的編譯時 `governance_nft_policy` + `governance_nft_name` 參數。流程:
+`keeper_stake_script` 帶一個 gov-gated `publish` handler(A2),用標準 `is_gov_authorized(ActDeregisterStake)` 檢查、對自己既有的編譯期 `governance_nft_policy` + `governance_nft_name` 參數。流程:
 
 1. 治理 queue `ActDeregisterStake`,`target_script = keeper_stake_script_hash`、`payload_hash = blake2b_256(cbor.serialise(keeper_stake_script_hash))`。
-2. 14 天 timelock 過(Preprod 驗證覆寫 1 小時,見 `lib/vault/constants.ak`)。
+2. 14 天 timelock 過(Preprod 驗證覆寫 1 小時,見 `contracts/lib/vault/constants.ak`)。
 3. 任一簽名者執行 TX,該 TX:(a) 消費 `multisig_gov` UTxO 以 `ExecuteAction(action_id)`、(b) 為 `keeper_stake_script` 的 stake credential 包含 Cardano `Deregister` 憑證、(c) 產生對應狀態轉移的 continuing `multisig_gov` output。
 
 Cardano ledger 在 Deregister cert 上呼叫 `keeper_stake_script.publish`;我們的 handler 重驗證治理授權並回傳 True。Ledger 接受 cert + 退 2 ADA。

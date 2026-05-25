@@ -1,6 +1,6 @@
 # 在 Cardano eUTXO 上做 vault 的四個設計約束
 
-*OptiVaults V1 合約架構解說 — 第 1 篇 / 共 4 篇*
+*OptiVaults V1 合約架構解說，第 1 篇 / 共 4 篇*
 
 ---
 
@@ -109,7 +109,7 @@ V1 對這些模式以及 Cardano Improvement Proposal 流程的更廣立場見 [
 
 - **第 2 篇**：Withdraw-Zero Forwarding Pattern 是怎麼運作的、有什麼效益、一筆 Compound TX 怎麼跑
 - **第 3 篇**：17 個 logic validator 沿著哪四條正交切割線拆分、每個 validator 各自負責什麼
-- **第 4 篇**：單 UTXO 狀態模型（29 欄位 VaultDatum、15 不可變 + 14 可變）與編譯期 Vault NFT Anchor
+- **第 4 篇**：單 UTXO 狀態模型（29 欄位 VaultDatum：9 不可變 + 8 政策可變 + 12 會計／運營）與編譯期 Vault NFT Anchor
 
 ---
 

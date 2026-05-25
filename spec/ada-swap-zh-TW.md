@@ -48,7 +48,7 @@ SwapAda { amount_ada, keeper_output_idx } -> {
   let out_lovelace = lovelace_of(cont_output.value)
 
   // 1. Keeper 授權——V1 的 stake-script zero-withdraw,
-  //    不是 require_keeper(keeper_pkh)。vault_core 編譯時錨定
+  //    不是 require_keeper(keeper_pkh)。vault_core 編譯期錨定
   //    keeper_stake_script_hash;任何被 stake script 授權的錢包都可呼叫。
   let keeper_authorized = require_keeper_stake_script(tx, keeper_stake_hash)
 
@@ -160,9 +160,9 @@ SwapAda { amount_ada, keeper_output_idx } -> {
 
 ---
 
-## 4. 編譯時參數
+## 4. 編譯期參數
 
-整合進 `vault_swap_ada` 的編譯時參數集(SwapAda 的家):
+整合進 `vault_swap_ada` 的編譯期參數集(SwapAda 的家):
 
 | 參數 | V1 啟動值 | 語意 |
 |------|-----------|------|
@@ -178,7 +178,7 @@ SwapAda { amount_ada, keeper_output_idx } -> {
 
 ## 5. Oracle 來源
 
-**§5.4 P5:透過 `lib/vault/oracle.ak` 的共用 dual-feed 讀取器。** SwapAda 透過與 P4 Tier 1 peg-floor(on `DeployToProtocol`)相同的 `read_fair_price` helper 讀取 ADA/USDCx 價格。Oracle 設定來自 registry 的 `asset_oracles` list:一個 `AssetOracleEntry` 釘在 ADA 慣例 `(asset_policy = #"", asset_name = #"")`。治理透過 `UpdateRegistry`(14 天 timelock)填入 ADA 條目;V1 啟動時 `asset_oracles = []`,代表 SwapAda **在治理啟用之前處於 inactive**;啟動窗口內,金庫 ADA top-up 走 `MergeUtxo` 捐贈(operator 路徑)。
+**§5.4 P5:透過 `contracts/lib/vault/oracle.ak` 的共用 dual-feed 讀取器。** SwapAda 透過與 P4 Tier 1 peg-floor(on `DeployToProtocol`)相同的 `read_fair_price` helper 讀取 ADA/USDCx 價格。Oracle 設定來自 registry 的 `asset_oracles` list:一個 `AssetOracleEntry` 釘在 ADA 慣例 `(asset_policy = #"", asset_name = #"")`。治理透過 `UpdateRegistry`(14 天 timelock)填入 ADA 條目;V1 啟動時 `asset_oracles = []`,代表 SwapAda **在治理啟用之前處於 inactive**;啟動窗口內,金庫 ADA top-up 走 `MergeUtxo` 捐贈(operator 路徑)。
 
 ### 5.1 Registry 條目佈局
 
@@ -187,7 +187,7 @@ SwapAda { amount_ada, keeper_output_idx } -> {
 - **資產身份**:`(asset_policy = #"", asset_name = #"")`,Cardano lovelace 慣例。
 - **Feeds list**(通常 2 項):每個 `AssetOracleFeed` 以 `(feed_script_hash, feed_auth_policy, feed_auth_name)` 標定 reference-UTXO 位置。Auth NFT 防止在同 script 地址的誘餌 UTxO。V1 啟動慣例是 1 個 Charli3 feed + 1 個 Orcfax feed,oracle operator 在鏈下做 aggregate 後寫入 canonical `PriceSample` 格式(見 5.2)。
 - **`max_disagreement_bps`**:跨 feed spread 上限。建議 200(2%),對應 legacy MVP 的 `diff_pct <= 2` 行為。
-- **`max_staleness_ms`**:各 feed 相對 `tx.validity_range.lower_bound` 的年齡上限。建議 600_000(10 分鐘)。比 legacy MVP 的 40 分鐘緊,因為 dual-feed 聚合已經補償單一 feed 的延遲。
+- **`max_staleness_ms`**:各 feed 相對 `tx.validity_range.lower_bound` 的年齡上限。鏈上 ceiling 為 **1 小時**，由 `contracts/lib/vault/validation.ak::valid_asset_oracle_entry` 強制。啟動建議值為**每條目 600_000（10 分鐘）**，可由治理 `UpdateRegistry` 在 ceiling 內調整。比 legacy MVP 的 40 分鐘緊,因為 dual-feed 聚合已經補償單一 feed 的延遲。
 - **`min_feeds`**:所需健康 feed 數。設 2(所有 feed 都要同意)。
 
 ### 5.2 PriceSample datum 格式
@@ -201,7 +201,7 @@ PriceSample {
 }
 ```
 
-鏈下 oracle operator 負責讀取 Charli3 + Orcfax native feed,套用自身聚合政策(通常是 midpoint 或 median),每個 feed slot 發布一份 `PriceSample` UTxO。Operator 身份 + 發布政策是文件化的外部信任邊界,見 `spec/security-model.md`。未來 V1.x / V2 可能換成各協議的原生解析器(Charli3 `OracleDatum` + Orcfax `FactStatement`)以移除 operator 聚合層。
+鏈下 oracle operator 負責讀取 Charli3 + Orcfax native feed,套用自身聚合政策(通常是 midpoint 或 median),每個 feed slot 發布一份 `PriceSample` UTxO。Operator 身份 + 發布政策是文件化的外部信任邊界,見 `../docs/security-model.md`。未來 V1.x / V2 可能換成各協議的原生解析器(Charli3 `OracleDatum` + Orcfax `FactStatement`)以移除 operator 聚合層。
 
 ### 5.3 共識規則(在 `vault_swap_ada` 中強制)
 
@@ -211,7 +211,7 @@ expect Some(ada_price_bps) = read_fair_price(tx, ada_entry)
 let usdcx_out_expected = amount_ada * ada_price_bps / 10_000_000
 ```
 
-`read_fair_price` 定義於 `lib/vault/oracle.ak`,強制:
+`read_fair_price` 定義於 `contracts/lib/vault/oracle.ak`,強制:
 
 1. 至少 `entry.min_feeds` 份健康 sample(feed UTxO 存在 + auth NFT 存在 + `price_bps > 0`)。
 2. 每份 sample 的 `timestamp_ms` 比 `tx.validity_range.lower_bound - entry.max_staleness_ms` 更新。過時的 sample 會從聚合中掉出。
@@ -220,7 +220,7 @@ let usdcx_out_expected = amount_ada * ada_price_bps / 10_000_000
 
 任何失敗(無條目、健康 feed 太少、過時、disagreement、價格退化)回傳 `None`,`SwapAda` 內的 `expect Some(...)` 會強制 TX revert。
 
-配合 SwapAda 的 1 小時 cooldown 與 10 分鐘最大 feed 過期,**想做單一 oracle 操弄的攻擊者必須讓兩個 feed 在 10 分鐘窗口內各自說同樣的謊**:dual-feed 共識把門檻從「一個 oracle 被入侵」提升到「兩個獨立 oracle 在 10 分鐘窗口內同時被入侵」。
+配合 SwapAda 的 1 小時 cooldown 與啟動建議的 10 分鐘每 feed 過期上限（鏈上 ceiling 為 1 小時），**想做單一 oracle 操弄的攻擊者必須讓兩個 feed 在設定的過期窗口內各自說同樣的謊**:dual-feed 共識把門檻從「一個 oracle 被入侵」提升到「兩個獨立 oracle 在過期窗口內同時被入侵」。
 
 ---
 

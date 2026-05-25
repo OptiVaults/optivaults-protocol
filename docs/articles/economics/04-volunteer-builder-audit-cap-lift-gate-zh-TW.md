@@ -1,6 +1,6 @@
 # 審計是 cap-lift gate，不是 launch gate：volunteer-builder 框架
 
-*OptiVaults V1 經濟模型解說 — 第 4 篇 / 共 4 篇*
+*OptiVaults V1 經濟模型解說，第 4 篇 / 共 4 篇*
 
 ---
 
@@ -20,7 +20,7 @@ V1 經濟模型最容易被誤解的一個面向：**外部審計不是 mainnet 
 
 先把兩個常被混淆的問題清楚分開：
 
-**(1) 審計資金 — 一次性、外部、約 $50-$150K**
+**(1) 審計資金：一次性、外部、約 $50-$150K**
 
 解決的問題：「V1 的 100K cap 能否解鎖到 Stage 2 / Stage 3？」
 
@@ -28,7 +28,7 @@ V1 經濟模型最容易被誤解的一個面向：**外部審計不是 mainnet 
 
 不承擔方：創辦人（明確不擔任 underwriter）。
 
-**(2) 營運 runway — 長期、創辦人承擔、依 TVL 約 $80-$200/年**
+**(2) 營運 runway：長期、創辦人承擔、依 TVL 約 $80-$200/年**
 
 解決的問題：「V1 啟動後能否持續運作？」
 
@@ -82,10 +82,10 @@ V1 經濟模型最容易被誤解的一個面向：**外部審計不是 mainnet 
 
 V1 公開承認 audit funding 有不確定性。白皮書 §8.1 的 Options A-D contingency tree：
 
-- **Option A** — 完整 $50-$150K 到位：full-scope audit 委託，cap 解鎖到 Stage 3。
-- **Option B** — 部分到位：scope-reduced audit 委託，cap 解鎖到 Stage 2（譬如 $250K），未來補審後再解鎖到 Stage 3。
-- **Option C** — Community crowdfund 補位：透過 Cardano DeFi 社群眾籌補齊不足。
-- **Option D** — 持續未到位：**V1 在 100K cap 維持無限期運作**。
+- **Option A**：完整 $50-$150K 到位，full-scope audit 委託，cap 解鎖到 Stage 3。
+- **Option B**：部分到位，scope-reduced audit 委託，cap 解鎖到 Stage 2（譬如 $250K），未來補審後再解鎖到 Stage 3。
+- **Option C**：Community crowdfund 補位，透過 Cardano DeFi 社群眾籌補齊不足。
+- **Option D**：持續未到位，**V1 在 100K cap 維持無限期運作**。
 
 Option D 不是「失敗」，它是 community 用「不出資審計」表達的偏好。在 Option D 下：
 
@@ -120,10 +120,10 @@ Option D 不是「失敗」，它是 community 用「不出資審計」表達的
 
 V1 sunset 觸發條件（白皮書 §9.2 + economics §7.2）有四條：
 
-- **Trigger A** — Post-audit 成長失敗（前提是審計發生）：外部審計完成後 6 個月內 TVL 未達 $500K。**僅適用於 post-audit 世界**。
-- **Trigger B** — 營運 runway 耗盡：創辦人營運面 runway 降至 6 個月以下前向支出。在 Reference Implementation Mode + $80-$200/年下，**結構性多年不可達**。
-- **Trigger C** — Class A override 持續：任一 §1.5 Class A override（Liqwid / USDCx / Cardano chain / oracle 異常）持續超過 remediation 期限。
-- **Trigger D** — 創辦人明確 sunset 決定：醫療失能 / 個人不可抗力 / 決定停止維護。
+- **Trigger A**：Post-audit 成長失敗（前提是審計發生），外部審計完成後 6 個月內 TVL 未達 $500K。**僅適用於 post-audit 世界**。
+- **Trigger B**：營運 runway 耗盡，創辦人營運面 runway 降至 6 個月以下前向支出。在 Reference Implementation Mode + $80-$200/年下，**結構性多年不可達**。
+- **Trigger C**：Class A override 持續，任一 §1.5 Class A override（Liqwid / USDCx / Cardano chain / oracle 異常）持續超過 remediation 期限。
+- **Trigger D**：創辦人明確 sunset 決定，醫療失能 / 個人不可抗力 / 決定停止維護。
 
 **Audit-funding 失敗不在這四條 trigger 內**。Option D（持續未到位）讓 V1 維持在 pre-audit 100K cap，**不啟動 sunset 協議**。這條框架對存入者的實質含意：
 
@@ -185,7 +185,7 @@ Apache 2.0 開源讓 V1 的設計範本可以被任何 Cardano 團隊 fork 並�
 
 - **[第 1 篇](./01-performance-fee-precise-semantics-zh-TW.md)**：4.5% 績效費精確語意 + validator hard cap
 - **[第 2 篇](./02-three-way-fee-split-evolution-zh-TW.md)**：keeper / gov pool / treasury 三流分配與演進
-- **[第 3 篇](./03-reference-implementation-mode-zh-TW.md)**：Reference Implementation Mode — 低 TVL 公共財運作
+- **[第 3 篇](./03-reference-implementation-mode-zh-TW.md)**：Reference Implementation Mode，低 TVL 公共財運作
 - **第 4 篇（本文）**：Volunteer-builder + audit-as-cap-lift-gate
 
 V1 經濟模型的整體姿態：**結構性鎖死的費率 / 三流分權 / 與成長壓力脫鉤的低 TVL 模式 / 與創辦人 underwriting 脫鉤的審計框架**。每一塊都對應 V1 公共財定位的具體承諾:把該寫進合約的寫進合約、把該誠實揭露的清楚揭露、把該交給社群決定的真的交給社群。

@@ -174,7 +174,7 @@ External audit remains the primary security signal. Chain replay supplements the
 
 ## Regression Tests Are Independently Reproducible
 
-The most important property of this methodology: **all redteam scripts are part of the open-source release**. They live under `v1/tests/preprod/`, distributed alongside the project under the same Apache 2.0 license.
+The most important property of this methodology: **all redteam scripts are part of the open-source release**. The scenario catalog and reproduction details live in `tests/preprod-e2e-plan.md`, distributed alongside the project under the same Apache 2.0 license.
 
 This means:
 

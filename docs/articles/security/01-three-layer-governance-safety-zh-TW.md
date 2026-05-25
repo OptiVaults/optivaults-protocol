@@ -1,10 +1,10 @@
 # 三層治理安全：在單一簽名者治理下保住存入者的回收路徑
 
-*OptiVaults V1 安全設計解說 — 第 1 篇 / 共 4 篇*
+*OptiVaults V1 安全設計解說，第 1 篇 / 共 4 篇*
 
 ---
 
-V1 啟動時最尷尬的現實是這個：理想中 mainnet ceremony 前會招募兩位獨立的 Cardano SPO 擔任治理簽名者，組成 3-of-3 全員同意的 multisig；但在 Phase 1 小 TVL 情境下（白皮書 §8.2 描述的 $500–$25K 區間），SPO 招募可能延後、可能維持為 standby 形式，創辦人實際上以單一簽名者方式運作治理。
+V1 啟動時最棘手的現實是這個：理想中 mainnet ceremony 前會招募兩位獨立的 Cardano SPO 擔任治理簽名者，組成 3-of-3 全員同意的 multisig；但在 Phase 1 小 TVL 情境下（白皮書 §8.2 描述的 $500–$25K 區間），SPO 招募可能延後、可能維持為 standby 形式，創辦人實際上以單一簽名者方式運作治理。
 
 「單一簽名者治理 + 容易出事的金鑰」聽起來像是存入者該躲開的 red flag。
 
@@ -36,7 +36,7 @@ V1 把 emergency 路徑切成三層，每一層各自處理特定威脅，並且
 
 ---
 
-## Layer 1 — `EmergencyWithdraw` 改為 freeze-only
+## Layer 1：`EmergencyWithdraw` 改為 freeze-only
 
 第一個威脅是「治理金鑰被竊，攻擊者試圖透過 emergency 路徑造成損失」。
 
@@ -54,7 +54,7 @@ V1 把 emergency 路徑切成三層，每一層各自處理特定威脅，並且
 
 ---
 
-## Layer 2 — DeployToProtocol 在 freeze 下對 swap-out 仍開放
+## Layer 2：DeployToProtocol 在 freeze 下對 swap-out 仍開放
 
 Layer 1 把破壞性路徑封死了，但留下一個新問題：**vault 凍結之後，金庫裡可能持有大量 DJED / USDM（剛從 Liqwid Recall 回來，但還沒 swap 成 USDCx）。如果 freeze 完全擋住 DeployToProtocol，這些非存入代幣就會卡在 vault 裡，存入者直接 Withdraw 拿到的是 DJED 而不是 USDCx，必須自行處理 swap。**
 
@@ -72,7 +72,7 @@ Layer 2 用一個精確的例外處理這個問題：當 `frozen == 1` 且 redee
 
 ---
 
-## Layer 3 — CommunitySunset 自動止血開關
+## Layer 3：CommunitySunset 自動止血開關
 
 前兩層都假設「keeper 或治理至少有一邊在運作」。如果兩邊都不見人呢？
 
@@ -102,13 +102,13 @@ Layer 3 觸發條件選 `max(last_compound_time, last_realloc_time)`，表面看
 
 把三層連起來看，V1 的回應對應四種具體情境：
 
-**情境 A — 創辦人誠實但只用一把 key**：系統照常運作為 1-of-1 multisig，配合 timelock + cancel 安全原語。Layer 1/2/3 都不會被觸發。
+**情境 A：創辦人誠實但只用一把 key**：系統照常運作為 1-of-1 multisig，配合 timelock + cancel 安全原語。Layer 1/2/3 都不會被觸發。
 
-**情境 B — 創辦人金鑰被竊**：攻擊者拿不到任何價值。Layer 1 封死 brick 路徑（不能把 vault 寫崩）、Layer 2 維持回收流量（freeze 下仍可 swap-out）、白皮書 §6.3 的硬上限封住手續費濫用（`performance_fee_bps` 永遠不可能被推到 4.5% 以上）。即使攻擊者 queue 了惡意動作，14 天 timelock 加上 1-of-n cancel 在實務上都會擋下，若那時已招募 SPO，任一位獨立 SPO 即可取消。
+**情境 B：創辦人金鑰被竊**：攻擊者拿不到任何價值。Layer 1 封死 brick 路徑（不能把 vault 寫崩）、Layer 2 維持回收流量（freeze 下仍可 swap-out）、白皮書 §6.3 的硬上限封住手續費濫用（`performance_fee_bps` 永遠不可能被推到 4.5% 以上）。即使攻擊者 queue 了惡意動作，14 天 timelock 加上 1-of-n cancel 在實務上都會擋下，若那時已招募 SPO，任一位獨立 SPO 即可取消。
 
-**情境 C — 創辦人停付營運補貼但又沒正式啟動 sunset**（白皮書 §9.2 (c) 描述的場景）：keeper 離線 → §5.4 7 天 gate 自動生效（Direct Withdraw 早提款費免除）→ 到了 90 天 Layer 3 可由任一 vUSDCx 持有者觸發。
+**情境 C：創辦人停付營運補貼但又沒正式啟動 sunset**（白皮書 §9.2 (c) 描述的場景）：keeper 離線 → §5.4 7 天 gate 自動生效（Direct Withdraw 早提款費免除）→ 到了 90 天 Layer 3 可由任一 vUSDCx 持有者觸發。
 
-**情境 D — 創辦人連續 90+ 天失能**：存入者直接執行 Layer 3 社群止血，不需要任何 operator 配合就能拿回 USDCx。
+**情境 D：創辦人連續 90+ 天失能**：存入者直接執行 Layer 3 社群止血，不需要任何 operator 配合就能拿回 USDCx。
 
 ---
 

@@ -53,7 +53,7 @@ The SwapAdapter pattern decouples DEX datum parsing into per-DEX validators disp
 
 ## 3. SwapAdapterRedeemer
 
-Defined in `lib/vault/swap_adapter.ak`:
+Defined in `contracts/lib/vault/swap_adapter.ak`:
 
 ```aiken
 pub type SwapAdapterRedeemer {
@@ -206,7 +206,7 @@ Before mainnet deploy (tracked as part of V1 external audit scope):
 
 ## 12. References
 
-- Code: `lib/vault/swap_adapter.ak`, `validators/minswap_v2_adapter.ak`, `validators/sundaeswap_adapter.ak`, `validators/sundaeswap_cancel_guard.ak`, `lib/vault/sundaeswap.ak`
+- Code: `contracts/lib/vault/swap_adapter.ak`, `contracts/validators/minswap_v2_adapter.ak`, `contracts/validators/sundaeswap_adapter.ak`, `contracts/validators/sundaeswap_cancel_guard.ak`, `contracts/lib/vault/sundaeswap.ak`
 - Whitepaper: §3.4 external dependencies (multi-DEX extensibility), §5.3 DEX slippage protection (Tier 2 peg-floor + Tier 1 oracle)
 - Spec: `spec/architecture.md` §3.6 (Registry layout), §4 (validator catalog)
-- Related: `spec/oracle.md` (Tier 1 oracle reader used by adapter callers)
+- Related: `spec/ada-swap.md` (Tier 1 oracle reader used by adapter callers)

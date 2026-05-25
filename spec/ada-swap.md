@@ -184,7 +184,7 @@ Changing any of these requires a full V1 redeploy (new validator hashes, new vau
 
 ## 5. Oracle source
 
-**§5.4 P5 — shared dual-feed reader via `lib/vault/oracle.ak`.** SwapAda reads the ADA/USDCx price through the same `read_fair_price` helper used for P4 Tier 1 peg-floor checks on `DeployToProtocol`. The oracle config comes from the registry's `asset_oracles` list — an `AssetOracleEntry` pinned to the ADA convention `(asset_policy = #"", asset_name = #"")`. Governance populates the ADA entry via `UpdateRegistry` (14-day timelock); V1 launches with `asset_oracles = []`, which means SwapAda is **inactive until governance enables it** — during the bootstrap window, vault ADA top-up goes via `MergeUtxo` donations (operator path).
+**§5.4 P5 — shared dual-feed reader via `contracts/lib/vault/oracle.ak`.** SwapAda reads the ADA/USDCx price through the same `read_fair_price` helper used for P4 Tier 1 peg-floor checks on `DeployToProtocol`. The oracle config comes from the registry's `asset_oracles` list — an `AssetOracleEntry` pinned to the ADA convention `(asset_policy = #"", asset_name = #"")`. Governance populates the ADA entry via `UpdateRegistry` (14-day timelock); V1 launches with `asset_oracles = []`, which means SwapAda is **inactive until governance enables it** — during the bootstrap window, vault ADA top-up goes via `MergeUtxo` donations (operator path).
 
 ### 5.1 Registry entry layout
 
@@ -193,7 +193,7 @@ The ADA entry in `RegistryDatum.asset_oracles` pins:
 - **Asset identity**: `(asset_policy = #"", asset_name = #"")` — the Cardano lovelace convention.
 - **Feeds list** (typically 2 entries): each `AssetOracleFeed` identifies a reference-UTXO location by `(feed_script_hash, feed_auth_policy, feed_auth_name)`. The auth NFT prevents decoy UTXOs at the same script address. V1 launch convention is one Charli3 feed + one Orcfax feed, aggregated off-chain by the oracle operator into the canonical `PriceSample` format (see 5.2 below).
 - **`max_disagreement_bps`**: cross-feed spread cap. Recommended 200 (2%) — matches the legacy MVP's `diff_pct <= 2` behaviour.
-- **`max_staleness_ms`**: per-feed age cap vs `tx.validity_range.lower_bound`. Recommended 600_000 (10 minutes). Tighter than the legacy MVP's 40-minute cap because dual-feed aggregation already compensates for single-feed lag.
+- **`max_staleness_ms`**: per-feed age cap vs `tx.validity_range.lower_bound`. The on-chain ceiling is **1 hour**, enforced by `contracts/lib/vault/validation.ak::valid_asset_oracle_entry`. Launch-recommended value is **600_000 (10 minutes) per entry**, governance-tunable within the ceiling via `UpdateRegistry`. Tighter than the legacy MVP's 40-minute cap because dual-feed aggregation already compensates for single-feed lag.
 - **`min_feeds`**: required healthy feed count. Set to 2 (all feeds must agree).
 
 ### 5.2 PriceSample datum format
@@ -207,7 +207,7 @@ PriceSample {
 }
 ```
 
-The off-chain oracle operator is responsible for reading Charli3 + Orcfax native feeds, applying the operator's aggregation policy (typically midpoint or median), and publishing one `PriceSample` UTXO per feed slot. The operator identity + publishing policy is an external trust boundary documented in `spec/security-model.md`. Future V1.x / V2 may swap in per-protocol native parsers (Charli3 `OracleDatum` + Orcfax `FactStatement`) to remove the operator-aggregation layer.
+The off-chain oracle operator is responsible for reading Charli3 + Orcfax native feeds, applying the operator's aggregation policy (typically midpoint or median), and publishing one `PriceSample` UTXO per feed slot. The operator identity + publishing policy is an external trust boundary documented in `../docs/security-model.md`. Future V1.x / V2 may swap in per-protocol native parsers (Charli3 `OracleDatum` + Orcfax `FactStatement`) to remove the operator-aggregation layer.
 
 ### 5.3 Consensus rule (enforced in `vault_swap_ada`)
 
@@ -217,7 +217,7 @@ expect Some(ada_price_bps) = read_fair_price(tx, ada_entry)
 let usdcx_out_expected = amount_ada * ada_price_bps / 10_000
 ```
 
-`read_fair_price` is defined in `lib/vault/oracle.ak` and enforces:
+`read_fair_price` is defined in `contracts/lib/vault/oracle.ak` and enforces:
 
 1. At least `entry.min_feeds` healthy samples (feed UTXO present + auth NFT present + `price_bps > 0`).
 2. Each sample's `timestamp_ms` is fresher than `tx.validity_range.lower_bound - entry.max_staleness_ms`. Stale samples drop out of the aggregate.
@@ -226,7 +226,7 @@ let usdcx_out_expected = amount_ada * ada_price_bps / 10_000
 
 Any failure (missing entry, too-few healthy feeds, stale, disagreement, degenerate price) returns `None`, and the `expect Some(...)` forms in `SwapAda` then force a TX revert.
 
-Combined with the 1-hour cooldown on SwapAda and the 10-minute max feed staleness, an attacker attempting single-oracle manipulation would need both feeds to independently lie in concert — the dual-feed consensus raises the bar from "one oracle compromised" to "two independent oracles compromised within a 10-minute window".
+Combined with the 1-hour cooldown on SwapAda and the launch-recommended 10-minute per-feed staleness (rooted in the on-chain 1-hour ceiling), an attacker attempting single-oracle manipulation would need both feeds to independently lie in concert — the dual-feed consensus raises the bar from "one oracle compromised" to "two independent oracles compromised within the configured staleness window".
 
 ---
 

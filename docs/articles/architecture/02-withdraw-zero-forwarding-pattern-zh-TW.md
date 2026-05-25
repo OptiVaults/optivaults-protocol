@@ -1,6 +1,6 @@
 # Withdraw-Zero Forwarding Pattern：把 vault 邏輯搬到 staking validator
 
-*OptiVaults V1 合約架構解說 — 第 2 篇 / 共 4 篇*
+*OptiVaults V1 合約架構解說，第 2 篇 / 共 4 篇*
 
 ---
 
@@ -147,7 +147,7 @@ Required signers: keeper PKH
    - 績效費分拆是否符合 `keeper_fee_bps` / `gov_fee_bps` / treasury 比例
    - keeper output 確實寄到 `tx.outputs[keeper_output_idx]`，地址對應 keeper signer PKH
    - treasury output 寄到 `treasury_hash` 地址
-   - vault datum 的 15 個不可變欄位完全沒變
+   - vault datum 的 9 個不可變 + 8 個政策可變欄位完全沒變（政策可變那層只能透過專屬的 UpdateFee / UpdateFeeSplit / UpdateStrategy redeemer 移動）
    - `last_compound_time` 推進到 validity range 的 lower bound
 3. **`keeper_stake_script` 被觸發**（透過 zero-withdraw）：檢查 TX 有 keeper PKH 簽名、PKH 在 `authorized_pkhs` 清單中（GovernanceOnly 模式）。
 

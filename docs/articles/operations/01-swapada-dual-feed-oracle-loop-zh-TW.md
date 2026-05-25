@@ -1,6 +1,6 @@
 # SwapAda：用 dual-feed oracle 做鏈上 ADA 補充閉環
 
-*OptiVaults V1 營運機制解說 — 第 1 篇 / 共 3 篇*
+*OptiVaults V1 營運機制解說，第 1 篇 / 共 3 篇*
 
 ---
 
@@ -169,7 +169,7 @@ drag 換算:
   200-400 USDCx / 100,000 USDCx TVL ≈ 0.20-0.40% / year ← 沒道理，太高
 ```
 
-等等，這個算法錯了。SwapAda 換給 vault 的是 ADA，vault 拿到的 ADA 不是「漏失」，是 vault 自己需要的營運成本（給 Minswap batcher）。所以 SwapAda 流出的 USDCx 對應的是 vault 真實的營運成本，不是額外的 drag。
+不過，這個算法有問題。SwapAda 換給 vault 的是 ADA，vault 拿到的 ADA 不是「漏失」，是 vault 自己需要的營運成本（給 Minswap batcher）。所以 SwapAda 流出的 USDCx 對應的是 vault 真實的營運成本，不是額外的 drag。
 
 正確的算法：
 

@@ -1,6 +1,6 @@
 # 4.5% 績效費：公式、不變式、validator-level 硬上限
 
-*OptiVaults V1 經濟模型解說 — 第 1 篇 / 共 4 篇*
+*OptiVaults V1 經濟模型解說，第 1 篇 / 共 4 篇*
 
 ---
 

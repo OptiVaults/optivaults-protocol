@@ -186,13 +186,6 @@ pub const ada_swap_min: Int = 10_000_000
 /// SwapAda maximum amount (50 ADA)
 pub const ada_swap_max: Int = 50_000_000
 
-/// Oracle-staleness ceiling (40 minutes) — Charli3/Orcfax feeds older
-/// than this are rejected by SwapAda.
-pub const oracle_max_staleness_ms: Int = 2_400_000
-
-/// Oracle-disagreement tolerance (2%, 200 bps).
-pub const oracle_max_disagreement_bps: Int = 200
-
 // ─────────────────────────────────────────────────────────────────────
 // Allocation + position bounds
 // ─────────────────────────────────────────────────────────────────────

@@ -1,8 +1,8 @@
-# Pattern Rationale — MultiSig Governance + Timelock
+# Pattern Rationale：MultiSig Governance + Timelock
 
 **狀態**：資訊性質的模式背景說明。不是 CIP、也不是 CIP 草案。OptiVaults V1 對 Cardano Improvement Proposals 的整體立場見 `docs/cip-readiness-posture-zh-TW.md`。
 
-**範圍**：一個反覆出現的協議政策治理模式，組合了 (a) m-of-n 門檻簽名核可、(b) 每個動作各自的 timelock（核可與執行之間的時間差）、(c) timelock 窗內任一 signer 都可以行使 1-of-n veto、(d) 嚴格單調遞增的 nonce 綁定 action 識別碼、(e) payload-hash 綁定 — 確保被 queue 的動作在執行之前其效果不會漂移、(f) timelock 過後的 TTL 上限 — 不讓過期的核可一直留在 queue 裡。模式本身是通用的；OptiVaults V1 把它具現為 14 種 action kind，案例研究見 §6。
+**範圍**：一個反覆出現的協議政策治理模式，組合了 (a) m-of-n 門檻簽名核可、(b) 每個動作各自的 timelock（核可與執行之間的時間差）、(c) timelock 窗內任一 signer 都可以行使 1-of-n veto、(d) 嚴格單調遞增的 nonce 綁定 action 識別碼、(e) payload-hash 綁定（確保被 queue 的動作在執行之前其效果不會漂移）、(f) timelock 過後的 TTL 上限（不讓過期的核可一直留在 queue 裡）。模式本身是通用的；OptiVaults V1 把它具現為 14 種 action kind，案例研究見 §6。
 
 ---
 

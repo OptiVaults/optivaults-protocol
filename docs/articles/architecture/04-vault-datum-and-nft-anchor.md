@@ -6,7 +6,7 @@
 
 [Part 1](./01-eutxo-vault-design-constraints.md) covered the four design constraints when building a vault on Cardano's eUTXO. [Part 2](./02-withdraw-zero-forwarding-pattern.md) introduced the Withdraw-Zero Forwarding Pattern. [Part 3](./03-seventeen-validators-four-cuts.md) explained why V1 splits vault logic into 17 validators.
 
-This final part handles the last piece: **how vault state is stored, the 29-field VaultDatum split between mutable and immutable, and how the compile-time Vault NFT anchor blocks phantom-vault attacks**. This is V1's response to Part 1's Constraint 4 — "UTXOs have no native identity."
+This final part handles the last piece: **how vault state is stored, the 29-field VaultDatum split into 9 immutable + 8 policy-locked + 12 accounting/operational fields, and how the compile-time Vault NFT anchor blocks phantom-vault attacks**. This is V1's response to Part 1's Constraint 4 — "UTXOs have no native identity."
 
 ---
 
@@ -32,9 +32,9 @@ Single-UTXO state is the standard pattern for vault design on Cardano DeFi.
 
 ## The 29-Field VaultDatum
 
-VaultDatum has 29 fields, partitioned into 14 mutable and 15 immutable.
+VaultDatum has 29 fields, partitioned into three tiers: **9 immutable**, **8 policy-locked** (governance-mutable within hard bounds), and **12 accounting / operational** (updated by ordinary operations).
 
-### 14 mutable fields (potentially updated on each operation)
+### 12 accounting / operational fields (potentially updated on each operation)
 
 - `total_deposited` — total USDCx principal held by the vault
 - `total_shares` — total supply of vUSDCx share tokens
@@ -44,29 +44,39 @@ VaultDatum has 29 fields, partitioned into 14 mutable and 15 immutable.
 - `liqwid_positions` — per-market `supplied_value` and `qtokens_held`
 - `last_compound_time` — timestamp of the most recent compound
 - `last_realloc_time` — timestamp of the most recent zero-yield reallocation
+- `last_fee_update_time` — UpdateFee cooldown anchor
+- `last_ada_swap_time` — SwapAda cooldown anchor
 - `frozen` — emergency freeze flag
 - `community_sunset_triggered` — Phase 1 dead-man-switch flag
-- `keeper_fee_bps` / `gov_fee_bps` — the two mutable components of the 3-way fee split
-- `max_slippage_bps` / `min_swap_peg_bps` — governance-tunable slippage policy
 
-### 15 immutable fields (set at deployment, enforced unchanged on every TX by `check_immutable_fields`)
+### 8 policy-locked fields (governance-mutable through dedicated UpdateFee / UpdateFeeSplit / UpdateStrategy redeemers, bounded by hard caps)
 
-- `governance_policy` / `governance_name` — Governance NFT identity
-- `vault_nft_policy` — Vault NFT identity (the compile-time anchor; see below)
-- `vusdcx_policy` — share token minting policy hash
-- `deposit_token_policy` / `deposit_token_name` — USDCx identity
-- `keeper_pkh` — keeper identity at launch
-- `fee_collector` — fee receiving address
 - `performance_fee_bps` — performance fee rate (**hard cap 4.5%**)
 - `early_withdraw_fee_bps` — early-withdrawal fee rate (**hard cap 1%**)
 - `min_hold_seconds` — direct-withdrawal cooldown (**hard cap 6 hours**)
 - `buffer_target_bps` — target buffer ratio
-- `order_script_hash` / `registry_hash` — relevant contract hash identities
+- `keeper_fee_bps` — keeper's slice of the 3-way fee split (**hard cap 40%**)
+- `gov_fee_bps` — governance pool's slice of the 3-way fee split (**hard cap 10%**)
+- `max_slippage_bps` — §5.4 P2 Tier 1 oracle fair-price bound (**hard cap 5%**)
+- `min_swap_peg_bps` — §5.4 P2 Tier 2 peg-floor bound
+
+The policy-locked tier is enforced on every non-governance redeemer by `check_policy_fields_unchanged`. The only paths that may move these values are the three governance redeemers above, each subject to its own timelock and m-of-n approval. The hard caps are validator-enforced — governance cannot lift them via any redeemer.
+
+### 9 immutable fields (set at deployment, enforced unchanged on every TX by `check_immutable_fields`)
+
 - `vault_version` — contract version identifier
+- `governance_policy` / `governance_name` — Governance NFT identity
+- `vusdcx_policy` — share token minting policy hash
+- `deposit_token_policy` / `deposit_token_name` — USDCx identity
+- `order_script_hash` — Order validator hash
+- `registry_hash` — Registry validator hash
+- `registry_auth_policy` — Registry auth NFT policy
 
-`check_immutable_fields` is a cornerstone of V1's security model: **any TX that mutates these 15 fields is rejected by every vault staking validator**.
+V1 deliberately does **not** put `keeper_pkh` or `fee_collector` in the datum at all. Keeper authorization is delegated to `keeper_stake_script` (a separate staking validator whose hash is a compile-time parameter on every keeper-touched validator), and the fee destination is the `treasury` script address (a compile-time parameter on `vault_keeper_hot`). Both anchors live in validator hashes rather than datum fields — which is structurally stronger than any datum guarantee, because a datum-controlling attacker still cannot substitute either value.
 
-Put differently, the 15 immutable fields of a deployed vault are **objective properties of the deployed validator hash** — not "we promise not to change them" but "the contract structurally does not allow changes." Performance fee can never be raised above 4.5%, min_hold_seconds can never exceed 6 hours, Vault NFT identity can never be substituted — these are objectively verifiable facts anyone can check against ledger data, requiring trust in no operator promise.
+`check_immutable_fields` is a cornerstone of V1's security model: **any TX that mutates these 9 fields is rejected by every vault staking validator**. Combined with `check_policy_fields_unchanged` (which guards the 8 policy-locked fields outside the dedicated governance redeemers), the full envelope of 17 fields is structurally locked across any non-governance redeemer.
+
+Put differently, the 9 immutable fields of a deployed vault are **objective properties of the deployed validator hash** — not "we promise not to change them" but "the contract structurally does not allow changes." `vault_version` can never shift, the Governance NFT identity can never be substituted, USDCx identity can never drift — these are objectively verifiable facts anyone can check against ledger data, requiring trust in no operator promise. The 8 policy-locked fields add a second layer: they can move, but only through the dedicated governance redeemers, only within validator-enforced hard caps, and only after their respective timelocks.
 
 ---
 
@@ -167,13 +177,13 @@ All three use the same PlutusV3 UTXO-ref one-shot pattern, **a much cleaner appr
 V1's vault state design connects up like this:
 
 1. **A single UTXO** holds all vault state (trading off less parallelism for a clean concurrency model)
-2. **A 29-field VaultDatum**, of which **15 are immutable** (key protections structurally locked at the contract level)
+2. **A 29-field VaultDatum**, of which **9 are immutable** and **8 more are policy-locked** within validator-enforced hard caps (key protections structurally locked at the contract level)
 3. **The Vault NFT** gives the single UTXO a chain-unique identity
 4. **The NFT's minting policy is baked into the compile-time parameters of three spending validators** (`vault_proxy` / `vusdcx` / `order`)
 5. **The NFT itself is minted via PlutusV3 UTXO-ref one-shot**, chain-unique and unrecreatable
 6. **User-level parallelism** is decoupled via Order UTXOs and BatchProcess (deposit / withdraw don't compete for the vault UTXO)
 
-Each layer corresponds to one of Part 1's constraints: single UTXO addresses Constraint 1 (parallelism is bounded), 15 immutable fields turn many promised protections into "structurally cannot be violated," and the compile-time NFT anchor addresses Constraint 4 (UTXOs have no native identity).
+Each layer corresponds to one of Part 1's constraints: single UTXO addresses Constraint 1 (parallelism is bounded), the 9 immutable + 8 policy-locked fields turn many promised protections into "structurally cannot be violated," and the compile-time NFT anchor addresses Constraint 4 (UTXOs have no native identity).
 
 ---
 

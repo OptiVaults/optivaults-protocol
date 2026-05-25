@@ -9,7 +9,7 @@
 OptiVaults V1 拆成兩個 repo(見 `README-zh-TW.md §「兩層架構」`):
 
 - **本 repo(`optivaults-protocol`)**:**協議層**:Aiken validators、協議 spec、whitepaper、部署流程。**合約變更、spec 修正、白皮書編輯、部署腳本改善**,都走這個 repo。
-- **[`optivaults-reference`](https://github.com/OptiVaults/optivaults-reference)**:**operator 參考實作**:TypeScript keeper、API server、frontend、CLI 工具。**Keeper runtime bug、frontend UX、API 改善、CLI 打磨**,走那個 repo。
+- **[`optivaults-reference`](../optivaults-reference)**:**operator 參考實作**:TypeScript keeper、API server、frontend、CLI 工具。**Keeper runtime bug、frontend UX、API 改善、CLI 打磨**,走那個 repo。
 
 **不確定就開在這裡**:維護者會在 repo 歸屬錯誤時移動 PR。
 
@@ -19,7 +19,7 @@ OptiVaults V1 拆成兩個 repo(見 `README-zh-TW.md §「兩層架構」`):
 
 1. 讀過 `README.md` + `whitepaper/whitepaper.md`(或 `whitepaper-zh-TW.md`),先理解定位與信任模型。
 2. `contracts/` 裡 `aiken check` 必須全綠(194 個 test / 689 個隨機化 check / 0 error)。
-3. 合約改動需要附一個 regression test 在 `lib/vault/tests/`。
+3. 合約改動需要附一個 regression test 在 `contracts/lib/vault/tests/`。
 4. 規格 / 文件改動請確認內部交叉引用還接得上(validator 名稱、redeemer tag、欄位數)。
 5. 不要 commit secret、mainnet signer PKH、或真的 Blockfrost key。這些屬於 operator 的 `.env`(gitignored),絕對不進 repo。
 6. **安全性相關的發現請寄到 `optivaults@gmail.com`(PGP key 在 optivaults.app/security),不要開公開 issue。** 詳見下方 §安全通報。
@@ -44,7 +44,7 @@ aiken build                       # 重新產生 plutus.json
 aiken check                       # 跑 194 個 test + 689 個隨機化 check
 ```
 
-開 PR 前,分支上的 `aiken check` 必須全綠。新增 test 請放在 `lib/vault/tests/`,命名遵守現有慣例(`<feature>_test.ak`)。
+開 PR 前,分支上的 `aiken check` 必須全綠。新增 test 請放在 `contracts/lib/vault/tests/`,命名遵守現有慣例(`<feature>_test.ak`)。
 
 **跑 Preprod 部署 ceremony 乾跑**(選用,deploy/* 相關貢獻者可跑):
 
@@ -61,7 +61,7 @@ tsx deploy/deploy.ts --network Preprod --releaseTag <your-test-tag> --dryRun
 ### 直接開 PR 沒問題
 
 - **Bug fix**:Aiken validator 的修正(必須附一個 regression test,示範舊版錯誤 + 新版正確)。
-- **測試覆蓋強化**:更多 property-based test(`aiken/fuzz`)、更多邊界條件單元測試、`tests/preprod/` 裡更多 E2E 情境。
+- **測試覆蓋強化**:更多 property-based test(`aiken/fuzz`)、更多邊界條件單元測試、`tests/preprod-e2e-plan.md` 裡規劃的更多 E2E 情境。
 - **文件清晰化**:錯字修正、規格與文件與白皮書與 Aiken inline 註解的用字改善。
 - **部署工具打磨**:冪等性改善、錯誤訊息改善、可觀測性。
 - **i18n**:product-overview / whitepaper 除了現有的 EN + 繁體中文以外的新語言翻譯。
@@ -127,7 +127,7 @@ tsx deploy/deploy.ts --network Preprod --releaseTag <your-test-tag> --dryRun
 
 ### Preprod E2E 測試
 
-新增 redeemer 路徑或改變 redeemer 語意時,要在 `tests/preprod/` 加一個對應的 Preprod E2E 腳本。既有的 `10-deposit-direct.ts` / `11-withdraw-direct-partial.ts` 是 canonical 的樣式範例(ceremony 狀態檔載入 + Blockfrost provider + key daemon → build TX → submit → 驗證 post-state)。
+新增 redeemer 路徑或改變 redeemer 語意時,要在 `tests/preprod-e2e-plan.md` 加一個對應的 Preprod E2E 情境，並補上對應的執行腳本。既有的 `10-deposit-direct.ts` / `11-withdraw-direct-partial.ts` 是 canonical 的樣式範例(ceremony 狀態檔載入 + Blockfrost provider + key daemon → build TX → submit → 驗證 post-state)。
 
 腳本用階段編號命名:`0X-ceremony-health`、`1X-user-flow`、`2X-compound`、`3X-merge-utxo`、`4X-protocol`、`5X-governance`、`6X-sunset`。新增腳本請跟上這個慣例。
 

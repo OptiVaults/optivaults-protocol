@@ -1,6 +1,6 @@
-# OptiVaults V1 — VaultDatum 規格
+# OptiVaults V1：VaultDatum 規格
 
-*VaultDatum Tiered Immutability 模式的實作(通用模式、強制 tier 邊界的 helper 函數紀律、與待答 CIP 設計問題見 [`pattern-rationale-vault-datum-tiered-zh-TW.md`](./pattern-rationale-vault-datum-tiered-zh-TW.md))。V1 的 29 個欄位組織在四個 tier — identity-immutable、governance-mutable policy、accounting、operational — 並由 `check_immutable_fields` 與 `check_policy_fields_unchanged` helper 在每一條會產出 continuing vault output 的 redeemer 上強制執行該 tier 的變更包絡。*
+*VaultDatum Tiered Immutability 模式的實作（通用模式、強制 tier 邊界的 helper 函數紀律、與待答 CIP 設計問題見 [`pattern-rationale-vault-datum-tiered-zh-TW.md`](./pattern-rationale-vault-datum-tiered-zh-TW.md)）。V1 的 29 個欄位組織在四個 tier（identity-immutable、governance-mutable policy、accounting、operational），並由 `check_immutable_fields` 與 `check_policy_fields_unchanged` helper 在每一條會產出 continuing vault output 的 redeemer 上強制執行該 tier 的變更包絡。*
 
 **範圍**:存放所有 vault 會計狀態的單一 UTxO datum。
 
@@ -26,7 +26,7 @@ type VaultDatum {
   performance_fee_bps: Int,       // 績效費 bps,[0, 450]
   early_withdraw_fee_bps: Int,    // Early withdrawal fee bps
   min_hold_seconds: Int,          // Compound 後到 Direct Withdraw 間的最短持有時間
-  buffer_target_bps: Int,         // 目標 buffer 比例(3500 = 35%)
+  buffer_target_bps: Int,         // 目標 buffer 比例(3000 = 30%)
   keeper_fee_bps: Int,            // Keeper 的績效費分成,[0, 4000]
   gov_fee_bps: Int,               // 治理簽名者池分成,[0, 1000]
                                    // Treasury 分成為推導值:10000 - keeper_fee_bps - gov_fee_bps
@@ -56,16 +56,16 @@ type VaultDatum {
 
 V1 有**兩個**身份錨點刻意**不**放進 datum:
 
-- **Keeper 授權**:**沒有** `keeper_pkh` 欄位。Keeper 授權委派給 `keeper_stake_script` staking validator;stake-script hash 是 `vault_user`、`vault_keeper_hot`、`vault_protocol`、`vault_recall`、`vault_liqwid` 的編譯時參數(並間接透過 `vault_proxy` 的 Withdraw-Zero route table)。變更授權 keeper 集合發生在 stake script 自己的 datum 裡,不會動到 VaultDatum。
-- **Fee collector**:**沒有** `fee_collector` 欄位。績效費流向 `treasury` script 地址;treasury-script hash 是 `vault_keeper_hot`(Compound 的家)的編譯時參數,在 Compound redeemer 的 fee-output binding 中檢查。
+- **Keeper 授權**:**沒有** `keeper_pkh` 欄位。Keeper 授權委派給 `keeper_stake_script` staking validator;stake-script hash 是 `vault_user`、`vault_keeper_hot`、`vault_protocol`、`vault_recall`、`vault_liqwid` 的編譯期參數(並間接透過 `vault_proxy` 的 Withdraw-Zero route table)。變更授權 keeper 集合發生在 stake script 自己的 datum 裡,不會動到 VaultDatum。
+- **Fee collector**:**沒有** `fee_collector` 欄位。績效費流向 `treasury` script 地址;treasury-script hash 是 `vault_keeper_hot`(Compound 的家)的編譯期參數,在 Compound redeemer 的 fee-output binding 中檢查。
 
-把這兩個錨點搬到編譯時參數,提供了**比 datum 欄位更嚴格**的信任屬性:控制了惡意 datum 的攻擊者**無法**替換 keeper 或 fee 收件方,因為 validator 會忽略 datum、直接從自己的 script hash 查死寫好的值。
+把這兩個錨點搬到編譯期參數,提供了**比 datum 欄位更嚴格**的信任屬性:控制了惡意 datum 的攻擊者**無法**替換 keeper 或 fee 收件方,因為 validator 會忽略 datum、直接從自己的 script hash 查死寫好的值。
 
 ---
 
 ## 2. 逐欄位說明
 
-### 2.1 Tier 3 — 會計狀態(10 個欄位)
+### 2.1 Tier 3：會計狀態(10 個欄位)
 
 | 欄位 | 型別 | 意義 | 不變量 |
 |------|------|------|-------|
@@ -80,14 +80,14 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 | `strategy_allocations` | List<Allocation> | 每個協議的目標配置,即資本應如何分配。每項包含 `protocol_name`(enum:`Liqwid`、`MinswapLP`、`SundaeSwapLP`)+ `amount` + `expected_apy_bps`。 | 長度 ≤ 10;`Σ amount + idle_buffer <= total_deposited + non_deposit_value + Σ liqwid_principal` |
 | `liqwid_positions` | List<LiqwidPosition> | 每個 Liqwid 市場的持倉。每項 = `{market_id, qtokens_held, supplied_value}`。 | 長度 ≤ 5;`qtokens_held > 0` 代表該部位存在;`supplied_value == 0` 代表已完全 recall |
 
-### 2.2 Tier 2 — 政策參數(8 個欄位)
+### 2.2 Tier 2：政策參數(8 個欄位)
 
 | 欄位 | 型別 | V1 啟動值 | 治理可調範圍 | 透過誰調整 |
 |------|------|-----------|--------------|-----------|
 | `performance_fee_bps` | Int | 450(4.5%) | [0, 450];4.5% 硬上限在 UpdateFee redeemer 強制 | `UpdateFee` 治理動作 |
 | `early_withdraw_fee_bps` | Int | 10(0.1%) | [0, 100] | `UpdateFee` 治理動作 |
 | `min_hold_seconds` | Int | 60 | [0, 21600](6 小時);從較早的 24 小時上限依白皮書 review 收緊(理由見白皮書 §2.4 + §6.3) | `UpdateFee` 治理動作 |
-| `buffer_target_bps` | Int | 3500(35%) | [0, 10000];建議目標,不嚴格強制 | `UpdateStrategy` 治理動作(與配置變更一起執行) |
+| `buffer_target_bps` | Int | 3000(30%) | [0, 10000];建議目標,不嚴格強制 | `UpdateStrategy` 治理動作(與配置變更一起執行) |
 | `keeper_fee_bps` | Int | 4000(40%) | [0, 4000];40% 硬上限,與 `gov_fee_bps` 合計 ≤ 5000(50%) | `UpdateFeeSplit` 治理動作(21 天 timelock) |
 | `gov_fee_bps` | Int | 0(啟動時停用) | [0, 1000];10% 硬上限 | `UpdateFeeSplit` 治理動作(21 天 timelock) |
 
@@ -111,7 +111,7 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 
 每次 fee-split 變更都是獨立的 `UpdateFeeSplit` 治理動作,帶完整 21 天 timelock + 1-of-n cancel 否決。變更從**下次** Compound 之後才適用;已累積的 gov pool 資金保留先前的處理方式,直到分配。
 
-### 2.3 Tier 1 — 身份參數(9 個不可變欄位)
+### 2.3 Tier 1：身份參數(9 個不可變欄位)
 
 | 欄位 | 值 | 用途 |
 |------|------|------|
@@ -123,7 +123,7 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 | `registry_hash` | (部署時設定) | Registry validator hash。DeployToProtocol / RecallFromProtocol 把 Registry UTxO 當 reference input 讀,地址必須 match。 |
 | `registry_auth_policy` | (部署時設定) | Registry auth NFT policy。Registry UTxO 必須帶此 policy 的 token 才被信任。 |
 
-### 2.4 Tier 4 — 運營旗標(2 個單向欄位)
+### 2.4 Tier 4：運營旗標(2 個單向欄位)
 
 | 欄位 | 值 | `= 1` 時的效果 |
 |------|------|---------------|
@@ -134,7 +134,7 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 
 ## 3. 每個 redeemer 都會檢查的不變量
 
-所有會動 datum 的 redeemer 都必須保留以下不變量(由 `lib/vault/validation.ak` 強制):
+所有會動 datum 的 redeemer 都必須保留以下不變量(由 `contracts/lib/vault/validation.ak` 強制):
 
 1. **不可變欄位保留**:9 個不可變欄位(8 身份錨點 + `vault_version`)在輸入與輸出 datum 之間必須 bit-identical。
 2. **會計值非負**:`total_shares >= 0`、`total_deposited >= 0`、`idle_buffer >= 0`、`non_deposit_value >= 0`。
@@ -201,7 +201,7 @@ V1 有**兩個**身份錨點刻意**不**放進 datum:
 
 | 模式性質 | V1 強制點 |
 |---|---|
-| Tier 1(身份)在每一條 non-deploy redeemer 上保持不變 | `lib/vault/validation.ak` 中的 `check_immutable_fields(old, new)` 對 9 個身份欄位執行相等性檢查。從九個 call site 被呼叫 — 七個在 `validation.ak`、兩個在 `helpers.ak`。每一條會產出 continuing vault output 的 redeemer 都會走到其中一個 |
+| Tier 1(身份)在每一條 non-deploy redeemer 上保持不變 | `contracts/lib/vault/validation.ak` 中的 `check_immutable_fields(old, new)` 對 9 個身份欄位執行相等性檢查。從九個 call site 被呼叫 — 七個在 `validation.ak`、兩個在 `helpers.ak`。每一條會產出 continuing vault output 的 redeemer 都會走到其中一個 |
 | Tier 2(政策)只透過專屬治理 redeemer 變動 | 非 policy-changing redeemer 全部呼叫 `check_policy_fields_unchanged(old, new)`,對 8 個政策欄位執行相等性檢查。四條 policy-changing redeemer — `UpdateFee`、`UpdateFeeSplit`、`UpdateStrategy`、`UpdateSlippagePolicy` — 明確列舉它擁有哪些政策欄位 |
 | Tier 3(會計)由每條 redeemer 的數學不變式守 | 每條 redeemer 各自攜帶明確的 delta(share 數學、fee 數學、buffer 約束、配置守恆、oracle 界限)。§4 的 state-transition 矩陣是審計的主要檢視對象 |
 | Tier 4(運營)單向旗標在不轉移它的 redeemer 上保持不變 | `frozen` 與 `community_sunset_triggered` 在每一條 redeemer 中都被保留,除了少數明確轉移它們的 redeemer;`community_sunset_triggered` 的轉移是單向(0 → 1,不可逆),`frozen` 的反向則僅透過專屬治理 redeemer 提供 |

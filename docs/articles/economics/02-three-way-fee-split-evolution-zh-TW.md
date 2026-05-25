@@ -1,6 +1,6 @@
 # 3-way fee split：keeper / gov pool / treasury 的演進
 
-*OptiVaults V1 經濟模型解說 — 第 2 篇 / 共 4 篇*
+*OptiVaults V1 經濟模型解說，第 2 篇 / 共 4 篇*
 
 ---
 
