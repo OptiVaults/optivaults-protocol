@@ -635,9 +635,9 @@ fee_amount = 0.045 × max(0, NAV_now − NAV_last_compound − realised_rebalanc
 
 | 資產 | 目標 | 角色 | 啟動日收益貢獻 |
 |------|------|------|----------------|
-| DJED（Liqwid supply） | 45% | 主要收益——演算法穩定幣，啟動時借貸需求最高 | 此份額享完整 Liqwid DJED 供應 APY |
-| USDM（Liqwid supply） | 25% | 次要收益——法幣擔保，Liqwid 市場 TVL 較小（但 DEX swap 側有 USDCx/USDM 11.6M 直接池；詳見 §5.2） | 此份額享完整 Liqwid USDM 供應 APY |
-| USDCx（閒置 buffer） | 30% | **提領流動性——V1 啟動日 0% 收益**（buffer USDCx 閒置於金庫地址；V1 啟動時 NOT 供應至 Liqwid USDCx 市場） | **0%** — 詳見下方說明 |
+| DJED（Liqwid supply） | 45% | 主要收益（演算法穩定幣，啟動時借貸需求最高） | 此份額享完整 Liqwid DJED 供應 APY |
+| USDM（Liqwid supply） | 25% | 次要收益：法幣擔保，Liqwid 市場 TVL 較小（但 DEX swap 側有 USDCx/USDM 11.6M 直接池；詳見 §5.2） | 此份額享完整 Liqwid USDM 供應 APY |
+| USDCx（閒置 buffer） | 30% | **提領流動性：V1 啟動日 0% 收益**（buffer USDCx 閒置於金庫地址；V1 啟動時 NOT 供應至 Liqwid USDCx 市場） | **0%** — 詳見下方說明 |
 
 #### 為什麼 buffer 啟動時是 0%，以及未來可以如何調整
 
@@ -705,7 +705,7 @@ V1 在 USDCx、USDM、DJED 三個 Liqwid 市場間動態配置供應資金。再
 
 **硬上限：** `keeper_fee_bps ≤ 4000`（40%）、`gov_fee_bps ≤ 1000`（10%）、`keeper + gov ≤ 5000`（treasury 保底 ≥ 50%）。變更需 `UpdateFeeSplit` 動作 + **21 天 timelock**（所有治理動作中最長——因治理調整自身報酬）。40% keeper 上限刻意推高,以支持公共財定位下第三方 keeper 經濟可行性——在 40% 下,Phase 2+ 非創辦人 keeper breakeven 降到 ~$1M TVL(舊 25% 上限是 ~$1.5M)。
 
-**V1 階段三方分拆的誠實揭露。** Keeper / gov pool / treasury 在鏈上為三個獨立流向，各有不同地址、redeemer 授權路徑、timelock 設定。然而 V1 啟動時，這三個流向的**人類控制者明顯重疊**——創辦人同時運作 keeper 並持有治理簽名者席位，而 treasury 支出亦需治理簽名（見 §9.1）。V1 的三方分拆因此是**走向去中心化的結構準備，而非當下已實現的去中心化**。參見 §6.1（Six-identity separation 目標）了解三個口袋達到經濟獨立的輪替路徑。
+**V1 階段三方分拆的誠實揭露。** Keeper / gov pool / treasury 在鏈上為三個獨立流向，各有不同地址、redeemer 授權路徑、timelock 設定。然而 V1 啟動時，這三個流向的**人類控制者明顯重疊**：創辦人同時運作 keeper 並持有治理簽名者席位，而 treasury 支出亦需治理簽名（見 §9.1）。V1 的三方分拆因此是**走向去中心化的結構準備，而非當下已實現的去中心化**。參見 §6.1（Six-identity separation 目標）了解三個口袋達到經濟獨立的輪替路徑。
 
 先前內部驗證版本將 100% 手續費送至單一營運者錢包。V1 將此流程鏈上分離，並採輪替 keeper 模型（§7「Run Now, Open Later」）+ soul-bound Gov Signer NFT（見 `spec/gov-nft.md`）確立聲譽責任制。Gov Signer NFT 的 soul-bound 特性**由其鑄造政策的 spending-script 檢查強制**（並非 Cardano ledger 原生特性）：任何花費帶有 Gov Signer NFT 之 UTXO 的 TX，必須將該 NFT 傳回至支付給簽名者原始 PKH（由 NFT 資產名尾綴導出）的 output，或於同筆 TX 透過 `BurnRotatedOut` 燒毀。第三方轉讓會不通過此 script 檢查而被 ledger 拒絕。該 NFT 不具投票權或財務權利（這些位於 MultisigGov 自身的 datum）；純屬認可。
 
@@ -777,7 +777,7 @@ Compound 的排程頻率由 TVL 決定，並非固定節奏。內部驗證期累
 
 ### 2.6.1 Reference Implementation Mode(低 TVL 營運政策)
 
-當 V1 持續在「§2.6 預設節奏已經不再經濟合理」的 TVL 區間運作時,keeper 切換到 **Reference Implementation Mode**——一套寬鬆的營運政策,只負責維持合約 liveness,不會燒掉相對於累計收益不成比例的鏈上 gas。這個模式是 §0「Cardano DeFi 公共財參考實作」定位,在低 TVL 期間的營運對應:V1 仍以已部署的參考實作姿態完整可用,不會把營運預算耗在收益基礎無法支撐的節奏上。
+當 V1 持續在「§2.6 預設節奏已經不再經濟合理」的 TVL 區間運作時,keeper 切換到 **Reference Implementation Mode**：一套寬鬆的營運政策,只負責維持合約 liveness,不會燒掉相對於累計收益不成比例的鏈上 gas。這個模式是 §0「Cardano DeFi 公共財參考實作」定位,在低 TVL 期間的營運對應:V1 仍以已部署的參考實作姿態完整可用,不會把營運預算耗在收益基礎無法支撐的節奏上。
 
 #### 啟用條件
 
@@ -800,11 +800,11 @@ Compound 的排程頻率由 TVL 決定，並非固定節奏。內部驗證期累
 
 #### 此模式不會放棄的部分(零妥協)
 
-- 全部合約不變式——不動費率、不繞治理捷徑、不繞 validator。
-- 全部存入者保護——`emergency-withdraw`、硬上限、`withdraw-cli`。
-- §5.5.1 三層治理安全——Layer 1 freeze-only、Layer 2 swap-out、Layer 3 CommunitySunset 全部正常。
-- Share price NAV 準確性——qToken 價值仍按需即時讀取;`total_*` datum 欄位仍在 Compound 時更新如設計。
-- §5.4 的 7 天 keeper-inactivity gate——讀的是 `last_compound_time`,不受 heartbeat 節奏放慢影響。
+- 全部合約不變式：不動費率、不繞治理捷徑、不繞 validator。
+- 全部存入者保護：`emergency-withdraw`、硬上限、`withdraw-cli`。
+- §5.5.1 三層治理安全：Layer 1 freeze-only、Layer 2 swap-out、Layer 3 CommunitySunset 全部正常。
+- Share price NAV 準確性：qToken 價值仍按需即時讀取;`total_*` datum 欄位仍在 Compound 時更新如設計。
+- §5.4 的 7 天 keeper-inactivity gate：讀的是 `last_compound_time`,不受 heartbeat 節奏放慢影響。
 
 #### 此模式會改變的部分
 
@@ -844,7 +844,7 @@ V1 部署 **17 個 logic validator**(其中 #17 `vusdcx` 是份額代幣鑄造�
 本架構組合了 §3.6 中說明的五個反覆出現的模式 — *Validator Identity NFT*(三個身份錨 NFT mint policy)、*MultiSig Governance + Timelock*(`multisig_gov` validator + 14-action 目錄)、*Withdraw-Zero Forwarding*(§3.2 涵蓋的 `vault_proxy` + 10-route 拓撲)、*Registry + Auth NFT Whitelist*(`registry` validator + 其 Auth NFT 錨點)、*VaultDatum Tiered Immutability*(`spec/vault-datum.md` 涵蓋的 29 欄位 VaultDatum × 四個 tier)。模式名稱在下方每個第一次被實例化的地方 inline 標出;§3.6 提供合併後的對照。
 
 1. **vault_proxy** — 入口點,透過 **Withdraw-Zero Forwarding** 模式(見 §3.2 + §3.6.3;10 條路徑:User / KeeperHot / Batcher / SwapAda / Protocol / Recall / Liqwid / GovPolicy / GovEmergency / AdminDeploy)轉發 spend
-2. **vault_user** — Deposit / Withdraw 專用。**純無許可**——不需要 keeper 授權。
+2. **vault_user** — Deposit / Withdraw 專用。**純無許可**：不需要 keeper 授權。
 3. **vault_keeper_hot** — Compound / RebalanceBuffer。Keeper 熱路徑；Compound 的 3-way fee split treasury output binding 在這個 validator。
 4. **vault_batcher** — BatchProcess 專用。Keeper-authorized staking validator，持有 4 個 fold 迴圈（order_sums / order_owners / vusdcx_leaked / payout_indices）+ OrderDatum / OrderRedeemer decode + `list.unique` + anti-leak invariant。詳見 `spec/order-batch.md`。
 5. **vault_swap_ada** — SwapAda 專用。持有 §5.4 P5 的 dual-feed oracle reader + 6-tuple registry read。V1 啟動時處於 inactive 狀態，直到治理在 `asset_oracles` 中加入 ADA 條目；詳見 `spec/ada-swap.md`。
@@ -921,7 +921,7 @@ V1 大量使用編譯期參數，把信任在部署當下就錨定住。寫進 v
 | Liqwid Finance | 貨幣市場收益 | qToken 匯率正確、無壞帳 | EmergencyWithdraw + KeeperToggleMarket |
 | Minswap V2 | DEX swap | Batcher 執行、fill 定價 | Order Cancel/Expire 退款 |
 | USDCx 發行方（Circle 透過 xReserve） | 1:1 USDC 擔保 + 跨鏈儲備完整性 | 穩定 $1 錨 | Depeg 監控 + 手動停機 |
-| Charli3 + Orcfax oracles | `SwapAda` 補充機制所需的 ADA/USD 價格 + P4 Tier 1 oracle-based fair-price 邊界 | 價格公平性與新鮮度——透過共用 `contracts/lib/vault/oracle.ak` 以 dual-feed（2 個 healthy sample 必須在 2% 分歧窗口內）聚合中位數回傳（§5.4 P5 已完成）。每 feed 過期上限在鏈上由 `contracts/lib/vault/validation.ak::valid_asset_oracle_entry` 強制為 1 小時 ceiling；啟動建議的 `max_staleness_ms` 為每條目 10 分鐘，可由治理 `UpdateRegistry` 調整。Oracle 設定位於 Registry 的 `asset_oracles`，由 governance `UpdateRegistry`（14 天 timelock）管理 | 治理 `UpdateRegistry`（14 天 timelock）可在某個資料源退化時更新對應 `asset_oracles` 條目來切換 feed；V1 launch 時 `asset_oracles = []`，SwapAda 在 governance 啟用 ADA 條目前不運作（可透過 `MergeUtxo` 捐贈進行 bootstrap） |
+| Charli3 + Orcfax oracles | `SwapAda` 補充機制所需的 ADA/USD 價格 + P4 Tier 1 oracle-based fair-price 邊界 | 價格公平性與新鮮度：透過共用 `contracts/lib/vault/oracle.ak` 以 dual-feed（2 個 healthy sample 必須在 2% 分歧窗口內）聚合中位數回傳（§5.4 P5 已完成）。每 feed 過期上限在鏈上由 `contracts/lib/vault/validation.ak::valid_asset_oracle_entry` 強制為 1 小時 ceiling；啟動建議的 `max_staleness_ms` 為每條目 10 分鐘，可由治理 `UpdateRegistry` 調整。Oracle 設定位於 Registry 的 `asset_oracles`，由 governance `UpdateRegistry`（14 天 timelock）管理 | 治理 `UpdateRegistry`（14 天 timelock）可在某個資料源退化時更新對應 `asset_oracles` 條目來切換 feed；V1 launch 時 `asset_oracles = []`，SwapAda 在 governance 啟用 ADA 條目前不運作（可透過 `MergeUtxo` 捐贈進行 bootstrap） |
 | Blockfrost / Ogmios | keeper 與 API 使用的鏈上索引 | UTXO 狀態正確 | 多源備援、以鏈上為準 |
 
 ### 3.5 兩層程式碼結構
@@ -930,7 +930,7 @@ V1 的原始碼**拆在兩個獨立的公開 repo**,各自有自己的審計範�
 
 | 層 | Repository | 裡面放什麼 | Fee | Fork 意涵 |
 |----|-----------|----------|-----|---------|
-| **協議層** | [`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol) | Aiken validators、spec、whitepaper、部署流程 | **零 fee**——任何人 fork 並啟動自己的 vault 實例,**完全不用付 OptiVaults** | fork 協議層 = 產出全新、獨立的 vault |
+| **協議層** | [`optivaults-protocol`](https://github.com/OptiVaults/optivaults-protocol) | Aiken validators、spec、whitepaper、部署流程 | **零 fee**：任何人 fork 並啟動自己的 vault 實例,**完全不用付 OptiVaults** | fork 協議層 = 產出全新、獨立的 vault |
 | **Operator 層** | [`optivaults-reference`](../../optivaults-reference) | TypeScript keeper、API server、frontend、CLI 工具(self-serve Withdraw / Emergency) | OptiVaults 在 `optivaults.app` 代跑的實例收已實現收益的 4.5% | 歡迎 fork;fork 者自訂費率(或零)、自己跑自己的基礎設施 |
 
 **4.5% 績效費是 operator 實例的屬性,不是協議本身的屬性**。若團隊 fork `optivaults-protocol` 並部署自己的 vault——用自己的 keeper 錢包跑自己的 `optivaults-reference` fork,或用完全重寫的 keeper——**他們對 OptiVaults 沒有任何欠款**。合約層強制的 4.5% 硬上限適用於「某一個 vault 實例的存入者該付多少績效費」,只約束該 vault 治理所能設的值,**不約束 fork 運營者對他們自己存入者收多少**。
@@ -1098,7 +1098,7 @@ V1 處於**啟動期(bootstrapping phase)**,直到 TVL 達到自給規模。自�
 | 基準 | 6%(近期 Liqwid 水準) | $1,200 | ~$500K | $150 | ~$56K |
 | 保守 | 3%(借貸需求衰退) | $2,400(高端含審計儲備擴張) | ~$1.8M | $250 | ~$185K |
 
-公式：`自給 TVL ≈ 年營運成本 / (毛 APY × 績效費率 0.045)`。保守-Default 情境下，從外部審計通過到 TVL 爬坡達到自給門檻，可能需要 **3-5 年**（post-audit cap 放寬 + 多次行銷週期 + Cardano DeFi 整體 TVL 成長）。**在 §4.3.1 volunteer-operator 模型下，V1 並不需要達到自給才能繼續運作**——營運成本由創辦人以個人收入持續吸收年化 ~$80–$200（§4.3.1 cost-scaling 表）。上表中的門檻因此是**一個「沒有補貼」假設下的參考里程碑**，不是 V1 必須達到才不致關停的財務生存目標。真正的 sunset 觸發條件是 §1.5 Class A overrides 或創辦人明確決定（§4.1 Triggers A–D + §9.2），而不是啟動資金 runway 耗盡。這個說法對存入者有實質意義：V1 永遠停在 $25K TVL 完全可以接受；真正會結束 V1 的是外部基礎設施失敗或創辦人主動 sunset，這兩件事都不以 TVL 為觸發條件。
+公式：`自給 TVL ≈ 年營運成本 / (毛 APY × 績效費率 0.045)`。保守-Default 情境下，從外部審計通過到 TVL 爬坡達到自給門檻，可能需要 **3-5 年**（post-audit cap 放寬 + 多次行銷週期 + Cardano DeFi 整體 TVL 成長）。**在 §4.3.1 volunteer-operator 模型下，V1 並不需要達到自給才能繼續運作**：營運成本由創辦人以個人收入持續吸收年化 ~$80–$200（§4.3.1 cost-scaling 表）。上表中的門檻因此是**一個「沒有補貼」假設下的參考里程碑**，不是 V1 必須達到才不致關停的財務生存目標。真正的 sunset 觸發條件是 §1.5 Class A overrides 或創辦人明確決定（§4.1 Triggers A–D + §9.2），而不是啟動資金 runway 耗盡。這個說法對存入者有實質意義：V1 永遠停在 $25K TVL 完全可以接受；真正會結束 V1 的是外部基礎設施失敗或創辦人主動 sunset，這兩件事都不以 TVL 為觸發條件。
 
 **Reference Implementation Mode 那一欄怎麼解讀。** 在 §2.6.1 節奏 + 基準假設下,V1 的自給 TVL 從 $500K 降到約 $56K——大約 9× 的下降。這讓 V1 的經濟性在更小規模下也能成立,正好對應 §8.2 (b)「小規模有機成長」sub-scenario 的營運輪廓。這不是天上掉下來的好處——只是反映了一個營運現實:低 TVL 金庫不該用 $100K+ 金庫的節奏跑。Reference Implementation Mode 做的事,是把成本基礎拉到與真實收益基礎匹配。Default 與 Reference 兩欄並不是 keeper 可以為了好看任意挑選的;模式由 §2.6.1 的啟用 / 停用條件決定,並在儀表板上公開追蹤。
 
@@ -1110,7 +1110,7 @@ V1 處於**啟動期(bootstrapping phase)**,直到 TVL 達到自給規模。自�
 
 **審計完全由外部資金支應。** 外部審計（依委託模型 $50–$150K，見 §8.1）僅由外部來源資助（Project Catalyst、Cardano Foundation、Intersect Member Committee、Aiken Foundation、audit firm 公共財折扣、社群 / DAO 資助池）。創辦人承諾上限 ~$15K 個人 gap-fill（即上述 (d)），用於彌補微額短缺，但**明確不承諾在任何情境下 underwriting 完整審計成本**。若資金堆疊表現低於 gap-fill 容量，V1 不會進入 mainnet——見 §8.1 Options A–D 的 contingency tree（時程延後 / 縮減 scope 審計 / 社群 crowdfund / 永久停留於 Preprod 的 Apache 2.0 狀態）。
 
-**Volunteer + cap-lift-by-audit 模型下的 sunset 語意。** §4.1 的標稱 sunset 條件（"runway < 6 個月 forward burn"）將「runway」解釋為**創辦人的營運面承諾**，而非審計承諾。在 ~$80–$200/年的最小化營運燒率下，營運 runway **結構性可永續**——幾百美元能撐數年；由個人收入持續支撐在現實上完全可行。**審計資金結果不是 sunset 觸發條件。** 審計資金決定 cap 是否解鎖到 100K 以上（依 §8.1 Options A–D）；不決定 V1 是否繼續運作。V1 真實的 sunset 觸發條件是 §1.5 Class A overrides（USDCx 事件、Liqwid 事件、Cardano chain halt、oracle 異常持續），或創辦人在 §9.2 下的明確 sunset 決定。**營運 runway sunset 在 §4.3.1 minimal-cost 模型下實際上不可達**。§8.1 Option D（「永久 pre-audit 100K cap」）是審計資金持續未到位的正確 framing——V1 在 mainnet 100K 繼續運作，不是 sunset。
+**Volunteer + cap-lift-by-audit 模型下的 sunset 語意。** §4.1 的標稱 sunset 條件（"runway < 6 個月 forward burn"）將「runway」解釋為**創辦人的營運面承諾**，而非審計承諾。在 ~$80–$200/年的最小化營運燒率下，營運 runway **結構性可永續**：幾百美元能撐數年；由個人收入持續支撐在現實上完全可行。**審計資金結果不是 sunset 觸發條件。** 審計資金決定 cap 是否解鎖到 100K 以上（依 §8.1 Options A–D）；不決定 V1 是否繼續運作。V1 真實的 sunset 觸發條件是 §1.5 Class A overrides（USDCx 事件、Liqwid 事件、Cardano chain halt、oracle 異常持續），或創辦人在 §9.2 下的明確 sunset 決定。**營運 runway sunset 在 §4.3.1 minimal-cost 模型下實際上不可達**。§8.1 Option D（「永久 pre-audit 100K cap」）是審計資金持續未到位的正確 framing——V1 在 mainnet 100K 繼續運作，不是 sunset。
 
 **Sunset 觸發條件與機制**（§9.2 + economics.md §7.2）。在 volunteer-builder + β cap-lift-by-audit 模型下，V1 有 **4 條獨立的 sunset 觸發條件**；任一觸發時，下方的有序 sunset 協議啟動：
 
@@ -1139,12 +1139,12 @@ V1 處於**啟動期(bootstrapping phase)**,直到 TVL 達到自給規模。自�
 
 Treasury 在 V1 啟動時累積 60% 的績效費（3-way 拆分:keeper 40% / gov pool 0%(關閉) / treasury 60%；後續 phase 啟用對照表見 §2.4），資產以 **USDCx** 計價。啟動時的類別分配：
 
-- **審計儲備 40% 進帳分配**——用於資助未來審計與未來安全研究者計畫（V1 上線採用「責任揭露政策 + ex gratia 認可框架」，而非固定結構化 bounty tier，詳見 `docs/audit-scope.md §6`；結構化 bounty 計畫啟用前提於 §6.3 說明）。審計比例從歷史的 30% 上調至 40%，是為了在較小的 60% treasury 份額下，仍維持「總 fee 的 24% 進審計儲備」這個累積速度（60% × 40% = 24%，與舊 80% × 30% 同）。有兩條獨立的治理硬下限保護：
+- **審計儲備 40% 進帳分配**：用於資助未來審計與未來安全研究者計畫（V1 上線採用「責任揭露政策 + ex gratia 認可框架」，而非固定結構化 bounty tier，詳見 `docs/audit-scope.md §6`；結構化 bounty 計畫啟用前提於 §6.3 說明）。審計比例從歷史的 30% 上調至 40%，是為了在較小的 60% treasury 份額下，仍維持「總 fee 的 24% 進審計儲備」這個累積速度（60% × 40% = 24%，與舊 80% × 30% 同）。有兩條獨立的治理硬下限保護：
   - **進帳比例下限**：`audit_bps ≥ 2000`（每次 Compound 的手續費流入必須有 20% 進審計類別）——由 `treasury.ak` 在 `UpdateParams` 時強制；治理無法把審計的進帳比例調降到 20% 以下。
   - **餘額下限**：`audit_reserve_balance ≥ min_audit_reserve`——`min_audit_reserve` 是部署當下設定的**不可變** datum 欄位（V1 啟動值為 0，也就是一開始沒有約束力）。若未來的 `UpdateParams` 把 floor 拉高，就不可再調低。任何治理動作都不能把餘額花到低於當前的 `min_audit_reserve`。
-- **營運 25%**——平台層基礎設施（前端 / landing / API 的主機、Blockfrost 平台查詢、監控、網域、CDN）。**個別 keeper 的基礎設施成本**（單一 keeper 的基礎設施、Blockfrost key、監控）改由每筆 Compound 的 40% keeper 份額直接吸收，不再從此 bucket 出——這也是 ops 從舊 40% 縮成 25% 的結構性原因。
-- **研發 25%**——V2+ 開發、新整合、貢獻者 bounty（post-audit + TVL-scale）。
-- **緩衝 10%**——應付突發狀況的自由儲備。
+- **營運 25%**：平台層基礎設施（前端 / landing / API 的主機、Blockfrost 平台查詢、監控、網域、CDN）。**個別 keeper 的基礎設施成本**（單一 keeper 的基礎設施、Blockfrost key、監控）改由每筆 Compound 的 40% keeper 份額直接吸收，不再從此 bucket 出——這也是 ops 從舊 40% 縮成 25% 的結構性原因。
+- **研發 25%**：V2+ 開發、新整合、貢獻者 bounty（post-audit + TVL-scale）。
+- **緩衝 10%**：應付突發狀況的自由儲備。
 
 40 / 25 / 25 / 10 這個分配是**每一類內部可軟調整**的——治理可透過 `UpdateTreasuryParams`（14 天 timelock + 180 天冷卻期，每類別範圍落在 [審計下限 20%, 上限 50%]）調整進帳比例。實際的支出則走 `TreasurySpend`（7 天 timelock），每類別還有「每月上限」與「24 小時冷卻」兩道閥。
 
@@ -1178,9 +1178,9 @@ V1 啟動時由創辦人擔任 keeper。在 100K TVL 下，對其他營運者而
 
 **三維度 self-sustain 區分（讀表前先理解）。** 上表的 tier (a)/(b)/(c) 計算基於「keeper share 覆蓋 keeper ops cost」breakeven，這是 protocol 自給**三個不同維度中的第一維**：
 
-- **(i) Keeper ops 自給**——keeper 份額(40% of 4.5% perf fee)≥ keeper 個人 infra 成本。**上表的 tier (a)/(b) 對應此維度**。Keeper 份額由歷史的 **25% 上限**提高到 40%,讓 Phase 2+ 非創辦人 keeper breakeven 降到 **~$1M TVL**(原本 25% 時為 ~$1.5M;算式:25%/40% = 0.625,$1.5M × 0.625 ≈ $0.94M ≈ $1M)。
-- **(ii) Treasury ops 自給**——treasury 60% 份額覆蓋 basic ops（$360/yr）+ R&D（$432/yr）+ 運營 buffer。tier (b) 的 TVL（$740K–$1.48M）產生 treasury 份額約 $1,620–$3,240/yr，在較小的 treasury 比例下**仍 comfortably 覆蓋**第二維,因為 keeper 份額已直接吸收 per-keeper infra 成本。
-- **(iii) Audit-reserve self-funding**——每年 audit reserve 分配(E2 下 40/25/25/10 sub-allocation 的 40% × treasury 60% = 總 fee 的 24%,與舊 80%×30% = 24% 累積速度相同)累積可 cover 下一輪 audit 成本($30–50K,每 18–24 個月一次)。此維度仍需 TVL **$20M+**,對應 tier (c)。20%→40% keeper 的轉變**不**改變 audit-reserve trajectory。
+- **(i) Keeper ops 自給**：keeper 份額(40% of 4.5% perf fee)≥ keeper 個人 infra 成本。**上表的 tier (a)/(b) 對應此維度**。Keeper 份額由歷史的 **25% 上限**提高到 40%,讓 Phase 2+ 非創辦人 keeper breakeven 降到 **~$1M TVL**(原本 25% 時為 ~$1.5M;算式:25%/40% = 0.625,$1.5M × 0.625 ≈ $0.94M ≈ $1M)。
+- **(ii) Treasury ops 自給**：treasury 60% 份額覆蓋 basic ops（$360/yr）+ R&D（$432/yr）+ 運營 buffer。tier (b) 的 TVL（$740K–$1.48M）產生 treasury 份額約 $1,620–$3,240/yr，在較小的 treasury 比例下**仍 comfortably 覆蓋**第二維,因為 keeper 份額已直接吸收 per-keeper infra 成本。
+- **(iii) Audit-reserve self-funding**：每年 audit reserve 分配(E2 下 40/25/25/10 sub-allocation 的 40% × treasury 60% = 總 fee 的 24%,與舊 80%×30% = 24% 累積速度相同)累積可 cover 下一輪 audit 成本($30–50K,每 18–24 個月一次)。此維度仍需 TVL **$20M+**,對應 tier (c)。20%→40% keeper 的轉變**不**改變 audit-reserve trajectory。
 
 所以讀 tier 表時要注意：**tier (a)/(b) 的 breakeven 是「keeper 不虧」，treasury ops 在同一 TVL 自動 comfortably 覆蓋；但 audit reserve accrual 不夠，靠 §8.1 四源 funding stack 而非 protocol-revenue**。這是刻意設計，不是 gap。
 
@@ -1223,19 +1223,19 @@ V1 將兩個常被混淆的永續性問題清楚分開：
 
 每個 TVL 區段下，創辦人每年吸收的短缺都維持在**低三位數美元**範圍，從不需要大額 lump-sum 承諾。這正是 minimal-operations 模型能與審計資金問題乾淨脫鉤的關鍵。
 
-**HA / 雙伺服器升級門檻。** `docs/economics.md §4` 列雙 instance HA 為「最小可行」推薦配置。V1 啟動模型**刻意以 HA 換最低成本，直到 TVL 突破約 $50K**——屆時吸收的短缺已足以正當化第二台伺服器帶來的 resilience。$50K TVL 前，單一伺服器故障表示 keeper 下線；7-day keeper-inactivity 合約 fallback（§5.4.1）確保存入者 withdraw 不被擋下、`early_withdraw_fee` 在故障期間自動 waive。單一伺服器故障在 Phase 1 早期是可接受的取捨。
+**HA / 雙伺服器升級門檻。** `docs/economics.md §4` 列雙 instance HA 為「最小可行」推薦配置。V1 啟動模型**刻意以 HA 換最低成本，直到 TVL 突破約 $50K**：屆時吸收的短缺已足以正當化第二台伺服器帶來的 resilience。$50K TVL 前，單一伺服器故障表示 keeper 下線；7-day keeper-inactivity 合約 fallback（§5.4.1）確保存入者 withdraw 不被擋下、`early_withdraw_fee` 在故障期間自動 waive。單一伺服器故障在 Phase 1 早期是可接受的取捨。
 
 **這個模型帶來什麼：**
 
 - V1 在 pre-audit 100K cap 下從啟動日起就在 mainnet 運作，不需要創辦人 runway 同時承擔審計成本；外部審計在資金到位時用來把 cap 解鎖到 Stage 2 / Stage 3（§1.5），而不是 gating 啟動本身
-- 啟動後，若社群發現速度慢，V1 可在 $500–$25K TVL **無限期運作**——同樣若審計資金始終未到位（§8.1 Option D），V1 在 100K cap 也能無限期運作
-- TVL 成長與營運永續性脫鉤——V1 **不受「不成長就死」的時間壓力**——且審計資金與 mainnet 持續運作脫鉤
+- 啟動後，若社群發現速度慢，V1 可在 $500–$25K TVL **無限期運作**：同樣若審計資金始終未到位（§8.1 Option D），V1 在 100K cap 也能無限期運作
+- TVL 成長與營運永續性脫鉤——V1 **不受「不成長就死」的時間壓力**：且審計資金與 mainnet 持續運作脫鉤
 - §4.1 / §9.2 sunset 觸發條件**不是**由營運 runway 耗盡驅動（本模型下結構性可永續）**也不是**由審計資金失敗驅動（這只是在 §8.1 Option D 下把 cap 維持在 100K，不影響協議 live 狀態）—— sunset 觸發是 §1.5 Class A overrides（USDCx / Liqwid / Cardano chain / oracle 事件）或創辦人明確 sunset 決定
 - 創辦人承諾範圍 bounded 且明確：~$2K seed + 年化 $80–$200 營運補貼 + ~$15K 審計 gap-fill 上限。創辦人對 V1 的總財務曝險是 **low-five-figures USD 上限**，跨越完整的 pre-audit + launch + 無限期 100K cap 窗口——比審計 base price 低幾個數量級，與 §0.2 公共財 volunteer-builder framing 一致。
 
 ### 4.4 誠實對比
 
-V1 的正確對比基準**不是**自己直接 Liqwid USDCx supply（0.5–2% APY、借貸需求稀薄、有經驗的 Cardano DeFi 使用者幾乎不碰）。正確對比是**自己直接 Liqwid DJED supply**——這才是成熟使用者會親手做的事。
+V1 的正確對比基準**不是**自己直接 Liqwid USDCx supply（0.5–2% APY、借貸需求稀薄、有經驗的 Cardano DeFi 使用者幾乎不碰）。正確對比是**自己直接 Liqwid DJED supply**：這才是成熟使用者會親手做的事。
 
 **2026-04-21 參考 Liqwid 供應 APY**（快照；隨借貸需求波動，每次 rebalance 重查）：DJED ~11.8%、USDM ~5.3%、USDCx ~0.5–2%。
 
@@ -1250,7 +1250,7 @@ V1 的正確對比基準**不是**自己直接 Liqwid USDCx supply（0.5–2% AP
 | 績效費：4.5% × 6.66% 毛 | -0.30% |
 | **使用者淨 APY** | **6.36%** |
 
-注意：6.66% 毛數字已經考慮 30% buffer 賺 0%。45 bps「buffer drag」這一行衡量的是「不把 buffer supply 到 Liqwid USDCx 市場（1.5% APY）的成本」，**它不從 6.66% 再扣**——它是「保留 buffer 這個政策選擇 vs 把 buffer 部署到 Liqwid USDCx」的成本。這個政策是有意識的：buffer 在 Liqwid 利用率飆升時提供瞬間提領能力與緊急流動性。
+注意：6.66% 毛數字已經考慮 30% buffer 賺 0%。45 bps「buffer drag」這一行衡量的是「不把 buffer supply 到 Liqwid USDCx 市場（1.5% APY）的成本」，**它不從 6.66% 再扣**：它是「保留 buffer 這個政策選擇 vs 把 buffer 部署到 Liqwid USDCx」的成本。這個政策是有意識的：buffer 在 Liqwid 利用率飆升時提供瞬間提領能力與緊急流動性。
 
 #### 對比：V1 vs 直接 Liqwid DJED supply
 
@@ -1298,7 +1298,7 @@ V1 對 Direct Liqwid 的損益平衡採用 §1.3.1 引入的「時間成本 + �
 
 風險管理 premium 成分對 $5K–$50K 規模存入的合理估計是每年 200–300 bps,並隨使用者複雜度配合存款規模而下降到 ~100–150 bps(成熟的 $1M 持有人通常已經有這些工作流程)。§1.3.1 的表已把這個區間換算成各使用者輪廓的「感知價值」欄。
 
-**整合後的誠實損益平衡**:對大多數現實輪廓而言,實務損益平衡落在 **$25K–$40K 區間**——完整逐輪廓數字請查 [§1.3.1 損益平衡表](#131-存入者實際得到什麼產品優勢)。~$40K 以上且有相關 DeFi 經驗的使用者,Direct Liqwid DJED 真的是更好的選擇。
+**整合後的誠實損益平衡**:對大多數現實輪廓而言,實務損益平衡落在 **$25K–$40K 區間**：完整逐輪廓數字請查 [§1.3.1 損益平衡表](#131-存入者實際得到什麼產品優勢)。~$40K 以上且有相關 DeFi 經驗的使用者,Direct Liqwid DJED 真的是更好的選擇。
 
 #### V1 適合誰
 
@@ -1334,7 +1334,7 @@ V1 為下列使用者設計，符合下面任一條件：
 
 ### 4.5 Compound 週期與每次網路費成本
 
-> **適用範圍說明。** 本節描述 §2.6 預設節奏在 100K cap 參考點的每次網路費成本。**Phase 1 sub-scenario（$500–$25K TVL、走 §2.6.1 Reference Implementation Mode）的營運成本見 §4.3.1 cost-scaling 表**——那才是 volunteer-operator 啟動預算。本節 §4.5 對應的是 post-cap-lift Default-cadence 的成本輪廓。
+> **適用範圍說明。** 本節描述 §2.6 預設節奏在 100K cap 參考點的每次網路費成本。**Phase 1 sub-scenario（$500–$25K TVL、走 §2.6.1 Reference Implementation Mode）的營運成本見 §4.3.1 cost-scaling 表**：那才是 volunteer-operator 啟動預算。本節 §4.5 對應的是 post-cap-lift Default-cadence 的成本輪廓。
 
 §2.6 的排程是**上限、不是目標**。Keeper 只在累計收益 × 剩餘結算窗口足以攤銷鏈上費用時才真的執行 Compound，否則等待。Zero-yield heartbeat（每 5 天一次）仍會照跑，推進 `last_realloc_time`——即使當下收益在經濟上不顯著。
 
@@ -1356,7 +1356,7 @@ V1 在 pre-audit 100K USDCx 上限下、§2.6 預設節奏下位於 **weekly 檔
 
 **Vault ADA 補充——`SwapAda` 閉環機制。** 每筆 `DeployToProtocol`（VaultSwap）TX 會讓金庫淨付約 2 ADA 給 Minswap V2 批處理者；若沒有補充機制，金庫最終會降到 `min_vault_ada` 底限並阻擋後續 Deploy。V1 透過 `SwapAda` redeemer 在鏈上閉環（規格見 `spec/ada-swap.md`）：當 `vault.lovelace < 15 ADA` 時，keeper 呼叫 `SwapAda` 給金庫 10–50 ADA，並按 Charli3 + Orcfax 的 oracle 匯率換回等值 USDCx。Validator 強制 1 小時冷卻、validity-range 上限寬度 1 小時、oracle 價公平原子交換——信任前提就只有系統本來就依賴的 depeg monitoring oracle。存款人承擔的是 USDCx 緩慢流出造成的 Minswap 批處理費——100K TVL 下每 2–4 週一次 SwapAda（每次 20–40 ADA ≈ 10–20 USDCx），全年摩擦約 0.02% APY drag，相對 4–6% 毛收益幾乎可忽略。
 
-Keeper 端：keeper 以 **USDCx** 收取 40% 份額，可定期在 Minswap 上把 USDCx 換成 ADA 來補充自己錢包的 Cardano 網路費。每次轉換約 60 bps（每季一次約等於一年 2.4 bps），100K TVL 下近乎忽略，但會隨 keeper 份額線性放大。這筆摩擦只有當 keeper 攤銷其他沈沒成本時（創辦人運營模型）才能被 40% keeper 份額（100K TVL × 6% 毛收益 ≈ $108/年）吸收;或當 TVL 跨過約 $1M 時,40% 份額本身就能覆蓋低端非創辦人 keeper 的獨立運營預算。**40% 上限(在 validator 硬上限)就是為了把第三方 keeper 經濟可行門檻拉到 ~$1M TVL 而設**——完整 breakeven matrix 見 §4.3。
+Keeper 端：keeper 以 **USDCx** 收取 40% 份額，可定期在 Minswap 上把 USDCx 換成 ADA 來補充自己錢包的 Cardano 網路費。每次轉換約 60 bps（每季一次約等於一年 2.4 bps），100K TVL 下近乎忽略，但會隨 keeper 份額線性放大。這筆摩擦只有當 keeper 攤銷其他沈沒成本時（創辦人運營模型）才能被 40% keeper 份額（100K TVL × 6% 毛收益 ≈ $108/年）吸收;或當 TVL 跨過約 $1M 時,40% 份額本身就能覆蓋低端非創辦人 keeper 的獨立運營預算。**40% 上限(在 validator 硬上限)就是為了把第三方 keeper 經濟可行門檻拉到 ~$1M TVL 而設**：完整 breakeven matrix 見 §4.3。
 
 #### 4.5.1 使用者自己要付的鏈上費用（直接 vs 排程對照）
 
@@ -1365,7 +1365,7 @@ Keeper 端：keeper 以 **USDCx** 收取 40% 份額，可定期在 Minswap 上�
 | 操作 | 對應 TX 類型 | 使用者支付 ADA | 金庫結算時間 | 備註 |
 |------|--------------|----------------|---------------|------|
 | **直接存入（Direct Deposit）** | 單筆 TX，錢包簽名後直接進金庫 | **約 0.5 ADA** 網路費 | 即時（該 TX confirm 後） | 需與金庫 UTXO 直接互動；忙時可能撞到 UTXO 競爭而需重送 |
-| **排程存入（Queue Deposit）** | Order UTXO → keeper BatchProcess | **約 0.5 ADA 網路費 + `max_batcher_tip`** | 通常小於 1 小時（keeper 每 5–15 分鐘跑一個批次週期；非合約強制 SLA） | `max_batcher_tip` 由使用者建訂單時自行設定（建議 0.1–0.5 ADA），keeper 處理時以此為上限收取。訂單資金進 Order UTXO，隨時可 `Cancel`（任何 block）或 24 小時後自動 `Expire` 取回。`max_batcher_tip` 與 Minswap V2 自己的 batcher fee 不同——後者由金庫在 VaultSwap 時吸收、不由存入者支付。 |
+| **排程存入（Queue Deposit）** | Order UTXO → keeper BatchProcess | **約 0.5 ADA 網路費 + `max_batcher_tip`** | 通常小於 1 小時（keeper 每 5–15 分鐘跑一個批次週期；非合約強制 SLA） | `max_batcher_tip` 由使用者建訂單時自行設定（建議 0.1–0.5 ADA），keeper 處理時以此為上限收取。訂單資金進 Order UTXO，隨時可 `Cancel`（任何 block）或 24 小時後自動 `Expire` 取回。`max_batcher_tip` 與 Minswap V2 自己的 batcher fee 不同,後者由金庫在 VaultSwap 時吸收、不由存入者支付。 |
 | **直接提款（Direct Withdraw）** | 單筆 TX，錢包簽名後直接從金庫提 | **約 1–1.5 ADA** 網路費 | 即時 | 比直接存入貴一些，因為要透過 proxy 花費金庫 UTXO，走 Withdraw-Zero forwarding 等於一次 proxy + 一次 staking validator 共兩次 validator 呼叫（§3.2） |
 | **排程提款（Queue Withdraw）** | Order UTXO → keeper BatchProcess | **約 1 ADA 網路費 + `max_batcher_tip`** | 通常小於 1 小時 | 與其他訂單一起批次化；優點是在金庫忙碌時不需搶 UTXO。份額送進 Order UTXO 後同樣可 `Cancel` / `Expire` |
 | **緊急提款（Emergency Withdraw）** | 使用者自己透過 CLI 或前端建 TX 提領 | **約 1.5–2 ADA** 網路費 | 即時 | keeper 離線 > 7 天後使用；早提領費自動免收。此路徑完全不依賴營運方 |
@@ -1483,7 +1483,7 @@ V1 同時持有三種穩定幣：USDCx（存入代幣）、DJED（Liqwid 配置�
 
 ### 5.2.1 Cardano 生態演化情境
 
-V1 的風險輪廓不是靜態的。Cardano DeFi 基礎設施的數個預期里程碑若如期成熟，會實質改變 V1 的風險輪廓——有些會降低風險，有些則引入新的風險面。本小節列出存入者應留意的條件性敏感度，獨立於 V1 自身設計（§5.1–5.6）。**這些是明確的外部狀態假設，不是預測或承諾**——存入者有權看到並自行追蹤。
+V1 的風險輪廓不是靜態的。Cardano DeFi 基礎設施的數個預期里程碑若如期成熟，會實質改變 V1 的風險輪廓——有些會降低風險，有些則引入新的風險面。本小節列出存入者應留意的條件性敏感度，獨立於 V1 自身設計（§5.1–5.6）。**這些是明確的外部狀態假設，不是預測或承諾**：存入者有權看到並自行追蹤。
 
 **Pogun BTC DeFi 上線（2026 Q2 借貸 → Q3 yield → Q4 BitVM bridge）。** Pogun 在 Cardano 上推出 BTC 抵押借貸，若按計劃上線，會實質提升 Liqwid 穩定幣市場的借方需求——目前這正是結構性缺口、也是 Liqwid 穩定幣 APY 集中而非分散的根本原因。更高且穩定的借方需求將：(a) 拉升 V1 的混合收益、(b) 降低 Liqwid 利用率飆升阻擋 keeper Recall 的機率、(c) 最終解鎖 V2.x BTC 抵押收益路由（§1.7）。**風險：** Pogun 目前是 IO 公開揭露的 roadmap，主網時程有目標但無確切日期。若 Pogun 延後過 2027 Q2，V1 將無限期維持當前的單一協議 Liqwid 姿態，啟動就緒框架（§1.5）的 A 軸維持紅級。
 
@@ -1518,10 +1518,10 @@ V1 對 Liqwid 的曝險來自把 USDCx、DJED、USDM 供應至 Liqwid 的 action
 
 V1 的緩解措施：
 
-- **Share price 透明化**——損失會在下次 Compound 顯現，不會被藏起來。存入者在下一個配置決策前就能看到帳面變化。
-- **`EmergencyWithdraw`**——治理可凍結金庫以規劃復原（0 天 timelock）。Phase 1 治理安全限制:此 redeemer 在 validator 層**只能 freeze**——不能減少 `total_deposited`、不能修改 `liqwid_positions`。實際損失帳務改走 `vault_liqwid.RecallFromLiqwid` 的治理 fallback 路徑——透過實體 Recall underlying USDCx 並只寫入實際實現的短缺（見 §5.5.1 Layer 1 + `docs/security-model.md` §5.4）。
-- **`KeeperToggleMarket`**——keeper 可在不需治理延遲的情況下單方停用特定 Liqwid 市場的新 Supply（單向旗標 `active: True → False`）。這是 keeper 偵測異常但治理尚未開會時的快速應變層。
-- **Per-market 部位隔離**——`LiqwidPosition { market_id, qtokens_held, supplied_value }` 依 market 獨立追蹤；單一市場發生壞帳不會自動把其他市場一併寫掉。
+- **Share price 透明化**：損失會在下次 Compound 顯現，不會被藏起來。存入者在下一個配置決策前就能看到帳面變化。
+- **`EmergencyWithdraw`**：治理可凍結金庫以規劃復原（0 天 timelock）。Phase 1 治理安全限制:此 redeemer 在 validator 層**只能 freeze**——不能減少 `total_deposited`、不能修改 `liqwid_positions`。實際損失帳務改走 `vault_liqwid.RecallFromLiqwid` 的治理 fallback 路徑——透過實體 Recall underlying USDCx 並只寫入實際實現的短缺（見 §5.5.1 Layer 1 + `docs/security-model.md` §5.4）。
+- **`KeeperToggleMarket`**：keeper 可在不需治理延遲的情況下單方停用特定 Liqwid 市場的新 Supply（單向旗標 `active: True → False`）。這是 keeper 偵測異常但治理尚未開會時的快速應變層。
+- **Per-market 部位隔離**：`LiqwidPosition { market_id, qtokens_held, supplied_value }` 依 market 獨立追蹤；單一市場發生壞帳不會自動把其他市場一併寫掉。
 
 ### 5.4 Keeper 風險
 
@@ -1578,10 +1578,10 @@ Keeper 是一個信任委託，鏈上邊界整理如下：
 
 **SPO 招募分階段——依實際營運 TVL 推進。** SPO 招募的活動強度,隨 V1 真實營運規模調整。以下分階段取代過去把「SPO 席位」視為主網日前必須完成的固定可交付項的框架:
 
-- **Phase 0(主網前)**——若 §1.5 啟動就緒條件仍未滿足,SPO 招募**可延後**。創辦人單獨治理 + §5.5.1 三層安全設計,本身就是存入者保護的底線。在主網前邀請 SPO 進入治理可以接受但非必要;若 SPO 偏好等到主網真實營運開始才加入,我們尊重這個選擇。
-- **Phase 1 小 TVL($500–$25K)**——V1 進入 Reference Implementation Mode(§2.6.1),治理活動稀疏(偶爾的 `UpdateStrategy`、可能的緊急回應)。這個階段邀請 SPO 加入,**必須完整揭露「治理工作量很輕」這件事**。為了「掛 SPO 之名做信任 signal」而招募、卻不告知實際工作量,**不是合適的做法**。
-- **Phase 1 中段 TVL($25–100K)**——主動進行 SPO 招募,並明確說明預期治理工作量,以及預期切到 Phase 2 的時程。
-- **Phase 2 觸發($100K+ TVL、且已 post-audit)**——3-of-3 完整運作。三位 SPO 席位全部 active。治理工作量反映真實的存入者規模。
+- **Phase 0(主網前)**：若 §1.5 啟動就緒條件仍未滿足,SPO 招募**可延後**。創辦人單獨治理 + §5.5.1 三層安全設計,本身就是存入者保護的底線。在主網前邀請 SPO 進入治理可以接受但非必要;若 SPO 偏好等到主網真實營運開始才加入,我們尊重這個選擇。
+- **Phase 1 小 TVL($500–$25K)**：V1 進入 Reference Implementation Mode(§2.6.1),治理活動稀疏(偶爾的 `UpdateStrategy`、可能的緊急回應)。這個階段邀請 SPO 加入,**必須完整揭露「治理工作量很輕」這件事**。為了「掛 SPO 之名做信任 signal」而招募、卻不告知實際工作量,**不是合適的做法**。
+- **Phase 1 中段 TVL($25–100K)**：主動進行 SPO 招募,並明確說明預期治理工作量,以及預期切到 Phase 2 的時程。
+- **Phase 2 觸發($100K+ TVL、且已 post-audit)**：3-of-3 完整運作。三位 SPO 席位全部 active。治理工作量反映真實的存入者規模。
 
 創辦人保留「比 TVL 進度更早招募 SPO」的選項——前提是,這對 V1 對外定位(audit firm 接洽、Cardano Foundation 接洽、Catalyst 評審委員會)能帶來實質的可信度提升。但 SPO 的承諾,本質上仍是上方所說的「Cardano 社群服務」,**在實質 TVL 出現之前,不會被預期負擔有意義的治理工作量**。若 V1 無限期停留在 Phase 1(§1.6.3 的 terminal-state 情境),SPO 的角色也可能維持為象徵性 / standby——以 §5.5.1 三層安全設計作為實質替代。這是可被接受的 terminal 結局,**不是**治理設計失敗。
 
@@ -1609,14 +1609,14 @@ Keeper 是一個信任委託，鏈上邊界整理如下：
 - `vault_liqwid.RecallFromLiqwid` 接受任何簽名者（不需要 keeper 或治理簽名）。
 - `vault_protocol.DeployToProtocol` Layer 2 路徑也接受任何簽名者（同上）。
 
-任何 vUSDCx 持有者都能驅動完整的回收鏈——Recall → Swap → Withdraw——完全不需要 keeper 或治理介入。90 天門檻相當於漏跑 ≈ 18 次 zero-yield heartbeat（每 5 天一次），等同於 keeper 完全死掉。Sunset 路徑**只開回收，不能改 datum**——它無法動 `total_deposited`、`total_shares`、`idle_buffer`、`liqwid_positions` 或任何 policy / immutable 欄位。Validator 的保留條款確保 sunset 期間 SwapAdapter 的目的地、peg-floor、slippage 限制仍然生效，攻擊者無法利用開放的回收路徑抽走價值。
+任何 vUSDCx 持有者都能驅動完整的回收鏈——Recall → Swap → Withdraw——完全不需要 keeper 或治理介入。90 天門檻相當於漏跑 ≈ 18 次 zero-yield heartbeat（每 5 天一次），等同於 keeper 完全死掉。Sunset 路徑**只開回收，不能改 datum**：它無法動 `total_deposited`、`total_shares`、`idle_buffer`、`liqwid_positions` 或任何 policy / immutable 欄位。Validator 的保留條款確保 sunset 期間 SwapAdapter 的目的地、peg-floor、slippage 限制仍然生效，攻擊者無法利用開放的回收路徑抽走價值。
 
 **邊角情境:只打 heartbeat 但停掉 productive Compound 的 keeper。** Layer 3 觸發條件是 `max(last_compound_time, last_realloc_time) + 90 天`,因此一個只持續送 heartbeat、卻不做 productive Compound 的 keeper,理論上可以無限期延後 Layer 3。這**不是缺陷**,而是有意的設計選擇——在這個情境下,存入者仍有足夠的保護:
 
 1. **§5.4 的 7 天 inactivity gate 只讀 `last_compound_time`**,不論 heartbeat 有沒有打,只要 productive Compound 停超過 7 天,gate **就會**啟動:(a) Direct Withdraw 早提領費自動免收、(b) keeper-authorized redeemer 的治理 m-of-n fallback 打開、(c) Emergency Withdraw 對存入者變得經濟合理。
 2. **Direct Withdraw 完全照常運作**,早提費自動免收,存入者不需要 keeper 配合也能退場。
 3. **未被 compound 的真實收益會反映在 share price 停滯上**,存入者隨時可從金庫帳務看到。
-4. **Withdraw-Zero 的 `vault_user` validator 在 Direct Withdraw 上是 permissionless 的**——不需要 keeper 簽名。
+4. **Withdraw-Zero 的 `vault_user` validator 在 Direct Withdraw 上是 permissionless 的**：不需要 keeper 簽名。
 
 Layer 3 因此是**最後一道**回收路徑,不是主要保護。Layer 1–2 + 7 天 gate + 自助 withdraw 基礎設施,在攻擊者撐到 Layer 3 之前就已經把 keeper-sabotage 情境蓋住了。
 
@@ -1649,13 +1649,13 @@ V1 的長期目標是讓六個身份由不同的人控制:keeper、三位治理�
 - **(2) 3 位治理簽名者中的 1 位** —— 創辦人在 `MultisigGov` quorum 中的簽名。
 - **(3) Ref-script deployer 兼 創辦人 subsidy wallet(同一錢包)** —— 創辦人單一錢包同時 (a) 持有 20 個 ref-script UTXO(§8.2 ~962 ADA 鎖定),且 (b) 是把啟動資金注入 Phase 1 營運的 subsidy 來源。把這兩個角色合併成同一個錢包,是誠實揭露:即使把它們拆成兩個錢包,在 Phase 1 仍是同一位簽名者,對 SPOF 本質沒有改變,反而徒增儀式複雜度。
 
-另外兩位治理簽名者由獨立 Cardano SPO 擔任、不在創辦人控制範圍——**前提是 §5.5 的 SPO 招募已落地**;若進入 §5.5.1 / §7.4 的 fallback 情境,創辦人會以 key separation 方式持有全部 3 個簽名者席位。§5.5.1 的三層治理安全設計就是為了讓存入者的回收路徑**不依賴**「六身份分離是否已完成」這件事。**V2 部署儀式計畫把 (3) 拆成 multi-sig ref-deployer wallet,分為兩個獨立金鑰**——見 §9.2 與 `docs/security-model.md` §2 的輪替路徑。
+另外兩位治理簽名者由獨立 Cardano SPO 擔任、不在創辦人控制範圍——**前提是 §5.5 的 SPO 招募已落地**;若進入 §5.5.1 / §7.4 的 fallback 情境,創辦人會以 key separation 方式持有全部 3 個簽名者席位。§5.5.1 的三層治理安全設計就是為了讓存入者的回收路徑**不依賴**「六身份分離是否已完成」這件事。**V2 部署儀式計畫把 (3) 拆成 multi-sig ref-deployer wallet,分為兩個獨立金鑰**：見 §9.2 與 `docs/security-model.md` §2 的輪替路徑。
 
 **輪替路徑**（以下使用 `threshold-of-total` 表示簽名者配置）：
 
-- **Phase 1**（啟動到外部審計通過）：3 位簽名者（**1 位創辦人 + 2 位獨立 Cardano SPO**）、**threshold 3（3-of-3 全員同意）**——結構上創辦人為少數派（1/3）；理由見 §7.4。
-- **Phase 2**（審計通過後 + TVL > 500K）：5 位簽名者（新增 1 位社群徵選簽名者）、**threshold 4（4-of-5）**——結構性異議簽名者恢復：`n - threshold = 1` 位永遠在通過 quorum 之外，可以行使 1-of-n cancel。
-- **Phase 3**（TVL > 2M）：7 位簽名者（加入社群選舉席位——選舉機制 TBD，明確**不**以 vUSDCx 持有量作為投票權）、**threshold 5（5-of-7）**——`n - threshold = 2` 位 quorum 外的簽名者。
+- **Phase 1**（啟動到外部審計通過）：3 位簽名者（**1 位創辦人 + 2 位獨立 Cardano SPO**）、**threshold 3（3-of-3 全員同意）**：結構上創辦人為少數派（1/3）；理由見 §7.4。
+- **Phase 2**（審計通過後 + TVL > 500K）：5 位簽名者（新增 1 位社群徵選簽名者）、**threshold 4（4-of-5）**：結構性異議簽名者恢復：`n - threshold = 1` 位永遠在通過 quorum 之外，可以行使 1-of-n cancel。
+- **Phase 3**（TVL > 2M）：7 位簽名者（加入社群選舉席位——選舉機制 TBD，明確**不**以 vUSDCx 持有量作為投票權）、**threshold 5（5-of-7）**：`n - threshold = 2` 位 quorum 外的簽名者。
 - **Phase 4**（成熟期、TVL > 10M）：評估 DAO 遷移。
 
 ### 6.2 治理動作
@@ -1664,7 +1664,7 @@ V1 的長期目標是讓六個身份由不同的人控制:keeper、三位治理�
 
 | 最短 Timelock | ActionKind | 類別 |
 |--------------|------------|------|
-| 0 天（無最短等待——見下方注解） | `EmergencyWithdraw` | 緊急回應 |
+| 0 天（無最短等待,見下方注解） | `EmergencyWithdraw` | 緊急回應 |
 | 1 小時 | `FastUpdateMarkets` | Liqwid pool-shard 遷移 |
 | 48 小時 | `UpdateSlippagePolicy` | 安全 bound 調整（§5.4） |
 | 7 天 | `UpdateStrategy` | 配置 / buffer 參數 |
@@ -1678,29 +1678,29 @@ V1 的長期目標是讓六個身份由不同的人控制:keeper、三位治理�
 | 14 天 | `SlashBond` | Phase 3+ — V1 啟動時不可達 |
 | 14 天 | `UpdateOracleSource` | SwapAda Charli3 / Orcfax feed 輪替 |
 | 14 天 | `ActDeregisterStake` | End-of-life：14 staking validator × 2 ADA |
-| 21 天 | `UpdateFeeSplit` | **治理在調整自己的報酬——timelock 最長** |
+| 21 天 | `UpdateFeeSplit` | **治理在調整自己的報酬:timelock 最長** |
 
 另有直接（非 queue）redeemer：`KeeperToggleMarket`（1 小時 keeper 單方停掉某個 Liqwid market — 見 §5.3，非治理 gating）、`Heartbeat`（1-of-self 簽名者 liveness）、`DistributeSignerCompensation`（1-of-n 季度資金池分配）。這些不走 queue→timelock→execute 流程，記在 `spec/governance.md` §5。
 
-> **關於 `EmergencyWithdraw` 的 0 天 timelock。** 0 天指的是 Queue 跟 Execute **之間不設最短等待時間**，**不是**繞過治理共識。每一次 `EmergencyWithdraw` 執行仍需要**完整的 3-of-3 簽名**（§5.5 的 unanimity 要求）、queue 跟 execute 之間不管有多短的空窗仍**暴露在 1-of-n cancel 否決權下**、仍受 payload-hash 綁定約束。0 天買的是**反應速度**——當持續性脫鉤或 Liqwid 事件需要立刻凍結時，治理可以在同一次簽名 session 內 queue + execute 完成。Keeper 無法單方觸發 `EmergencyWithdraw`；keeper 的快速反應手段是 `KeeperToggleMarket`（§5.3），只能單方停掉某個 Liqwid market 的新 Supply，沒辦法凍結金庫或移動資金。
+> **關於 `EmergencyWithdraw` 的 0 天 timelock。** 0 天指的是 Queue 跟 Execute **之間不設最短等待時間**，**不是**繞過治理共識。每一次 `EmergencyWithdraw` 執行仍需要**完整的 3-of-3 簽名**（§5.5 的 unanimity 要求）、queue 跟 execute 之間不管有多短的空窗仍**暴露在 1-of-n cancel 否決權下**、仍受 payload-hash 綁定約束。0 天買的是**反應速度**：當持續性脫鉤或 Liqwid 事件需要立刻凍結時，治理可以在同一次簽名 session 內 queue + execute 完成。Keeper 無法單方觸發 `EmergencyWithdraw`；keeper 的快速反應手段是 `KeeperToggleMarket`（§5.3），只能單方停掉某個 Liqwid market 的新 Supply，沒辦法凍結金庫或移動資金。
 
 `ActDeregisterStake` 是 V1 operator 面向的「end-of-life」路徑：用來贖回 ceremony PHASE 4a 為每個 staking validator 投入的 2 ADA Cardano stake 註冊押金，走標準的 m-of-n 治理流程 + 14 天 timelock + 1-of-n cancel。**V1 的 14 個 staking credential 全部具備此路徑**：`vault_user`、`vault_keeper_hot`、`vault_batcher`、`vault_swap_ada`、`vault_protocol`、`vault_recall`、`vault_liqwid`、`vault_gov_policy`、`vault_gov_emergency`、`vault_admin_deploy`、`keeper_stake_script`，以及 SwapAdapter `minswap_v2_adapter`，再加上 SundaeSwap 這一對 `sundaeswap_adapter` + `sundaeswap_cancel_guard`（各自單純為了啟用此路徑而以治理錨點為編譯期參數）。每一個治理動作都滿足：
 
-- **最短 timelock 由 `multisig_gov.ak` 於鏈上強制**——治理可以選擇更長的 timelock，但不能比最短值更短。
-- **Queue 時提交 payload hash**——避免執行時被替換成別的 payload（每個目標 validator 會呼叫 `is_gov_authorized`，重新計算 `blake2b_256(cbor.serialise(payload))` 並與 queue 時的 hash 比對）。
-- **整個 timelock 期間任一簽名者可以 1-of-n cancel**——單方取消即可生效。
-- **目標 script 綁定**——queue 時寫入的 `target_script` 必須等於目標 validator 的 script hash，確保某個動作無法被導向另一個 validator 執行。
+- **最短 timelock 由 `multisig_gov.ak` 於鏈上強制**：治理可以選擇更長的 timelock，但不能比最短值更短。
+- **Queue 時提交 payload hash**：避免執行時被替換成別的 payload（每個目標 validator 會呼叫 `is_gov_authorized`，重新計算 `blake2b_256(cbor.serialise(payload))` 並與 queue 時的 hash 比對）。
+- **整個 timelock 期間任一簽名者可以 1-of-n cancel**：單方取消即可生效。
+- **目標 script 綁定**：queue 時寫入的 `target_script` 必須等於目標 validator 的 script hash，確保某個動作無法被導向另一個 validator 執行。
 
 ### 6.3 治理的硬上限
 
 以下上限寫死在 validator 裡，治理繞不過：
 
-- `performance_fee_bps > 450`（4.5%）——會被 `vault_gov_policy.ak` 的 `UpdateFee` redeemer 拒絕
-- `early_withdraw_fee_bps > 100`（1%）——同樣被 `UpdateFee` 拒絕
+- `performance_fee_bps > 450`（4.5%）：會被 `vault_gov_policy.ak` 的 `UpdateFee` redeemer 拒絕
+- `early_withdraw_fee_bps > 100`（1%）：同樣被 `UpdateFee` 拒絕
 - `min_hold_seconds > 21600`（6 小時）——被 `UpdateFee` 拒絕。理由：V1 採週 Compound 節奏，即使治理拉到 6 小時上限，直接提領閘門也只封閉當週的約 3.6% 時間；排隊提領路徑從不被這個閘門觀察，使用者資金無論設定值為何都不會被鎖。從原本 24 小時的設計上限收緊至此——詳見 §2.4。
 - `keeper_fee_bps > 4000`（40%）、`gov_fee_bps > 1000`（10%）、或 `keeper_fee_bps + gov_fee_bps > 5000`（treasury 下限 50%）——被 `UpdateFeeSplit` 拒絕
 - `signers < 3`、`threshold < 2`、或 `threshold > signers`（全員同意 `threshold == signers` 明確允許——V1 啟動採 3-of-3）
-- 任何編譯期錨的變更——需要重新部署整套合約
+- 任何編譯期錨的變更：需要重新部署整套合約
 
 `buffer_target_bps` 是 keeper 在 Supply 與 Recall 之間抉擇時參考的建議值，不是 validator 強制的範圍。治理可以透過 `UpdateStrategy` 在 [0, 10000] 區間內設定，但 keeper 不會執行經濟上明顯不合理的數值。
 
@@ -1734,7 +1734,7 @@ V1 以 `RegistrationMode = GovernanceOnly` 部署 `keeper_stake_script`，allowl
 
 ### 7.4 創辦人兼任 keeper operator 與治理簽名者
 
-**在基本案 Phase 1 小 TVL 配置 (b) 下**——依 Executive Summary 與 §8.2 $500–$25K Phase 1 TVL 區間，存入者啟動時應以此為預設假設——創辦人運作 keeper instance **並同時**以 HD-key 分隔（多把 HD-derived keys 存於物理上隔離的簽名環境）持有全部 3 個治理簽名者席位。**在 stretch-target 配置 (a) 下**——以 mainnet ceremony 前 SPO 招募成功落地為前提——創辦人運作 keeper 並擔任 **3 位治理簽名者中的 1 位**，其餘 2 席由獨立 Cardano SPO 持有（見 §5.5）。§5.5.1 三層治理安全設計 + §6.3 硬上限**不論簽名者集合組成都保留**存款人的復原路徑；(a) / (b) 的差別只影響治理異議語意，不影響合約層的存入者保護。任一情境下，此安排在 §6.1 揭露為 launch 階段的**單一營運方風險**——範圍僅限 keeper operator 選擇（在 (b) 下還包含治理簽名者集合），**不涵蓋合約程式碼**（全開源）、**不涵蓋 keeper 程式碼**（全開源且合約支援 `UpdateKeeperAuth` 切換）。
+**在基本案 Phase 1 小 TVL 配置 (b) 下**：依 Executive Summary 與 §8.2 $500–$25K Phase 1 TVL 區間，存入者啟動時應以此為預設假設——創辦人運作 keeper instance **並同時**以 HD-key 分隔（多把 HD-derived keys 存於物理上隔離的簽名環境）持有全部 3 個治理簽名者席位。**在 stretch-target 配置 (a) 下**——以 mainnet ceremony 前 SPO 招募成功落地為前提——創辦人運作 keeper 並擔任 **3 位治理簽名者中的 1 位**，其餘 2 席由獨立 Cardano SPO 持有（見 §5.5）。§5.5.1 三層治理安全設計 + §6.3 硬上限**不論簽名者集合組成都保留**存款人的復原路徑；(a) / (b) 的差別只影響治理異議語意，不影響合約層的存入者保護。任一情境下，此安排在 §6.1 揭露為 launch 階段的**單一營運方風險**——範圍僅限 keeper operator 選擇（在 (b) 下還包含治理簽名者集合），**不涵蓋合約程式碼**（全開源）、**不涵蓋 keeper 程式碼**（全開源且合約支援 `UpdateKeeperAuth` 切換）。
 
 **Phase 1 3-of-3 全員同意實際能提供的保護**(誠實說法):
 
@@ -1742,7 +1742,7 @@ V1 以 `RegistrationMode = GovernanceOnly` 部署 `keeper_stake_script`，allowl
 - **創辦人無法單獨通過治理。** 即使創辦人串謀 1 位 SPO，也只有 2-of-3，仍然不足以執行任何動作。任一位獨立 SPO 拒絕即可全面阻擋。
 - **1-of-3 cancel 不對稱性。** Queue 需要 3 簽名，停止需要 1 個——任一位簽名者（包含任一位獨立 SPO）都可在 timelock 窗口內單方取消。
 - **公開 timelock 觀察窗口。** 高影響動作 14 天 timelock（`UpdateFeeSplit` 21 天）公開曝露每個已 queue 變更，供存入者檢視 + 獨立研究到執行前。
-- **治理完全動不了的硬性不變式**——validator 層上限（費用上限 4.5%、配置邊界、不可變身份欄位）。見 §6.3。
+- **治理完全動不了的硬性不變式**：validator 層上限（費用上限 4.5%、配置邊界、不可變身份欄位）。見 §6.3。
 
 **Phase 1 3-of-3 的侷限**（同樣誠實）：
 
@@ -1829,13 +1829,13 @@ V1 的金庫 UTXO 只持有必要的 ADA：符合 min-UTXO 規範，以及支付
 
 **與 §4.1 sunset 觸發條件的聯動——在 volunteer 模型下的釐清。** §4.1 標稱 sunset 條件（"runway < 6 個月 forward burn"）將「runway」解釋為**創辦人營運面承諾**（依 §4.3.1 ~$80–$200/年），不是審計承諾。在 volunteer-builder 框架下，營運 runway 從個人收入持續支撐、結構上**幾乎不可達**作為 sunset 觸發條件；真實的失敗模式是 §1.5 Class A overrides（USDCx / Liqwid / Cardano chain / oracle 事件）與創辦人明確 sunset 決定。**審計資金失敗不是 sunset 觸發條件** — 它只是在 §8.1 Option D 下把 cap 維持在 100K。V1 在四個（A/B/C/D）審計資金結果下都會在 mainnet 持續運作。
 
-**審計時程反映 funding-stack 不確定性。** Q2-Q3 2027 目標明確比原本 Q3 2026 計畫晚，刻意預留時間以容納 (i) Catalyst Round 恢復的概率、(ii) 並行 Cardano Foundation / Intersect / Aiken Foundation grant 接洽、(iii) 若 (a)/(b) 結果保守時，社群 / DAO 資助池路徑（上方 Option C）的成熟時間。**V1 在整個過渡期間於 mainnet 維持 100K pre-audit cap 運作**；若 2027 Q4 仍未讓資金堆疊達到成本門檻，§1.5 Override condition 6 啟動（cap 無限期維持 100K — V1 仍在 mainnet，不退回 Preprod）。審計本身**取決於資金到位，不取決於 calendar 日期**——見上方 §8.1 Options A-D 與 §0.2 funding posture 的 volunteer-builder framing。
+**審計時程反映 funding-stack 不確定性。** Q2-Q3 2027 目標明確比原本 Q3 2026 計畫晚，刻意預留時間以容納 (i) Catalyst Round 恢復的概率、(ii) 並行 Cardano Foundation / Intersect / Aiken Foundation grant 接洽、(iii) 若 (a)/(b) 結果保守時，社群 / DAO 資助池路徑（上方 Option C）的成熟時間。**V1 在整個過渡期間於 mainnet 維持 100K pre-audit cap 運作**；若 2027 Q4 仍未讓資金堆疊達到成本門檻，§1.5 Override condition 6 啟動（cap 無限期維持 100K — V1 仍在 mainnet，不退回 Preprod）。審計本身**取決於資金到位，不取決於 calendar 日期**：見上方 §8.1 Options A-D 與 §0.2 funding posture 的 volunteer-builder framing。
 
 各 funding source 進度會在 `docs/economics.md §5.2` 持續更新。這個 stack 讓 V1 可以在不進入 VC / 代幣募資 / 不稀釋 Apache 2.0 公共財立場的前提下完成外部審計。
 
 ### 8.2 啟動（TVL 上限 100K USDCx）
 
-**Phase 1 的真正性質——誠實標示。** V1 在 100K USDCx 上限下的啟動是 **對抗性條件下的協議驗證**，不是商業 TVL-scale 發射。100K cap 是**上限，不是目標**。我們內部對 Phase 1 TVL 的預期是**頭 6-12 個月落在 $500-$25K 區間**——這是推測性區間，不是預測，基於保守的使用者取得假設加上 permissionless-only 立場（沒有 closed-beta gate，因此若 organic discovery 緩慢，下限可能極低）；實際結果可能往任一方向顯著偏離。以「填滿 cap」情境為基礎模擬 Phase 1 的讀者，應該知道那並不是我們在規劃的結果。
+**Phase 1 的真正性質——誠實標示。** V1 在 100K USDCx 上限下的啟動是 **對抗性條件下的協議驗證**，不是商業 TVL-scale 發射。100K cap 是**上限，不是目標**。我們內部對 Phase 1 TVL 的預期是**頭 6-12 個月落在 $500-$25K 區間**：這是推測性區間，不是預測，基於保守的使用者取得假設加上 permissionless-only 立場（沒有 closed-beta gate，因此若 organic discovery 緩慢，下限可能極低）；實際結果可能往任一方向顯著偏離。以「填滿 cap」情境為基礎模擬 Phase 1 的讀者，應該知道那並不是我們在規劃的結果。
 
 **Pre-audit 期間的營運姿態。** Pre-audit 階段 V1 不做 marketing 推廣、landing 只維持 organic SEO。合約本身是 permissionless smart contract，任何理解並接受 pre-audit 風險（未知 CRITICAL bug 可能、TVL 不會快速成長、founder bandwidth 有限）的 depositor 都可依自己判斷進入——沒有 invitation gate，沒有 whitelist。但請**誠實預期**：這不是 opening sale 階段，而是驗證階段；想規模化入場或追求最大化 yield 的 depositor 建議等 post-audit cap 解除、或直接選 Direct Liqwid DJED supply。
 
@@ -1845,8 +1845,8 @@ V1 的金庫 UTXO 只持有必要的 ADA：符合 min-UTXO 規範，以及支付
 
 | Sub-scenario | TVL 區間 | 預期存入者數量 | 營運模式 | SPO 治理姿態 | 審計 / 對外 framing |
 |---|---|---|---|---|---|
-| (a) 個人 reference | $500–$5K | 創辦人 + 1–2 位社群 | Reference Implementation Mode(§2.6.1)——季度到年度 Compound | 延後 / 象徵性 | 「Cardano reference vault 實作」 |
-| (b) 小規模有機成長 | $5K–$25K | 5–20 位存入者 | Reference Implementation Mode(§2.6.1)——隨 TVL 接近 $25K 停用門檻,節奏自動往月度–雙週 Compound 偏 | 可選擇性招募 SPO,並完整揭露工作量 | 標準非商業公共財 framing |
+| (a) 個人 reference | $500–$5K | 創辦人 + 1–2 位社群 | Reference Implementation Mode(§2.6.1),季度到年度 Compound | 延後 / 象徵性 | 「Cardano reference vault 實作」 |
+| (b) 小規模有機成長 | $5K–$25K | 5–20 位存入者 | Reference Implementation Mode(§2.6.1),隨 TVL 接近 $25K 停用門檻,節奏自動往月度–雙週 Compound 偏 | 可選擇性招募 SPO,並完整揭露工作量 | 標準非商業公共財 framing |
 | (c) Phase 1 接近 cap | $25K–$100K | 20–100 位存入者 | §2.6 預設節奏(週六排程 Compound) | 完整 3-of-3 SPO 席位 active | 標準產品審計 framing |
 
 每一個 sub-scenario 都是 §8.2 成功準則 (a)–(d) 下可接受的 Phase 1 結尾。模式之間的切換,屬於 §4.5 裁量下的 keeper 營運政策,**不**需要治理動作——除非 TVL 反覆來回跨越門檻(若如此,就值得用 `UpdateStrategy` 把切換條件正式編入規範)。
@@ -1908,10 +1908,10 @@ V1 想達到的具體里程碑：**V1 連續 12 個月運作無遷移或重新�
 
 - **原始碼在主網啟動前公開。**
 - **審計報告完成時公開。**
-- **治理動作公開透明**——每個 QueueAction 於 1 小時內對外公告，鏈上歷史即為正式紀錄。
-- **結束協議透明**——若 §4.1 的 4 個 sunset triggers 任一觸發（A：post-audit 6 個月後 TVL < $500K，**前提是審計發生**；B：營運 runway 耗盡；C：Class A override 持續；D：創辦人明確決定），90 天通知 + fee 歸零 + Liqwid 部位預先 recall 前置條件適用，依 §4.1 sunset 機制，加上 `EmergencyWithdraw` 治理路徑 + `emergency-withdraw` 自助工具。**硬失敗備援**：即使創辦人和任何 SPO 共簽者連續 90 天完全聯絡不上，任何 vUSDCx 持有者都可呼叫 permissionless 的 `CommunitySunset` redeemer（vault_user）原子性凍結金庫 + 開放 permissionless 的 `RecallFromLiqwid` + swap-to-USDCx 路徑，讓存入者完整自助回收——見 §5.5.1 Layer 3 + `docs/security-model.md` §5.4 情境 E。**注意**：持續性審計資金缺口（§8.1 Option D）**不是** sunset 觸發條件——它讓 V1 在 mainnet 維持 pre-audit 100K cap；wind-down 協議在該情境下不啟動。
+- **治理動作公開透明**：每個 QueueAction 於 1 小時內對外公告，鏈上歷史即為正式紀錄。
+- **結束協議透明**：若 §4.1 的 4 個 sunset triggers 任一觸發（A：post-audit 6 個月後 TVL < $500K，**前提是審計發生**；B：營運 runway 耗盡；C：Class A override 持續；D：創辦人明確決定），90 天通知 + fee 歸零 + Liqwid 部位預先 recall 前置條件適用，依 §4.1 sunset 機制，加上 `EmergencyWithdraw` 治理路徑 + `emergency-withdraw` 自助工具。**硬失敗備援**：即使創辦人和任何 SPO 共簽者連續 90 天完全聯絡不上，任何 vUSDCx 持有者都可呼叫 permissionless 的 `CommunitySunset` redeemer（vault_user）原子性凍結金庫 + 開放 permissionless 的 `RecallFromLiqwid` + swap-to-USDCx 路徑，讓存入者完整自助回收——見 §5.5.1 Layer 3 + `docs/security-model.md` §5.4 情境 E。**注意**：持續性審計資金缺口（§8.1 Option D）**不是** sunset 觸發條件——它讓 V1 在 mainnet 維持 pre-audit 100K cap；wind-down 協議在該情境下不啟動。
 - **架構上不設計「抽乾資金跑路」（rug-pull）的後門。** 任何可能抽乾資金的不變式都在 validator 層封閉，不留給社會信任層。
-- **創辦人失能應對（Founder incapacitation protocol）。** V1 啟動時創辦人同時擔任 keeper operator、治理簽名者（在配置 (a) SPO 已招募下為 1-of-3；在基本案配置 (b) 下持有全部 3 席，見 §7.4）、ref-deployer wallet 控制者，個人層級單點故障是真實的。應對機制：(a) **短期失聯（< 7 天）**——合約層 7 天 keeper inactivity 窗口自動生效，Direct Withdraw 路徑完全可用且 early-withdraw fee 免除；(b) **中期失能（7-30 天）**——在配置 (a) 下，2 位獨立 SPO 可透過 `UpdateKeeperAuth` 治理動作（14 天 timelock + 1-of-n cancel）把 keeper PKH 切換到社群接手者；在配置 (b) 下，創辦人 HD-key 分隔的簽名環境提供一部分備援，若全部失效則退到下方 (c) 路徑；(c) **營運補貼停付但未正式 sunset**（v1.4 volunteer 模型下的真實場景）——創辦人健在、但停付 ~$80/年的基礎設施補貼、且未依 §9.2 正式啟動 sunset。後續鏈：keeper 離線 → §5.4 7 天 inactivity gate 自動觸發（early-withdraw fee 免除）→ Direct Withdraw 仍可用 → vault 進入「founder-keeper 離線、合約仍 live」的混合狀態，直到 90 天 §5.5.1 Layer 3 `CommunitySunset` 可由任一 vUSDCx 持有者觸發完成自助恢復。這條路徑在 v1.4 volunteer-operator 模型下實際存在，此處明寫讓存入者知道恢復**不需要創辦人配合**；(d) **永久失能**——配置 (a) 下由 2 位 SPO 觸發 §4.1 sunset path（90 天預告 + fee=0 + 存入者自助退場）；配置 (b) 下，§5.5.1 Layer 3 `CommunitySunset` 在 90 天時是絕對備援。Ref-deployer wallet key 目前由創辦人獨自控制，若此 key 遺失或無法存取，**~962 ADA** 的 ref-script 資本 + **~28 ADA** 的 stake-credential 押金會永久鎖定（對應 §8.2 實測 962.07 ADA + 14 × 2 ADA）——但**不影響存入者提領**，因為 ref-script 仍可作為 reference input。V2 部署儀式會納入 multi-sig ref-deployer wallet 或社群 key escrow 機制消除此 SPOF。
+- **創辦人失能應對（Founder incapacitation protocol）。** V1 啟動時創辦人同時擔任 keeper operator、治理簽名者（在配置 (a) SPO 已招募下為 1-of-3；在基本案配置 (b) 下持有全部 3 席，見 §7.4）、ref-deployer wallet 控制者，個人層級單點故障是真實的。應對機制：(a) **短期失聯（< 7 天）**：合約層 7 天 keeper inactivity 窗口自動生效，Direct Withdraw 路徑完全可用且 early-withdraw fee 免除；(b) **中期失能（7-30 天）**——在配置 (a) 下，2 位獨立 SPO 可透過 `UpdateKeeperAuth` 治理動作（14 天 timelock + 1-of-n cancel）把 keeper PKH 切換到社群接手者；在配置 (b) 下，創辦人 HD-key 分隔的簽名環境提供一部分備援，若全部失效則退到下方 (c) 路徑；(c) **營運補貼停付但未正式 sunset**（v1.4 volunteer 模型下的真實場景）——創辦人健在、但停付 ~$80/年的基礎設施補貼、且未依 §9.2 正式啟動 sunset。後續鏈：keeper 離線 → §5.4 7 天 inactivity gate 自動觸發（early-withdraw fee 免除）→ Direct Withdraw 仍可用 → vault 進入「founder-keeper 離線、合約仍 live」的混合狀態，直到 90 天 §5.5.1 Layer 3 `CommunitySunset` 可由任一 vUSDCx 持有者觸發完成自助恢復。這條路徑在 v1.4 volunteer-operator 模型下實際存在，此處明寫讓存入者知道恢復**不需要創辦人配合**；(d) **永久失能**——配置 (a) 下由 2 位 SPO 觸發 §4.1 sunset path（90 天預告 + fee=0 + 存入者自助退場）；配置 (b) 下，§5.5.1 Layer 3 `CommunitySunset` 在 90 天時是絕對備援。Ref-deployer wallet key 目前由創辦人獨自控制，若此 key 遺失或無法存取，**~962 ADA** 的 ref-script 資本 + **~28 ADA** 的 stake-credential 押金會永久鎖定（對應 §8.2 實測 962.07 ADA + 14 × 2 ADA）——但**不影響存入者提領**，因為 ref-script 仍可作為 reference input。V2 部署儀式會納入 multi-sig ref-deployer wallet 或社群 key escrow 機制消除此 SPOF。
 
 ### 9.3 仍然可能出錯的地方
 
@@ -1996,11 +1996,11 @@ scripts/verify-hashes.sh  # 比對 plutus.json 的 hash 與鏈上部署
 
 **Non-investment product / non-solicitation。** V1 是 Cardano DeFi 公共財 reference implementation（見 Executive Summary 的定位宣告），**不是投資產品、不是 fund、不是 managed service**。4.5% Performance fee 覆蓋協議運營與 treasury 累積（審計儲備 / R&D / buffer）；**沒有股權、沒有代幣、沒有對投資人的分配**。**Keeper share 的揭露**：績效費 40%（約佔收益 1.8%）流入 keeper 錢包作為營運補償；由於 V1 啟動時由創辦人運作 keeper（§7.4），**確實有 USDCx 流入創辦人的 keeper 錢包**（100K cap 下年化 ~$108；§8.2 所列實際 Phase 1 sub-scenario 下 < $30/年）。**即便在 §4.3.1 minimal-operations footprint（~$80/年基礎設施 + 鏈上 fee）下這條收入仍不夠覆蓋 keeper 自身基礎設施**，所以這個位子對創辦人來說是**淨成本中心、不是利潤線**——缺口由創辦人從個人收入持續吸收（§4.3.1 cost-scaling 表），不是從預先撥定的啟動資金 runway 中扣除。誠實的解讀是：沒有股權式利潤分配、沒有代幣，但有一條不足以支付自身成本的小額 USDCx 收入線。§0 + §0.2 + §4.3 + §4.3.1 + §7.4 完整揭露結構。本白皮書是對 V1 設計與啟動條件的**事實描述**，不構成投資建議、不構成任何形式的招攬。智能合約存入本身涉及全部損失的風險。
 
-**Geographical posture。** V1 是 Cardano 鏈上 permissionless 智能合約，技術上任何持有 Cardano 錢包的人都可以互動。但 V1 是為 Cardano 原生使用者設計，**不主動提供服務給任何法域的居民**。存入者必須**自行判斷**其所在司法管轄區（特別是美國、歐盟、英國、中國、OFAC 制裁名單國家）是否允許使用非託管 DeFi 公共財 infrastructure；合規責任由存入者自負。V1 的前端（optivaults.app）可能基於法律意見在特定法域**顯示警告或阻擋存取**；這是**純前端 soft signal**，不限制底層鏈上智能合約——使用者若繞過前端直接與合約互動（例如透過 `withdraw-cli` 或自建 TX），完整自行承擔該法域合規責任。**V1 合約本身不做地址白名單或地理限制**，這違背 non-custodial + permissionless 設計本質，也不在 roadmap 內。任何前端 geoblock 變動會於公開 channel（optivaults.app + Discord）通知。若你所在法域明確禁止使用非託管 DeFi 或未登記金融服務,**不要使用 V1**——即使技術上繞過前端做得到。
+**Geographical posture。** V1 是 Cardano 鏈上 permissionless 智能合約，技術上任何持有 Cardano 錢包的人都可以互動。但 V1 是為 Cardano 原生使用者設計，**不主動提供服務給任何法域的居民**。存入者必須**自行判斷**其所在司法管轄區（特別是美國、歐盟、英國、中國、OFAC 制裁名單國家）是否允許使用非託管 DeFi 公共財 infrastructure；合規責任由存入者自負。V1 的前端（optivaults.app）可能基於法律意見在特定法域**顯示警告或阻擋存取**；這是**純前端 soft signal**，不限制底層鏈上智能合約——使用者若繞過前端直接與合約互動（例如透過 `withdraw-cli` 或自建 TX），完整自行承擔該法域合規責任。**V1 合約本身不做地址白名單或地理限制**，這違背 non-custodial + permissionless 設計本質，也不在 roadmap 內。任何前端 geoblock 變動會於公開 channel（optivaults.app + Discord）通知。若你所在法域明確禁止使用非託管 DeFi 或未登記金融服務,**不要使用 V1**：即使技術上繞過前端做得到。
 
 **Code-is-law 姿態。** V1 是 open source / Apache 2.0 / 部署後 validator hash 永久不變。存入者存入時即接受「合約在鏈上以其部署時的形式執行」——沒有任何個人、團隊或治理動作能修改合約邏輯本身(治理只能在合約授權的 parameter 範圍內調整)。若合約 bug 導致損失,自助 `emergency-withdraw` 工具是唯一恢復路徑;**無任何法律追索可讓已確認的鏈上 TX 逆轉**。這不是 bug,是 V1 的核心設計選擇——你的資金不被 intermediary 掌控的代價是 intermediary 無法為你恢復意外。
 
-**Depositor 自行盡職調查。** 存入者必須自行對 OptiVaults V1、USDCx(Circle / xReserve)、Liqwid、Minswap V2、Cardano 協議本身做完整 due diligence。**任何「V1 為我管理風險」的期待都是誤解定位**——V1 只是將風險公開、分散、並在架構上讓你隨時可退場(見 §5 Risks 完整揭露 + §6.3 治理硬上限)。V1 不是 insurance、不是 advisory service、不是 wealth manager。
+**Depositor 自行盡職調查。** 存入者必須自行對 OptiVaults V1、USDCx(Circle / xReserve)、Liqwid、Minswap V2、Cardano 協議本身做完整 due diligence。**任何「V1 為我管理風險」的期待都是誤解定位**：V1 只是將風險公開、分散、並在架構上讓你隨時可退場(見 §5 Risks 完整揭露 + §6.3 治理硬上限)。V1 不是 insurance、不是 advisory service、不是 wealth manager。
 
 **聯絡資訊。** 安全揭露(PGP key 見 optivaults.app/security)、遷移補貼申請、一般諮詢:`optivaults@gmail.com`。即時討論請到 Discord(連結於 optivaults.app)。
 
