@@ -47,7 +47,7 @@ SwapAda { amount_ada, keeper_output_idx } -> {
     get_continuing_datum(tx.outputs, proxy_hash, own_input.output)
   let out_lovelace = lovelace_of(cont_output.value)
 
-  // 1. Keeper 授權——V1 的 stake-script zero-withdraw,
+  // 1. Keeper 授權：V1 的 stake-script zero-withdraw,
   //    不是 require_keeper(keeper_pkh)。vault_core 編譯期錨定
   //    keeper_stake_script_hash;任何被 stake script 授權的錢包都可呼叫。
   let keeper_authorized = require_keeper_stake_script(tx, keeper_stake_hash)
@@ -81,7 +81,7 @@ SwapAda { amount_ada, keeper_output_idx } -> {
   )
   let usdcx_deducted = own_usdcx == out_usdcx + usdcx_out_expected
 
-  // 6. Keeper 收 USDCx —— keeper_output_idx 的 output 必須付給
+  // 6. Keeper 收 USDCx：keeper_output_idx 的 output 必須付給
   //    一個 VerificationKey wallet,其 PKH 在 tx.extra_signatories
   //    (簽名 keeper)裡出現。這從 TX runtime 推導 keeper 身份,
   //    不是從 datum 欄位。
