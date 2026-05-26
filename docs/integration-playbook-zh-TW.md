@@ -284,4 +284,4 @@ Rollback 是正常運作模式,不是失敗事件。V1 的 registry 刻意設計
 - `spec/governance.md §4.6 UpdateRegistry` — 鏈上授權機制
 - `spec/governance.md §4.8 FastUpdateMarkets` — 協議遷移的 1 小時快速路徑
 - `docs/security-model.md §3` — 整合相關的攻擊面與威脅模型
-- GitHub repo：每個協議的 trace 保存與 schema lock 與其 adapter 原始碼同在合約樹下：V1 目前在 `contracts/validators/` 放 Minswap V2 + SundaeSwap adapter；後續整合依此目錄結構擴充。
+- GitHub repo：每個協議的 trace 保存與 schema lock 與其 adapter 原始碼同在合約樹下，V1 目前在 `contracts/validators/` 放 Minswap V2 + SundaeSwap adapter；後續整合依此目錄結構擴充。
