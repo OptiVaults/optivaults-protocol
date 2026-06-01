@@ -33,6 +33,7 @@ use vault/constants.{
   timelock_update_registry_ms, timelock_update_slippage_policy_ms,
   timelock_update_strategy_ms, timelock_update_treasury_params_ms,
 }
+use vault/helpers.{gov_usdcx_preserved}
 use vault/types.{
   ActAdminDeployNonDeposit, ActDeregisterStake, ActEmergencyWithdraw,
   ActFastUpdateMarkets, ActRotateSigners, ActSlashBond, ActTreasurySpend,
@@ -311,6 +312,12 @@ validator multisig_gov(
           nft_in_input,
           nft_in_output,
           value_ok,
+          gov_usdcx_preserved(
+            own_input.output,
+            cont_output,
+            deposit_token_policy,
+            deposit_token_name,
+          ),
           sig_ok,
           timelock_ok,
           ttl_ok,
@@ -364,6 +371,12 @@ validator multisig_gov(
           nft_in_input,
           nft_in_output,
           value_ok,
+          gov_usdcx_preserved(
+            own_input.output,
+            cont_output,
+            deposit_token_policy,
+            deposit_token_name,
+          ),
           sig_ok,
           action_exists,
           valid_datum,
@@ -435,6 +448,12 @@ validator multisig_gov(
           nft_in_input,
           nft_in_output,
           value_ok,
+          gov_usdcx_preserved(
+            own_input.output,
+            cont_output,
+            deposit_token_policy,
+            deposit_token_name,
+          ),
           sig_ok,
           time_window_ok,
           tx_hash_ok,
@@ -545,6 +564,12 @@ validator multisig_gov(
           nft_in_input,
           nft_in_output,
           value_ok,
+          gov_usdcx_preserved(
+            own_input.output,
+            cont_output,
+            deposit_token_policy,
+            deposit_token_name,
+          ),
           sig_ok,
           signer_set_ok,
           time_window_ok,
@@ -602,6 +627,12 @@ validator multisig_gov(
           nft_in_input,
           nft_in_output,
           value_ok,
+          gov_usdcx_preserved(
+            own_input.output,
+            cont_output,
+            deposit_token_policy,
+            deposit_token_name,
+          ),
           in_set,
           signed,
           cooldown_ok,

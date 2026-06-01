@@ -108,7 +108,7 @@ validator vault_admin_deploy(
           )
         let (cont_output, new_datum) =
           get_continuing_datum(tx.outputs, proxy_hash, own_input.output)
-        let (whitelist, registry_last_update, _, _, asset_oracles, adapter_hashes) =
+        let (whitelist, registry_last_update, stable_tokens, _, asset_oracles, adapter_hashes) =
           read_registry_datum_full(
             tx.reference_inputs,
             old_datum.registry_hash,
@@ -171,6 +171,9 @@ validator vault_admin_deploy(
             tx,
             adapter_hashes,
             asset_oracles,
+            stable_tokens,
+            old_datum.deposit_token_policy,
+            old_datum.deposit_token_name,
             dest_output_idx,
             deploy_amount,
             old_datum.min_swap_peg_bps,

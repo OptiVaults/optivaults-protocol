@@ -140,6 +140,15 @@ validator vault_liqwid(
           keeper_authorized,
           valid_underlying_decrease,
           valid_qtoken_increase,
+          // (2026-05-30): bind the credited qtokens to a real
+          // in-TX mint — symmetric to the recall burn-binding (line ~230,
+          // `get_mint_quantity == -qtokens_held`). Without it, qtoken_delta
+          // could be satisfied by pre-existing / fabricated qtokens routed
+          // into the vault output instead of freshly market-minted claims,
+          // recording a position whose qtokens are not provably redeemable.
+          // (The recall `>=` floor defends downstream; this closes the
+          // provenance gap at supply time.)
+          get_mint_quantity(tx, q_pol) == qtoken_delta,
           valid_destination,
           valid_other_tokens,
           no_duplicate_market,

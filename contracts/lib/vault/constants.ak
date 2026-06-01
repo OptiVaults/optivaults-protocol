@@ -186,6 +186,19 @@ pub const ada_swap_min: Int = 10_000_000
 /// SwapAda maximum amount (50 ADA)
 pub const ada_swap_max: Int = 50_000_000
 
+/// (2026-05-30): absolute sanity band on the oracle ADA price
+/// (USDCx-per-ADA × 10_000). A degenerate-value circuit breaker that
+/// backstops `read_fair_price` (whose dual-feed disagreement guard — now
+/// distinct-feed — is the primary defense). Deliberately
+/// VERY wide ($0.01–$100/ADA) so it never binds a real price; it only
+/// rejects an obviously-broken feed (0 / overflow / mis-decoded). Bounds
+/// the protocol's serviceable ADA-price range — acceptable since SwapAda
+/// is a minor 50-ADA-capped, keeper-only, oracle-gated path.
+pub const ada_swap_price_floor_bps: Int = 100
+
+/// upper sanity bound — $100/ADA × 10_000.
+pub const ada_swap_price_ceiling_bps: Int = 1_000_000
+
 // ─────────────────────────────────────────────────────────────────────
 // Allocation + position bounds
 // ─────────────────────────────────────────────────────────────────────

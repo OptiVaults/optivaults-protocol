@@ -51,7 +51,7 @@ use aiken/collection/pairs
 use cardano/address.{Address, Script}
 use cardano/transaction.{Transaction, Withdraw}
 use vault/oracle.{check_tier1_bound, find_asset_oracle}
-use vault/types.{AssetOracleEntry}
+use vault/types.{AssetOracleEntry, StableTokenEntry}
 
 // ─────────────────────────────────────────────────────────────────────
 // Adapter redeemer shape
@@ -213,6 +213,32 @@ fn hop_chain_non_adjacent_dup(xs: List<(ByteArray, ByteArray)>) -> Bool {
   }
 }
 
+/// (2026-05-30): is `target` an allowed swap-out destination
+/// asset? Allowed iff it is the deposit token (USDCx) or a registry-
+/// whitelisted stable token. The Tier-2 peg-floor compares `min_receive`
+/// (target-asset native units) to `deploy_amount` (USDCx micro-units) 1:1,
+/// so any target whose per-unit value differs from USDCx slips past the
+/// floor — an attacker-seeded junk-token pool could then absorb vault USDCx
+/// for worthless units. This allowlist is the load-bearing bound (Tier-1
+/// oracle is fail-open for targets with no oracle entry, which is the launch
+/// state). Extracted as a pure predicate so it is unit-testable in
+/// isolation.
+pub fn swap_target_allowed(
+  target_policy: ByteArray,
+  target_name: ByteArray,
+  stable_tokens: List<StableTokenEntry>,
+  deposit_token_policy: ByteArray,
+  deposit_token_name: ByteArray,
+) -> Bool {
+  or {
+    target_policy == deposit_token_policy && target_name == deposit_token_name,
+    list.any(
+      stable_tokens,
+      fn(st) { st.policy == target_policy && st.name == target_name },
+    ),
+  }
+}
+
 /// Tier 2 peg-floor on an adapter-committed `min_receive`.
 ///
 ///   min_receive × 10_000 >= deploy_amount × peg_bps
@@ -247,6 +273,12 @@ pub fn verify_swap_via_adapter(
   tx: Transaction,
   adapter_hashes: List<ByteArray>,
   asset_oracles: List<AssetOracleEntry>,
+  /// registry stable-token allowlist. The swap target
+  /// (`hop_chain[last]`) MUST be the deposit token or one of these.
+  stable_tokens: List<StableTokenEntry>,
+  /// deposit-token identity (USDCx) — the other allowed target.
+  deposit_token_policy: ByteArray,
+  deposit_token_name: ByteArray,
   expected_dest_idx: Int,
   deploy_amount: Int,
   min_swap_peg_bps: Int,
@@ -271,17 +303,31 @@ pub fn verify_swap_via_adapter(
               min_swap_peg_bps,
             ),
             when last_hop_target(adapter_r.hop_chain) is {
-              Some((target_policy, target_name)) ->
-                when find_asset_oracle(asset_oracles, target_policy, target_name) is {
-                  Some(entry) ->
-                    check_tier1_bound(
-                      tx,
-                      entry,
-                      deploy_amount,
-                      adapter_r.min_receive,
-                      max_slippage_bps,
-                    )
-                  None -> True
+              Some((target_policy, target_name)) -> and {
+                  // (2026-05-30): the swap target asset must be the
+                  // deposit token (USDCx) or a registry-whitelisted stable
+                  // token — see `swap_target_allowed`. Without this a
+                  // compromised keeper (or post-sunset permissionless caller)
+                  // could route vault value into an attacker-seeded junk-token
+                  // pool (peg-floor satisfied in worthless units) and drain it.
+                  swap_target_allowed(
+                    target_policy,
+                    target_name,
+                    stable_tokens,
+                    deposit_token_policy,
+                    deposit_token_name,
+                  ),
+                  when find_asset_oracle(asset_oracles, target_policy, target_name) is {
+                    Some(entry) ->
+                      check_tier1_bound(
+                        tx,
+                        entry,
+                        deploy_amount,
+                        adapter_r.min_receive,
+                        max_slippage_bps,
+                      )
+                    None -> True
+                  },
                 }
               // hop_chain LP-name re-hash: hop_chain must have >= 2 entries (in + target) for
               // a meaningful swap. Empty / single-asset hop_chain is rejected.

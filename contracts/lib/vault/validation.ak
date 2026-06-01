@@ -875,8 +875,18 @@ pub fn valid_asset_oracle_entry(e: AssetOracleEntry) -> Bool {
         }
       },
     )
+  // (2026-05-30): feeds must be DISTINCT. Without this, an entry
+  // can list the same (feed_script_hash, feed_auth_policy, feed_auth_name)
+  // twice with min_feeds:2 — at read time both resolve to the SAME ref UTXO,
+  // so collect_healthy_samples yields two copies of one sample, spread_bps
+  // collapses to 0, and the cross-feed disagreement circuit-breaker is
+  // silently inert (a single feed operator sets the fair price unilaterally).
+  // Deduping the feed list makes min_feeds an actual distinct-feed quorum.
+  let feeds_distinct =
+    list.length(list.unique(e.feeds)) == list.length(e.feeds)
   and {
     feeds_ok,
+    feeds_distinct,
     e.min_feeds >= 1,
     e.min_feeds <= list.length(e.feeds),
     e.max_disagreement_bps > 0,

@@ -189,6 +189,28 @@ pub fn verify_token_preserved(
   new_qty >= old_qty - allowed_decrease
 }
 
+/// (2026-05-30): preserve a specific token's quantity on the
+/// continuing output (>= spent input). Used by `multisig_gov`'s
+/// Queue/Cancel/Execute/Rotate/Heartbeat redeemers to pin the gov UTXO's
+/// USDCx (`signer_compensation_pool` backing) so a single rogue signer
+/// cannot reproduce the gov UTXO with identical lovelace + NFT + datum
+/// counter while routing the pooled USDCx to themselves (m-of-n bypass on
+/// gov-controlled funds). Dormant while `gov_fee_bps == 0` but a structural
+/// gap that must be closed before the gov fee split is ever enabled.
+/// Pure predicate → unit-testable in isolation.
+pub fn gov_usdcx_preserved(
+  spent: Output,
+  cont: Output,
+  deposit_token_policy: ByteArray,
+  deposit_token_name: ByteArray,
+) -> Bool {
+  quantity_of(cont.value, deposit_token_policy, deposit_token_name) >= quantity_of(
+    spent.value,
+    deposit_token_policy,
+    deposit_token_name,
+  )
+}
+
 /// Strictly stronger than `verify_other_tokens_preserved`: every token
 /// in old_input must survive at >= old qty AND no new tokens may appear.
 /// Used by RebalanceBuffer / UpdateStrategy / UpdateFee / UpdateFeeSplit

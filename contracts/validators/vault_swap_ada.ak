@@ -42,7 +42,8 @@ use cardano/assets.{lovelace_of, quantity_of}
 use cardano/certificate.{Certificate, UnregisterCredential}
 use cardano/transaction.{Transaction}
 use vault/constants.{
-  ada_swap_max, ada_swap_min, ada_swap_threshold, max_validity_range_ms,
+  ada_swap_max, ada_swap_min, ada_swap_price_ceiling_bps,
+  ada_swap_price_floor_bps, ada_swap_threshold, max_validity_range_ms,
   one_hour_ms,
 }
 use vault/helpers.{
@@ -127,6 +128,13 @@ validator vault_swap_ada(
           )
         expect Some(ada_entry) = find_asset_oracle(asset_oracles_list, #"", #"")
         expect Some(ada_price_bps) = read_fair_price(tx, ada_entry)
+        // (2026-05-30): absolute sanity band on the oracle price.
+        // read_fair_price already enforces the dual-feed disagreement guard
+        // (distinct-feed quorum); this wide band ($0.01–$100/ADA) is
+        // a backstop against a both-feeds-broken / mis-decoded degenerate
+        // value mis-pricing the keeper's USDCx-for-ADA fill.
+        expect ada_price_bps >= ada_swap_price_floor_bps
+        expect ada_price_bps <= ada_swap_price_ceiling_bps
         let usdcx_out_expected = amount_ada * ada_price_bps / 10_000
 
         let usdcx_in_input =
