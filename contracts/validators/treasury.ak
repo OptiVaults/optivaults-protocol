@@ -131,6 +131,8 @@ fn monthly_spent(
 validator treasury(
   deposit_token_policy: ByteArray,
   deposit_token_name: ByteArray,
+  treasury_nft_policy: ByteArray,
+  treasury_nft_name: ByteArray,
 ) {
   spend(
     datum: Option<TreasuryDatum>,
@@ -156,7 +158,15 @@ validator treasury(
     let in_usdcx = usdcx_qty(own_input.output, deposit_token_policy, deposit_token_name)
     let out_usdcx = usdcx_qty(cont_output, deposit_token_policy, deposit_token_name)
 
-    when redeemer is {
+    // One-shot Treasury identity NFT must be on the spent input
+    // AND the continuing output — binds every redeemer to the canonical
+    // treasury UTXO, blocking forged-datum decoys at the script address.
+    let nft_ok = and {
+        quantity_of(own_input.output.value, treasury_nft_policy, treasury_nft_name) == 1,
+        quantity_of(cont_output.value, treasury_nft_policy, treasury_nft_name) == 1,
+      }
+
+    let redeemer_ok = when redeemer is {
       // ══════════════════════════════════════════════════════
       // Receive — passive accounting transition for Compound's
       // treasury fee output.
@@ -518,6 +528,7 @@ validator treasury(
         }
       }
     }
+    nft_ok && redeemer_ok
   }
 
   else(_) {

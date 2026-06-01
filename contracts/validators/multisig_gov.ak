@@ -214,6 +214,8 @@ validator multisig_gov(
   /// verify the forfeit output is routed through treasury.ReceiveGovForfeit
   /// (cross-validator binding).
   treasury_hash: ByteArray,
+  treasury_nft_policy: ByteArray,
+  treasury_nft_name: ByteArray,
 ) {
   spend(
     datum: Option<GovDatum>,
@@ -808,6 +810,12 @@ validator multisig_gov(
                         deposit_token_policy,
                         deposit_token_name,
                       ) >= forfeit_amount,
+                      // route only to the canonical NFT-bearing treasury output.
+                      quantity_of(
+                        forfeit_out.value,
+                        treasury_nft_policy,
+                        treasury_nft_name,
+                      ) == 1,
                     }
                   _ -> False
                 }

@@ -64,6 +64,8 @@ validator vault_keeper_hot(
   treasury_hash: ByteArray,
   governance_nft_policy: ByteArray,
   governance_nft_name: ByteArray,
+  treasury_nft_policy: ByteArray,
+  treasury_nft_name: ByteArray,
 ) {
   withdraw(redeemer: VaultRedeemer, account: Credential, tx: Transaction) {
     expect Script(_) = account
@@ -169,6 +171,8 @@ validator vault_keeper_hot(
                     old_datum.deposit_token_policy,
                     old_datum.deposit_token_name,
                   ) >= treasury_share,
+                  // Route only to the canonical NFT-bearing treasury output.
+                  quantity_of(fee_out.value, treasury_nft_policy, treasury_nft_name) == 1,
                 }
               _ -> False
             }
